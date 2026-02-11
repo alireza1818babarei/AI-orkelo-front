@@ -1,21 +1,26 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   PointerSensor,
   closestCenter,
-  closestCorners,
-  pointerWithin,
+  TouchSensor,
   DragOverlay,
   useDroppable,
   useSensor,
   useSensors,
+  closestCorners,
+  MeasuringStrategy,
+  defaultDropAnimationSideEffects,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
-  rectSortingStrategy,
   verticalListSortingStrategy,
+  horizontalListSortingStrategy,
+  defaultAnimateLayoutChanges,
 } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import BoardColumn from "./BoardColumn";
 import BoardItem from "../../../../Components/BoardItem";
 import { formatMonthDay } from "../../../../utils/date";
@@ -27,8 +32,75 @@ const arrayMove = (arr, from, to) => {
   return next;
 };
 
-const DraggableTask = ({ task, columnId, onTaskClick }) => {
-  const taskId = String(task.__dndId);
+const parseId = (rawId) => {
+  const id = String(rawId || "");
+  if (id.startsWith("col-drop-")) return { type: "column-drop", id: id.slice(9) };
+  if (id.startsWith("col-")) return { type: "column", id: id.slice(4) };
+  if (id.startsWith("task-")) return { type: "task", id: id.slice(5) };
+  return { type: null, id };
+};
+
+const cloneColumns = (columns) =>
+  (columns || []).map((c) => ({
+    ...c,
+    taskIds: [...(c.taskIds || [])],
+  }));
+
+const normalizeBoard = (columns = []) => {
+  const tasksById = {};
+  const nextColumns = (columns || []).map((col) => {
+    const rawTasks = col.tasks ?? col.items ?? col.cards ?? col.task_list;
+    const tasksUndefined = rawTasks == null;
+    const taskIds = (rawTasks || []).map((t, index) => {
+      const id = String(t.id ?? t.task_id ?? t.uuid ?? `${col.id || "col"}-${index}`);
+      tasksById[id] = { ...t, id };
+      return id;
+    });
+    return {
+      ...col,
+      id: String(col.id),
+      taskIds,
+      tasksUndefined,
+    };
+  });
+  return { columns: nextColumns, tasksById };
+};
+
+const findContainer = (taskId, columns) =>
+  (columns || []).find((c) => (c.taskIds || []).includes(taskId))?.id ?? null;
+
+const getProjectedIndex = ({
+  overType,
+  overId,
+  destColumn,
+  activeRect,
+  overRect,
+}) => {
+  if (!destColumn) return 0;
+  if (overType === "column") return destColumn.taskIds.length;
+  if (!overId) return destColumn.taskIds.length;
+  const overIndex = destColumn.taskIds.indexOf(overId);
+  if (overIndex < 0) return destColumn.taskIds.length;
+  const isBelow =
+    activeRect && overRect
+      ? activeRect.top > overRect.top + overRect.height / 2
+      : false;
+  return overIndex + (isBelow ? 1 : 0);
+};
+
+const animateLayoutChanges = (args) =>
+  defaultAnimateLayoutChanges({ ...args, wasDragging: true });
+
+const dropAnimation = {
+  duration: 220,
+  easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: { active: { opacity: "0.6" } },
+  }),
+};
+
+const TaskCard = memo(function TaskCard({ task, columnId, onTaskClick }) {
+  if (!task) return null;
   const {
     attributes,
     listeners,
@@ -36,25 +108,23 @@ const DraggableTask = ({ task, columnId, onTaskClick }) => {
     transform,
     transition,
     isDragging,
-    isOver,
   } = useSortable({
-    id: `task:${taskId}`,
-    data: { type: "task", columnId: String(columnId), taskId, task },
+    id: `task-${task.id}`,
+    data: { type: "task", taskId: task.id, columnId },
+    animateLayoutChanges,
   });
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        transition,
-        zIndex: isDragging ? 6 : 1,
-      }
-    : { transition };
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? "none" : transition || "transform 200ms ease",
+    zIndex: isDragging ? 6 : 1,
+  };
 
   return (
     <BoardItem
       innerRef={setNodeRef}
       style={style}
-      className={`${isDragging ? "is-dragging" : ""} ${isOver ? "is-over" : ""}`}
+      className={isDragging ? "is-dragging" : ""}
       {...attributes}
       {...listeners}
       role="button"
@@ -74,11 +144,32 @@ const DraggableTask = ({ task, columnId, onTaskClick }) => {
       taskUserImg={task.user_image || task.avatar || ""}
     />
   );
-};
+});
 
-const DraggableColumn = ({
+const PlaceholderItem = memo(function PlaceholderItem({ id, height }) {
+  const { setNodeRef, transform, transition } = useSortable({
+    id,
+    disabled: true,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || "transform 200ms ease",
+    height: height || 64,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="board-item board-item-placeholder"
+      style={style}
+    />
+  );
+});
+
+const Column = memo(function Column({
   column,
-  actions,
+  tasksById,
   status,
   tasksLoading,
   onAddTask,
@@ -89,8 +180,10 @@ const DraggableColumn = ({
   onStartAddTask,
   onCancelAddTask,
   onSubmitAddTask,
-}) => {
-  const id = String(column.id);
+  activeTaskId,
+  activeTaskHeight,
+  onColumnNodeRef,
+}) {
   const {
     attributes,
     listeners,
@@ -99,68 +192,95 @@ const DraggableColumn = ({
     transform,
     transition,
     isDragging,
-    isOver,
   } = useSortable({
-    id: `column:${id}`,
-    data: { type: "column", columnId: id, column },
+    id: `col-${column.id}`,
+    data: { type: "column", columnId: column.id },
+    animateLayoutChanges,
   });
 
-  const {
-    setNodeRef: setTasksDropRef,
-    isOver: isOverTasks,
-  } = useDroppable({
-    id: `column-tasks:${id}`,
-    data: { type: "column-tasks", columnId: id },
+  const { setNodeRef: setDropRef, isOver: isOverTasks } = useDroppable({
+    id: `col-drop-${column.id}`,
+    data: { type: "column-drop", columnId: column.id },
   });
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        transition,
-        zIndex: isDragging ? 5 : 1,
+  const setColumnRef = useCallback(
+    (node) => {
+      setNodeRef(node);
+      if (onColumnNodeRef) {
+        onColumnNodeRef(column.id, node);
       }
-    : { transition };
+    },
+    [setNodeRef, onColumnNodeRef, column.id],
+  );
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? "none" : transition || "transform 220ms ease",
+    zIndex: isDragging ? 5 : 1,
+  };
+
+  const taskIds = column.taskIds || [];
+  const placeholderId = `placeholder-${column.id}`;
+  const hasActive = activeTaskId && taskIds.includes(activeTaskId);
+  const displayIds = useMemo(() => {
+    if (!hasActive) return taskIds;
+    return taskIds.map((id) => (id === activeTaskId ? placeholderId : id));
+  }, [taskIds, activeTaskId, hasActive]);
+  const sortableIds = useMemo(
+    () =>
+      displayIds.map((id) =>
+        id === placeholderId ? placeholderId : `task-${id}`,
+      ),
+    [displayIds, placeholderId],
+  );
 
   return (
     <BoardColumn
       color={column.color}
-      innerRef={setNodeRef}
+      innerRef={setColumnRef}
       headerRef={setActivatorNodeRef}
       headerProps={{ ...attributes, ...listeners }}
       style={style}
-      className={`${isOver ? "is-over" : ""} ${
-        isDragging ? "is-dragging" : ""
-      }`}
+      className={isDragging ? "is-dragging" : ""}
       columnTitle={column.title || column.name || "Column"}
-      actions={actions}
-      contentRef={setTasksDropRef}
+      actions={column.actions}
+      contentRef={setDropRef}
       contentClassName={isOverTasks ? "is-over" : ""}
     >
-      {column.tasks === undefined ? (
+      {column.tasksUndefined ? (
         tasksLoading || status === "loading" ? (
           <div className="d-flex align-items-center justify-content-center py-3">
             <iconify-icon icon="line-md:loading-loop" />
           </div>
         ) : null
-      ) : column.tasks.length === 0 ? (
+      ) : taskIds.length === 0 ? (
         <div className="d-flex align-items-center justify-content-center py-3 text-muted">
           No tasks yet
         </div>
       ) : (
         <SortableContext
-          items={(column.tasks || []).map((t) => `task:${t.__dndId}`)}
+          items={sortableIds}
           strategy={verticalListSortingStrategy}
         >
-          {(column.tasks || []).map((task) => (
-            <DraggableTask
-              key={task.__dndId}
-              task={task}
-              columnId={column.id}
-              onTaskClick={onTaskClick}
-            />
-          ))}
+          {(displayIds || []).map((id) =>
+            id === placeholderId ? (
+              <PlaceholderItem
+                key={placeholderId}
+                id={placeholderId}
+                height={activeTaskHeight}
+              />
+            ) : (
+              <TaskCard
+                key={id}
+                task={tasksById[id]}
+                columnId={column.id}
+                onTaskClick={onTaskClick}
+              />
+            ),
+          )}
         </SortableContext>
       )}
+
       {addTaskColumnId === String(column.id) ? (
         <div className="py-3 px-2">
           <input
@@ -197,10 +317,10 @@ const DraggableColumn = ({
       )}
     </BoardColumn>
   );
-};
+});
 
 const ProjectBoardColumns = ({
-  columns,
+  columns: columnsProp,
   status,
   tasksLoading = false,
   onEditColumn,
@@ -208,217 +328,209 @@ const ProjectBoardColumns = ({
   onAddTask,
   onTaskClick,
 }) => {
-  const [orderedColumns, setOrderedColumns] = useState([]);
-  const [activeDrag, setActiveDrag] = useState(null);
+  const [board, setBoard] = useState(() => normalizeBoard(columnsProp));
+  const [activeId, setActiveId] = useState(null);
+  const [activeType, setActiveType] = useState(null);
+  const [activeTaskId, setActiveTaskId] = useState(null);
+  const [activeTaskSize, setActiveTaskSize] = useState({ width: 0, height: 0 });
   const [addTaskColumnId, setAddTaskColumnId] = useState(null);
   const [addTaskText, setAddTaskText] = useState("");
-
-  const normalizedColumns = useMemo(() => {
-    return (columns || []).map((col) => {
-      const rawTasks =
-        col.tasks ?? col.items ?? col.cards ?? col.task_list;
-      if (rawTasks == null) {
-        return { ...col, tasks: undefined };
-      }
-      const tasks = (rawTasks || []).map((t, index) => ({
-        ...t,
-        __dndId: String(
-          t.id ?? t.task_id ?? t.uuid ?? `${col.id || "col"}-${index}`,
-        ),
-      }));
-      return { ...col, tasks };
-    });
-  }, [columns]);
+  const snapshotRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const columnNodeRefs = useRef({});
 
   useEffect(() => {
-    setOrderedColumns(normalizedColumns);
-  }, [normalizedColumns]);
+    if (isDraggingRef.current) return;
+    setBoard(normalizeBoard(columnsProp));
+  }, [columnsProp]);
 
   const columnIds = useMemo(
-    () => orderedColumns.map((c) => `column:${c.id}`),
-    [orderedColumns],
+    () => board.columns.map((c) => `col-${c.id}`),
+    [board.columns],
   );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 5 } }),
+  );
+  const collisionDetection = useCallback(
+    (args) => {
+      const activeType = parseId(args?.active?.id).type;
+      return activeType === "column" ? closestCenter(args) : closestCorners(args);
+    },
+    [],
   );
 
-  const collisionDetection = (args) => {
-    const activeType = args?.active?.data?.current?.type;
-    if (activeType === "column") {
-      const hits = pointerWithin(args);
-      return hits.length ? hits : closestCorners(args);
+  const handleDragStart = useCallback(({ active }) => {
+    const parsed = parseId(active.id);
+    setActiveId(active.id);
+    setActiveType(parsed.type);
+    setActiveTaskId(parsed.type === "task" ? parsed.id : null);
+    snapshotRef.current = cloneColumns(board.columns);
+    isDraggingRef.current = true;
+    const columnNode =
+      parsed.type === "column"
+        ? columnNodeRefs.current?.[String(parsed.id)]
+        : null;
+    if (columnNode && active?.data?.current) {
+      if (active.data.current.sortable) {
+        active.data.current.sortable.node = columnNode;
+      } else {
+        active.data.current.sortable = { node: columnNode };
+      }
     }
-    return closestCenter(args);
-  };
+    const rect =
+      parsed.type === "column"
+        ? active.data.current?.sortable?.node?.getBoundingClientRect?.() ||
+          active.rect.current?.initial ||
+          active.rect.current?.translated
+        : active.rect.current?.initial || active.rect.current?.translated;
+    setActiveTaskSize({
+      width: rect?.width || 0,
+      height: rect?.height || 0,
+    });
+  }, [board.columns]);
 
-  const handleDragOver = ({ active, over }) => {
+  const handleDragOver = useCallback(({ active, over }) => {
     if (!over) return;
-    const activeType = active?.data?.current?.type;
-    const overType = over?.data?.current?.type;
+    const activeInfo = parseId(active.id);
+    if (activeInfo.type !== "task") return;
 
-    if (activeType === "column") {
-      const activeId = active.data.current.columnId;
-      const overId = over?.data?.current?.columnId;
-      if (!overId || activeId === overId) return;
+    setBoard((prev) => {
+      const { columns, tasksById } = prev;
+      const activeTask = activeInfo.id;
+      const overInfo = parseId(over.id);
 
-      setOrderedColumns((items) => {
-        const oldIndex = items.findIndex(
-          (c) => String(c.id) === String(activeId),
+      const sourceColumnId = findContainer(activeTask, columns);
+      const overColumnId =
+        overInfo.type === "column-drop"
+          ? overInfo.id
+          : overInfo.type === "column"
+            ? overInfo.id
+            : overInfo.type === "task"
+              ? findContainer(overInfo.id, columns)
+              : null;
+
+      if (!sourceColumnId || !overColumnId) return prev;
+
+      const sourceIndex = columns.findIndex((c) => c.id === sourceColumnId);
+      const destIndex = columns.findIndex((c) => c.id === overColumnId);
+      if (sourceIndex === -1 || destIndex === -1) return prev;
+
+      const sourceColumn = columns[sourceIndex];
+      const destColumn = columns[destIndex];
+
+      const activeRect = active.rect.current?.translated || active.rect.current?.initial;
+      const overRect = over.rect;
+
+      if (sourceColumnId === overColumnId) {
+        const oldIndex = sourceColumn.taskIds.indexOf(activeTask);
+        const projectedIndex = getProjectedIndex({
+          overType: overInfo.type === "column-drop" ? "column" : overInfo.type,
+          overId: overInfo.type === "task" ? overInfo.id : null,
+          destColumn: sourceColumn,
+          activeRect,
+          overRect,
+        });
+
+        if (oldIndex === projectedIndex || oldIndex < 0 || projectedIndex < 0) {
+          return prev;
+        }
+
+        const nextTaskIds = arrayMove(
+          sourceColumn.taskIds,
+          oldIndex,
+          projectedIndex,
         );
-        const newIndex = items.findIndex(
-          (c) => String(c.id) === String(overId),
+
+        const nextColumns = columns.map((c) =>
+          c.id === sourceColumnId ? { ...c, taskIds: nextTaskIds } : c,
+        );
+
+        return { columns: nextColumns, tasksById };
+      }
+
+      const nextSourceTaskIds = sourceColumn.taskIds.filter(
+        (id) => id !== activeTask,
+      );
+      const nextDestTaskIds = destColumn.taskIds.filter(
+        (id) => id !== activeTask,
+      );
+
+      const destColumnForIndex = {
+        ...destColumn,
+        taskIds: nextDestTaskIds,
+      };
+      let insertIndex = getProjectedIndex({
+        overType: overInfo.type === "column-drop" ? "column" : overInfo.type,
+        overId: overInfo.type === "task" ? overInfo.id : null,
+        destColumn: destColumnForIndex,
+        activeRect,
+        overRect,
+      });
+
+      insertIndex = Math.max(0, Math.min(insertIndex, nextDestTaskIds.length));
+      nextDestTaskIds.splice(insertIndex, 0, activeTask);
+
+      const nextColumns = columns.map((c) => {
+        if (c.id === sourceColumnId) return { ...c, taskIds: nextSourceTaskIds };
+        if (c.id === overColumnId) return { ...c, taskIds: nextDestTaskIds };
+        return c;
+      });
+
+      return { columns: nextColumns, tasksById };
+    });
+  }, []);
+
+  const handleDragEnd = useCallback(({ active, over }) => {
+    const activeInfo = parseId(active.id);
+    const overInfo = over ? parseId(over.id) : { type: null, id: null };
+
+    if (!over && snapshotRef.current) {
+      setBoard((prev) => ({
+        ...prev,
+        columns: snapshotRef.current,
+      }));
+    }
+
+    if (activeInfo.type === "column" && overInfo.type === "column") {
+      setBoard((prev) => {
+        const oldIndex = prev.columns.findIndex(
+          (c) => String(c.id) === String(activeInfo.id),
+        );
+        const newIndex = prev.columns.findIndex(
+          (c) => String(c.id) === String(overInfo.id),
         );
         if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
-          return items;
+          return prev;
         }
-        return arrayMove(items, oldIndex, newIndex);
-      });
-      return;
-    }
-
-    if (activeType === "task") {
-      const activeTaskId = active.data.current.taskId;
-      const sourceColumnId = active.data.current.columnId;
-      const destColumnId =
-        overType === "task"
-          ? over.data.current.columnId
-          : overType === "column" || overType === "column-tasks"
-            ? over.data.current.columnId
-            : null;
-      if (!destColumnId) return;
-
-      setOrderedColumns((items) => {
-        const sourceIndex = items.findIndex(
-          (c) => String(c.id) === String(sourceColumnId),
-        );
-        const destIndex = items.findIndex(
-          (c) => String(c.id) === String(destColumnId),
-        );
-        if (sourceIndex === -1 || destIndex === -1) return items;
-
-        const sourceTasks = [...(items[sourceIndex].tasks || [])];
-        const destTasks =
-          sourceIndex === destIndex
-            ? sourceTasks
-            : [...(items[destIndex].tasks || [])];
-
-        const fromIndex = sourceTasks.findIndex(
-          (t) => String(t.__dndId) === String(activeTaskId),
-        );
-        if (fromIndex === -1) return items;
-
-        const toIndex =
-          overType === "task"
-            ? destTasks.findIndex(
-                (t) =>
-                  String(t.__dndId) ===
-                  String(over.data.current.taskId),
-              )
-            : destTasks.length;
-        if (toIndex === -1) return items;
-
-        const [moved] = sourceTasks.splice(fromIndex, 1);
-        destTasks.splice(toIndex, 0, moved);
-
-        return items.map((c, idx) => {
-          if (idx === sourceIndex) return { ...c, tasks: sourceTasks };
-          if (idx === destIndex) return { ...c, tasks: destTasks };
-          return c;
-        });
+        return {
+          ...prev,
+          columns: arrayMove(prev.columns, oldIndex, newIndex),
+        };
       });
     }
-  };
 
-  const handleDragEnd = ({ active, over }) => {
-    if (!over) return;
-    const activeType = active?.data?.current?.type;
-    const overType = over?.data?.current?.type;
+    setActiveId(null);
+    setActiveType(null);
+    setActiveTaskId(null);
+    snapshotRef.current = null;
+    isDraggingRef.current = false;
+  }, []);
 
-    if (activeType === "column") {
-      const activeId = active.data.current.columnId;
-      const overId = over?.data?.current?.columnId;
-      if (!overId) return;
-      if (activeId === overId) return;
-      setOrderedColumns((items) => {
-        const oldIndex = items.findIndex(
-          (c) => String(c.id) === String(activeId),
-        );
-        const newIndex = items.findIndex(
-          (c) => String(c.id) === String(overId),
-        );
-        if (oldIndex === -1 || newIndex === -1) return items;
-        return arrayMove(items, oldIndex, newIndex);
-      });
-      return;
+  const handleDragCancel = useCallback(() => {
+    if (snapshotRef.current) {
+      setBoard((prev) => ({
+        ...prev,
+        columns: snapshotRef.current,
+      }));
     }
-
-    if (activeType === "task") {
-      const activeTaskId = active.data.current.taskId;
-      const sourceColumnId = active.data.current.columnId;
-      const destColumnId =
-        overType === "task"
-          ? over.data.current.columnId
-          : overType === "column" || overType === "column-tasks"
-            ? over.data.current.columnId
-            : null;
-      if (!destColumnId) return;
-
-      setOrderedColumns((items) => {
-        const sourceIndex = items.findIndex(
-          (c) => String(c.id) === String(sourceColumnId),
-        );
-        const destIndex = items.findIndex(
-          (c) => String(c.id) === String(destColumnId),
-        );
-        if (sourceIndex === -1 || destIndex === -1) return items;
-
-        const sourceTasks = [...(items[sourceIndex].tasks || [])];
-        const destTasks =
-          sourceIndex === destIndex
-            ? sourceTasks
-            : [...(items[destIndex].tasks || [])];
-
-        const fromIndex = sourceTasks.findIndex(
-          (t) => String(t.__dndId) === String(activeTaskId),
-        );
-        if (fromIndex === -1) return items;
-
-        const toIndex =
-          overType === "task"
-            ? destTasks.findIndex(
-                (t) =>
-                  String(t.__dndId) ===
-                  String(over.data.current.taskId),
-              )
-            : destTasks.length;
-
-        if (toIndex === -1) return items;
-
-        const [moved] = sourceTasks.splice(fromIndex, 1);
-        destTasks.splice(toIndex, 0, moved);
-
-        return items.map((c, idx) => {
-          if (idx === sourceIndex) return { ...c, tasks: sourceTasks };
-          if (idx === destIndex) return { ...c, tasks: destTasks };
-          return c;
-        });
-      });
-    }
-  };
-
-  const handleDragStart = ({ active }) => {
-    setActiveDrag(active?.data?.current || null);
-  };
-
-  const handleDragCancel = () => {
-    setActiveDrag(null);
-  };
-
-  const handleDragEndCleanup = (args) => {
-    handleDragEnd(args);
-    setActiveDrag(null);
-  };
+    setActiveId(null);
+    setActiveType(null);
+    setActiveTaskId(null);
+    snapshotRef.current = null;
+    isDraggingRef.current = false;
+  }, []);
 
   const startAddTask = (column) => {
     if (!column?.id) return;
@@ -441,7 +553,16 @@ const ProjectBoardColumns = ({
     cancelAddTask();
   };
 
-  if (!orderedColumns.length) {
+  const handleColumnNodeRef = useCallback((id, node) => {
+    const key = String(id);
+    if (node) {
+      columnNodeRefs.current[key] = node;
+    } else {
+      delete columnNodeRefs.current[key];
+    }
+  }, []);
+
+  if (!board.columns.length) {
     if (status === "loading") {
       return (
         <div className="d-flex align-items-center justify-content-center py-5">
@@ -460,17 +581,37 @@ const ProjectBoardColumns = ({
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetection}
-      onDragOver={handleDragOver}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
-      onDragEnd={handleDragEndCleanup}
     >
-      <SortableContext items={columnIds} strategy={rectSortingStrategy}>
+      <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
         <div className="board">
-          {orderedColumns.map((c) => (
-            <DraggableColumn
-              key={c.id}
-              column={c}
+          {board.columns.map((col) => (
+            <Column
+              key={col.id}
+              column={{
+                ...col,
+                actions: [
+                  {
+                    key: "edit",
+                    label: "Edit",
+                    icon: "ti-pencil",
+                    onClick: () => onEditColumn?.(col),
+                  },
+                  { type: "divider" },
+                  {
+                    key: "delete",
+                    label: "Delete",
+                    icon: "ti-trash",
+                    destructive: true,
+                    onClick: () => onDeleteColumn?.(col),
+                  },
+                ],
+              }}
+              tasksById={board.tasksById}
               status={status}
               tasksLoading={tasksLoading}
               onAddTask={onAddTask}
@@ -481,56 +622,76 @@ const ProjectBoardColumns = ({
               onStartAddTask={startAddTask}
               onCancelAddTask={cancelAddTask}
               onSubmitAddTask={submitAddTask}
-              actions={[
-                {
-                  key: "edit",
-                  label: "Edit",
-                  icon: "ti-pencil",
-                  onClick: () => onEditColumn?.(c),
-                },
-                { type: "divider" },
-                {
-                  key: "delete",
-                  label: "Delete",
-                  icon: "ti-trash",
-                  destructive: true,
-                  onClick: () => onDeleteColumn?.(c),
-                },
-              ]}
+              activeTaskId={activeType === "task" ? activeTaskId : null}
+              activeTaskHeight={activeTaskSize.height}
+              onColumnNodeRef={handleColumnNodeRef}
             />
           ))}
         </div>
       </SortableContext>
-      <DragOverlay>
-        {activeDrag?.type === "task" ? (
-          <BoardItem
-            className="is-drag-overlay"
-            taskTitle={
-              activeDrag.task?.title ||
-              activeDrag.task?.name ||
-              activeDrag.task?.text ||
-              "Task"
-            }
-            taskBody={
-              activeDrag.task?.body || activeDrag.task?.description || "-"
-            }
-            taskDate={activeDrag.task?.date || activeDrag.task?.due_date || ""}
-            taskFileAttachCount={
-              activeDrag.task?.files_count || activeDrag.task?.attachments || "0"
-            }
-            taskIcon={activeDrag.task?.icon || "ti-device-desktop-analytics"}
-            taskUserImg={activeDrag.task?.user_image || activeDrag.task?.avatar || ""}
-          />
-        ) : activeDrag?.type === "column" ? (
-          <BoardColumn
-            className="is-drag-overlay"
-            columnTitle={
-              activeDrag.column?.title || activeDrag.column?.name || "Column"
-            }
-            color={activeDrag.column?.color}
-          />
-        ) : null}
-      </DragOverlay>
+
+      {createPortal(
+        <DragOverlay dropAnimation={dropAnimation} className="dnd-overlay">
+          {activeType === "task" && activeTaskId ? (
+            <div style={{ width: activeTaskSize.width || undefined }}>
+              <BoardItem
+                className="is-drag-overlay"
+                taskTitle={
+                  board.tasksById[activeTaskId]?.title ||
+                  board.tasksById[activeTaskId]?.name ||
+                  board.tasksById[activeTaskId]?.text ||
+                  "Task"
+                }
+                taskBody={
+                  board.tasksById[activeTaskId]?.body ||
+                  board.tasksById[activeTaskId]?.description ||
+                  "-"
+                }
+                taskDate={
+                  board.tasksById[activeTaskId]?.date ||
+                  formatMonthDay(board.tasksById[activeTaskId]?.created_at) ||
+                  ""
+                }
+                taskFileAttachCount={
+                  board.tasksById[activeTaskId]?.files_count ||
+                  board.tasksById[activeTaskId]?.attachments ||
+                  "0"
+                }
+                taskIcon={
+                  board.tasksById[activeTaskId]?.icon || "ti-device-desktop-analytics"
+                }
+                taskUserImg={
+                  board.tasksById[activeTaskId]?.user_image ||
+                  board.tasksById[activeTaskId]?.avatar ||
+                  ""
+                }
+              />
+            </div>
+          ) : null}
+
+          {activeType === "column" && activeId ? (
+            <div
+              style={{
+                width: activeTaskSize.width || 300,
+                height: activeTaskSize.height || undefined,
+              }}
+            >
+              <BoardColumn
+                className="is-drag-overlay"
+                columnTitle={
+                  board.columns.find((c) => `col-${c.id}` === activeId)?.title ||
+                  board.columns.find((c) => `col-${c.id}` === activeId)?.name ||
+                  "Column"
+                }
+                color={
+                  board.columns.find((c) => `col-${c.id}` === activeId)?.color
+                }
+              />
+            </div>
+          ) : null}
+        </DragOverlay>,
+        document.body,
+      )}
     </DndContext>
   );
 };
