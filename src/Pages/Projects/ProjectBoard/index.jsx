@@ -13,6 +13,7 @@ import {
   createProjectTaskThunk,
   deleteProjectColumnThunk,
   getProjectColumnsThunk,
+  removeTaskFromColumn,
   updateProjectColumnThunk,
 } from "../../../store/projects/projectColumnsSlice";
 
@@ -41,6 +42,7 @@ const ProjectBoard = () => {
   const [editingColumn, setEditingColumn] = useState(null);
   const [taskInfoOpen, setTaskInfoOpen] = useState(false);
   const [activeTask, setActiveTask] = useState(null);
+  const [removedTaskIds, setRemovedTaskIds] = useState([]);
 
   const { data, error, loading } = useSelector((s) => s.projectDetails);
   const projectsList = useSelector((s) => s.projects?.items ?? []);
@@ -73,6 +75,7 @@ const ProjectBoard = () => {
   const columns = useMemo(() => {
     if (!columnsFromSlice?.length) return baseColumns || [];
 
+    const removedSet = new Set(removedTaskIds.map(String));
     const baseMap = new Map(
       (baseColumns || []).map((c) => [String(c.id), c]),
     );
@@ -83,7 +86,9 @@ const ProjectBoard = () => {
       const baseTasks = Array.isArray(base?.tasks) ? base.tasks : null;
       const sliceTasks = Array.isArray(c?.tasks) ? c.tasks : null;
       if (baseTasks && !sliceTasks) {
-        next.tasks = baseTasks;
+        next.tasks = baseTasks.filter(
+          (t) => !removedSet.has(String(t.id ?? t.task_id ?? t.uuid)),
+        );
       } else if (baseTasks && sliceTasks) {
         const merged = [...baseTasks];
         const seen = new Set(baseTasks.map((t) => String(t.id ?? t.task_id ?? t.uuid ?? t.text ?? "")));
@@ -94,11 +99,13 @@ const ProjectBoard = () => {
             merged.push(t);
           }
         });
-        next.tasks = merged;
+        next.tasks = merged.filter(
+          (t) => !removedSet.has(String(t.id ?? t.task_id ?? t.uuid)),
+        );
       }
       return next;
     });
-  }, [columnsFromSlice, baseColumns]);
+  }, [columnsFromSlice, baseColumns, removedTaskIds]);
 
   useEffect(() => {
     if (!id) return;
@@ -409,6 +416,17 @@ const ProjectBoard = () => {
               onClose={() => setTaskInfoOpen(false)}
               task={activeTask}
               projectId={project?.id ?? id}
+              onDeleted={({ taskId, columnId }) => {
+                if (taskId && columnId) {
+                  dispatch(removeTaskFromColumn({ taskId, columnId }));
+                  setRemovedTaskIds((prev) =>
+                    prev.includes(taskId) ? prev : [...prev, taskId],
+                  );
+                }
+                if (project?.id) {
+                  dispatch(getProjectColumnsThunk(project.id));
+                }
+              }}
             />
             <ProjectColumnModal
               isOpen={columnModalOpen}

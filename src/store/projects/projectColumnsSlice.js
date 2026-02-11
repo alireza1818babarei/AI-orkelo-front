@@ -102,6 +102,20 @@ const projectColumnsSlice = createSlice({
       state.projectId = action.payload?.projectId ?? null;
       state.items = action.payload?.columns || [];
     },
+    removeTaskFromColumn: (state, action) => {
+      const { columnId, taskId } = action.payload || {};
+      if (!columnId || !taskId) return;
+      state.items = (state.items || []).map((c) => {
+        if (String(c.id) !== String(columnId)) return c;
+        const nextTasks = Array.isArray(c.tasks) ? c.tasks : [];
+        return {
+          ...c,
+          tasks: nextTasks.filter(
+            (t) => String(t.id ?? t.task_id ?? t.uuid) !== String(taskId),
+          ),
+        };
+      });
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(getProjectColumnsThunk.pending, (state) => {
@@ -156,6 +170,6 @@ const projectColumnsSlice = createSlice({
   },
 });
 
-export const { clearProjectColumns, setProjectColumns } =
+export const { clearProjectColumns, setProjectColumns, removeTaskFromColumn } =
   projectColumnsSlice.actions;
 export default projectColumnsSlice.reducer;

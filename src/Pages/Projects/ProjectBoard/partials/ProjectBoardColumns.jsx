@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import BoardColumn from "./BoardColumn";
 import BoardItem from "../../../../Components/BoardItem";
+import { formatMonthDay } from "../../../../utils/date";
 
 const arrayMove = (arr, from, to) => {
   const next = arr.slice();
@@ -67,7 +68,7 @@ const DraggableTask = ({ task, columnId, onTaskClick }) => {
       }}
       taskTitle={task.title || task.name || task.text || "Task"}
       taskBody={task.body || task.description || "-"}
-      taskDate={task.date || task.due_date || ""}
+      taskDate={task.date || formatMonthDay(task.created_at) || ""}
       taskFileAttachCount={task.files_count || task.attachments || "0"}
       taskIcon={task.icon || "ti-device-desktop-analytics"}
       taskUserImg={task.user_image || task.avatar || ""}
