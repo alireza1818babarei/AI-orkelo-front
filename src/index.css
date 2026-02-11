@@ -1,0 +1,23 @@
+body {
+  margin: 0;
+}
+
+.swal-toast-container {
+  pointer-events: none !important;
+  background: transparent !important;
+}
+.swal-toast-popup {
+  pointer-events: auto !important;
+  max-width: 360px;
+}
+
+.swal2-container.swal2-top-end.swal2-backdrop-show {
+  background: transparent !important;
+}
+.loader_box {
+  position: absolute;
+  inset: 0;
+  display:  flex;
+  justify-content: center;
+  align-items: center;
+}

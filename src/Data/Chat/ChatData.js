@@ -1,0 +1,350 @@
+export const chatmessages = [
+    {
+        id: 1,
+        sender: 'Jerry',
+        avatar: '/assets/images/avtar/14.png',
+        message: 'Hi! Ninfa Monaldo can we go over the project details for the upcoming presentation?',
+        time: '2:00PM',
+        position: 'left',
+    },
+    {
+        id: 2,
+        sender: 'Ninfa',
+        avatar: '/assets/images/avtar/09.png',
+        message: 'Sure, Jerry. I was just reviewing our notes. What do you want to start with?',
+        time: '2:02PM',
+        position: 'right',
+    },
+    {
+        id: 3,
+        sender: 'Jerry',
+        avatar: '/assets/images/avtar/14.png',
+        message: 'Let’s begin with the project timeline. Are we on track to meet the deadlines?',
+        time: '2:03PM',
+        position: 'left',
+    },
+    {
+        id: 4,
+        sender: 'Ninfa',
+        avatar: '/assets/images/avtar/09.png',
+        message:
+            'Yes, mostly. We completed the initial research phase and the design draft. We\'re currently in the development phase, which should be done by the end of the week.',
+        time: '2:02PM',
+        position: 'right',
+    },
+    {
+        id: 5,
+        sender: "User",
+        avatar: "/assets/images/avtar/14.png",
+        message: "Great to hear! How about the testing phase? When do we plan to start that?",
+        time: "2:06PM",
+        position: "left",
+    },
+    {
+        id: 6,
+        sender: "Admin",
+        avatar: "/assets/images/avtar/09.png",
+        message: "We have it scheduled to start next Monday. That gives us a full week to iron out any issues before the final presentation.",
+        time: "2:08PM",
+        position: "right",
+    },
+    {
+        id: 7,
+        sender: "User",
+        avatar: "/assets/images/avtar/14.png",
+        message: "Perfect. Have we assigned specific tasks for the testing phase?",
+        time: "2:10PM",
+        position: "left",
+    },
+    {
+        id: 8,
+        sender: "Admin",
+        avatar: "/assets/images/avtar/09.png",
+        message: "Yes, I've assigned the initial testing to the QA team. I've also scheduled a meeting with them to go over the testing protocols.",
+        time: "2:12PM",
+        position: "right",
+    },
+    {
+        id: 9,
+        sender: "User",
+        avatar: "/assets/images/avtar/14.png",
+        message: "Typing....",
+        time: "",
+        position: "left",
+    },
+  ];
+
+export const chatContactList  = [
+    {
+        id: 1,
+        name: "Bette Hagenes",
+        phone: "+978356479",
+        avatar: "/assets/images/avtar/13.png",
+        bgColor: "bg-info",
+        onlineStatus: "bg-success",
+    },
+    {
+        id: 2,
+        name: "Fleta Walsh",
+        phone: "+988456479",
+        avatar: "/assets/images/avtar/12.png",
+        bgColor: "bg-danger",
+        onlineStatus: "bg-success",
+    },
+    {
+        id: 3,
+        name: "Lenora Bogisich",
+        phone: "+4583546479",
+        avatar: "/assets/images/avtar/11.png",
+        bgColor: "bg-warning",
+        onlineStatus: "bg-success",
+    },
+    {
+        id: 4,
+        name: "Emery McKenzie",
+        phone: "+378356479",
+        avatar: "/assets/images/avtar/10.png",
+        bgColor: "bg-success",
+        onlineStatus: "bg-secondary",
+    },
+    {
+        id: 5,
+        name: "Elmer",
+        phone: "+678356270",
+        avatar: "/assets/images/avtar/08.png",
+        bgColor: "bg-danger",
+        onlineStatus: "bg-success",
+    },
+    {
+        id: 6,
+        name: "Mark Walsh",
+        phone: "+780356479",
+        avatar: "/assets/images/avtar/09.png",
+        bgColor: "bg-success",
+        onlineStatus: "bg-success",
+    },
+    {
+        id: 7,
+        name: "Sue Flay",
+        phone: "+780356479",
+        avatar: "/assets/images/avtar/07.png",
+        bgColor: "bg-warning",
+        onlineStatus: "bg-success",
+    },
+];
+
+export const ChatUpdates  = [
+    {
+        id: 1,
+        name: "Bette Hagenes",
+        time: "2:30AM",
+        avatar: "/assets/images/avtar/16.png",
+        bgColor: "bg-primary",
+        borderColor:"success"
+    },
+    {
+        id: 2,
+        name: "Jessica",
+        time: "2min",
+        avatar: "/assets/images/avtar/6.png",
+        bgColor: "bg-info",
+        borderColor:"secondary"
+    },
+    {
+        id: 3,
+        name: "Jerry Ladies",
+        time: "7:00AM",
+        avatar: "/assets/images/avtar/5.png",
+        bgColor: "bg-dark",
+        borderColor:"secondary"
+    },
+    {
+        id: 4,
+        name: "Emery McKenzie",
+        time: "5:26PM",
+        avatar: "/assets/images/avtar/4.png",
+        bgColor: "bg-warning",
+        borderColor:"success"
+    },
+    {
+        id: 5,
+        name: "Mark Walsh",
+        time: "1:26PM",
+        avatar: "/assets/images/avtar/3.png",
+        bgColor: "bg-primary",
+        borderColor:"secondary"
+    },
+    {
+        id: 6,
+        name: "Noah Davis",
+        time: "6:22PM",
+        avatar: "/assets/images/avtar/2.png",
+        bgColor: "bg-dark",
+        borderColor:"secondary"
+    },
+    {
+        id: 7,
+        name: "Isla White",
+        time: "6:10PM",
+        avatar: "/assets/images/avtar/1.png",
+        bgColor: "bg-primary",
+        borderColor:"success"
+    },
+    {
+        id: 8,
+        name: "Fleta Walsh",
+        time: "5:26PM",
+        avatar: "/assets/images/avtar/10.png",
+        bgColor: "bg-secondary",
+        borderColor:"success"
+    },
+    {
+        id: 9,
+        name: "Pete Sakes",
+        time: "3:26PM",
+        avatar: "/assets/images/avtar/11.png",
+        bgColor: "bg-secondary",
+        borderColor:"secondary"
+    },
+];
+
+
+export const privateContacts = [
+    {
+        id: 1,
+        name: 'Bette Hagenes',
+        message: 'Hi! Bette How are you?',
+        time: '2:30AM',
+        avatar: '/assets/images/avtar/1.png',
+        status: 'bg-success',
+    },
+    {
+        id: 2,
+        name: 'Mark Walsh',
+        message: 'Hi! Work is done',
+        time: '2:30AM',
+        avatar: '/assets/images/avtar/2.png',
+        status: 'bg-warning',
+    },
+    {
+        id: 3,
+        name: 'Jerry Ladies',
+        message: 'I\'m waiting',
+        time: '2:30AM',
+        avatar: '/assets/images/avtar/3.png',
+        status: 'bg-primary',
+    },
+    {
+        id: 4,
+        name: 'Jessica',
+        message: 'Awesome! 🤩 I like it',
+        time: '2:30AM',
+        avatar: '/assets/images/avtar/4.png',
+        status: 'bg-secondary',
+    },
+    {
+        id: 5,
+        name: 'Sue Flay',
+        message: 'oh, Really !!',
+        time: '1:00PM',
+        avatar: '/assets/images/avtar/5.png',
+        status: 'bg-danger',
+    },
+    {
+        id: 6,
+        name: 'Isla White',
+        message: 'Bye! see you soon',
+        time: '12:33PM',
+        avatar: '/assets/images/avtar/6.png',
+        status: 'bg-light',
+    },
+    {
+        id: 7,
+        name: 'Anita Break',
+        message: 'Bye!',
+        time: '1:52AM',
+        avatar: '/assets/images/avtar/07.png',
+        status: 'bg-warning',
+    },
+    {
+        id: 8,
+        name: 'Lou Pole',
+        message: 'Heyy !',
+        time: '2 days',
+        avatar: '/assets/images/avtar/08.png',
+        status: 'bg-primary',
+    },
+    {
+        id: 9,
+        name: 'Noah Davis',
+        message: 'Have a great day',
+        time: '8:00 PM',
+        avatar: '/assets/images/avtar/09.png',
+        status: 'bg-success',
+    },
+    {
+        id: 10,
+        name: 'Pete Sakes',
+        message: 'Bye! see you soon',
+        time: '12:30 PM',
+        avatar: '/assets/images/avtar/10.png',
+        status: 'bg-secondary',
+    },
+    {
+        id: 11,
+        name: 'Fleta Walsh',
+        message: 'Typing....',
+        time: 'Now',
+        avatar: '/assets/images/avtar/11.png',
+        status: 'bg-dark',
+    }
+];
+
+export const chatGroups = [
+    {
+        groupName: 'Office Group',
+        avatars: ['A', '2+'],
+        lastMessage: 'Hi! Bette How are you?',
+        time: '2:30AM',
+        avatarBg: 'warning',
+    },
+    {
+        groupName: 'Markting Group',
+        avatars: ['1', '4+'],
+        lastMessage: 'Hi! Work is done',
+        time: '7:24AM',
+        avatarBg: 'primary',
+        imageSrc: '/assets/images/avtar/16.png',
+    },
+    {
+        groupName: 'Developer Group',
+        avatars: ['1', '10+'],
+        lastMessage: 'I\'m waiting',
+        time: '2min',
+        avatarBg: 'info',
+        imageSrc: '/assets/images/avtar/15.png',
+    },
+    {
+        groupName: 'Designer Group',
+        avatars: ['AD', '2+'],
+        lastMessage: 'Awesome! 🤩 I like it',
+        time: '2day',
+        avatarBg: 'danger',
+    },
+    {
+        groupName: 'Friend\'s Group',
+        avatars: ['1', '15+'],
+        lastMessage: 'Bye! see you soon',
+        time: '12:30PM',
+        avatarBg: 'dark',
+        imageSrc: '/assets/images/avtar/14.png',
+    },
+    {
+        groupName: 'client Group',
+        avatars: ['1', '25+'],
+        lastMessage: 'Typing...',
+        time: 'Now',
+        avatarBg: 'danger',
+        imageSrc: '/assets/images/avtar/10.png',
+    }
+];

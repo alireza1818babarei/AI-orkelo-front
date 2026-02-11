@@ -1,0 +1,180 @@
+// >>-- 52 Pricing css start --<<
+
+.pricing-table {
+    &.table-responsive {
+        table {
+            thead {
+                tr {
+                    th:first-child {
+                        width: 34%;
+                    }
+
+                    th:nth-child(2) {
+                        width: 22%;
+                    }
+
+                    th:nth-child(3) {
+                        width: 22%;
+                    }
+
+                    th:nth-child(4) {
+                        width: 22%;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.simple-pricing-card {
+    box-shadow: var(--box-shadow);
+    border: 1px solid rgba(var(--secondary),.2);
+    .simple-price-body {
+        .simple-price-value {
+            color: #fff;
+            margin: 25px auto 60px;
+            width: 80%;
+            padding: 10px;
+        }
+        .simple-price-content {
+            p {
+                font-size: 14px !important;
+            }
+            button {
+                margin-top: 50px;
+            }
+
+        }
+    }
+}
+
+.flip-pricing {
+    margin: 10px;
+
+    &:hover .flip-card {
+        transform: rotateY(190deg);
+        transition: transform 0.9s;
+    }
+    .app-divider-v{
+        &:before{
+            border: 1px solid rgba(var(--secondary),.2);
+        }
+    }
+
+    .flip-card {
+        transition: transform 0.1s;
+        -webkit-transform-style: preserve-3d;
+        transform-style: preserve-3d;
+
+        .front-pricing {
+            position: relative;
+        }
+
+        .front-pricing,
+        .back-pricing {
+            width: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            background-color: var(--white);
+            border-radius: 10px;
+            padding: 6px 12px;
+            border: 1px solid rgba(var(--secondary),.2);
+
+            .pricing-header {
+                margin-top: 20px;
+                text-align: center;
+            }
+
+            .price {
+                font-weight: 500;
+                font-size: 40px;
+            }
+
+            .pricing-content {
+                margin-bottom: 20px;
+
+                .pricing-list {
+                    text-align: center;
+                    margin-bottom: 20px;
+
+                    li {
+                        margin: 20px 0 0 0;
+                        font-size: 14px;
+                        font-weight: 500;
+                        color: rgb(var(--dark), 0.75);
+                    }
+                }
+            }
+        }
+
+        .back-pricing {
+            position: absolute;
+            top: 0;
+            transform: rotateY(-180deg);
+        }
+    }
+}
+
+.flip-pricing-container {
+    .slick-slide img {
+        display: inline;
+    }
+}
+.pricing-plan-section{
+    .pricing-cards{
+        border: 1px solid rgba(var(--secondary),.2);
+    }
+}
+
+.pricing-cards {
+    padding: 2rem;
+    position: relative;
+    border: 1px solid rgba(var(--secondary), 1);
+    border-radius: 0;
+
+    &.active {
+        border: 2px solid rgba(var(--primary), 1);
+
+        h2 {
+            color: rgba(var(--primary), 1) !important;
+        }
+    }
+
+}
+.pricing-details {
+    .price-title {
+        //text-align: center;
+        p {
+            font-size: 18px;
+            color: rgb(var(--dark), 0.75);
+            font-weight: 500;
+        }
+
+        h2 {
+            font-size: calc(20px + 20 * (100vw - 300px) / 1600);
+            color: rgb(var(--dark), 0.9);
+            font-weight: 600;
+        }
+
+        .pricing-list-menu {
+            width: fit-content;
+            margin-bottom: 1.5rem;
+
+            .pricing-listitem {
+                font-size: 16px;
+                color: rgb(var(--secondary), 1);
+                text-align: start;
+                padding: 0.75rem 0;
+            }
+        }
+
+        .price-btn {
+            .btn {
+                width: 100%;
+                padding: 12px 25px;
+                border-radius: 15px;
+            }
+        }
+    }
+}
+// >>-- 52 Pricing css end --<<

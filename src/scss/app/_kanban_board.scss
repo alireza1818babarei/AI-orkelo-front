@@ -1,0 +1,161 @@
+// >>-- 45 Kanban_board css start --<<
+
+.kanban-board-container {
+  overflow: auto;
+}
+
+.board {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 0 10px;
+  min-height: 200px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.board-column {
+  position: relative;
+  width: 300px;
+  flex: 0 0 300px;
+  margin: 0;
+  background: rgba(var(--secondary), 0.1);
+  border-radius: 3px;
+  z-index: 1;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  will-change: transform;
+}
+.board-column {
+  &.muuri-item-releasing {
+    z-index: 2;
+  }
+  .muuri-item-dragging {
+    z-index: 3;
+    cursor: move;
+  }
+
+  &.is-dragging {
+    transition: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.board-column-header {
+  position: relative;
+  padding: 1rem;
+  border-top: none; border-radius: 8px 8px 0 0;
+  color: rgba(var(--dark), 0.75);
+  font-weight: 600;
+}
+
+.board-column-content-wrapper {
+  position: relative;
+  max-height: 640px;
+  overflow-y: auto;
+  &::-webkit-scrollbar {
+    position: absolute;
+    right: 0;
+    width: 4px;
+    height: 4px;
+    background-color: rgba(var(--secondary),0.1);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(var(--secondary),0.3);
+    border-radius: 20px;
+  }
+
+}
+.board-column-content-wrapper {
+  position: relative;
+  max-height: 640px;
+  overflow-y: auto;
+}
+.board-column-content {
+  position: relative;
+  border: 10px solid transparent;
+  min-height: 95px;
+}
+
+.board-item {
+  position: relative;
+  width: 100%;
+  margin: 5px 0;
+  transition: transform 200ms ease;
+  will-change: transform;
+}
+
+.board-item.is-drag-overlay {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.board-column.is-drag-overlay {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  background: rgba(var(--secondary), 0.12);
+}
+
+.board-item.muuri-item-releasing {
+  z-index: 9998;
+}
+
+.board-item.muuri-item-dragging {
+  z-index: 9999;
+  cursor: move;
+}
+
+.board-item.muuri-item-hidden {
+  z-index: 0;
+}
+
+.board-item-content {
+  position: relative;
+  padding: 15px;
+  background: var(--white);
+  border-radius: 10px;
+  font-size: 17px;
+  cursor: pointer;
+  overflow: hidden;
+  .board-footer {
+    margin-top: 1rem;
+  }
+  h6 {
+    font-weight: 500;
+
+    margin-bottom: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+}
+
+.task-side-card {
+  background: var(--white);
+  border: 1px solid rgba(var(--secondary), 0.15);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.task-side-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  i {
+    color: rgba(var(--secondary), 0.8);
+  }
+}
+
+.task-side-row.space-between {
+  justify-content: space-between;
+}
+
+@media (max-width: 991px) {
+  .task-detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+// >>-- 45 Kanban_board css end --<<
