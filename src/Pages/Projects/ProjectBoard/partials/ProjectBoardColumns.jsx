@@ -394,6 +394,26 @@ const ProjectBoardColumns = ({
   const handleDragOver = useCallback(({ active, over }) => {
     if (!over) return;
     const activeInfo = parseId(active.id);
+    if (activeInfo.type === "column") {
+      const overInfo = parseId(over.id);
+      if (overInfo.type !== "column") return;
+      setBoard((prev) => {
+        const oldIndex = prev.columns.findIndex(
+          (c) => String(c.id) === String(activeInfo.id),
+        );
+        const newIndex = prev.columns.findIndex(
+          (c) => String(c.id) === String(overInfo.id),
+        );
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+          return prev;
+        }
+        return {
+          ...prev,
+          columns: arrayMove(prev.columns, oldIndex, newIndex),
+        };
+      });
+      return;
+    }
     if (activeInfo.type !== "task") return;
 
     setBoard((prev) => {
@@ -669,26 +689,27 @@ const ProjectBoardColumns = ({
             </div>
           ) : null}
 
-          {activeType === "column" && activeId ? (
-            <div
-              style={{
-                width: activeTaskSize.width || 300,
-                height: activeTaskSize.height || undefined,
-              }}
-            >
-              <BoardColumn
-                className="is-drag-overlay"
-                columnTitle={
-                  board.columns.find((c) => `col-${c.id}` === activeId)?.title ||
-                  board.columns.find((c) => `col-${c.id}` === activeId)?.name ||
-                  "Column"
-                }
-                color={
-                  board.columns.find((c) => `col-${c.id}` === activeId)?.color
-                }
-              />
-            </div>
-          ) : null}
+          {activeType === "column" && activeId ? (() => {
+            const columnId = parseId(activeId).id;
+            const column = board.columns.find(
+              (c) => String(c.id) === String(columnId),
+            );
+            if (!column) return null;
+            return (
+              <div
+                style={{
+                  width: activeTaskSize.width || 300,
+                  height: activeTaskSize.height || undefined,
+                }}
+              >
+                <BoardColumn
+                  className="is-drag-overlay"
+                  columnTitle={column.title || column.name || "Column"}
+                  color={column.color}
+                />
+              </div>
+            );
+          })() : null}
         </DragOverlay>,
         document.body,
       )}
