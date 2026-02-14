@@ -75,10 +75,28 @@ export const createProjectTaskThunk = createAsyncThunk(
         payload,
       );
       const data = res.data?.data ?? res.data;
+      const createdTaskId = data?.id ?? data?.task_id ?? data?.uuid ?? null;
+
+      const missingMeta = createdTaskId && (!data?.created_at || !data?.updated_at);
+      let enriched = null;
+      if (missingMeta) {
+        try {
+          const metaRes = await api.get(`/projects/${projectId}/tasks/${createdTaskId}`);
+          const metaPayload = metaRes?.data?.data ?? metaRes?.data ?? null;
+          enriched =
+            metaPayload?.task ??
+            metaPayload?.data?.task ??
+            metaPayload?.data ??
+            metaPayload ??
+            null;
+        } catch {
+          enriched = null;
+        }
+      }
       return {
         projectId,
         columnId,
-        task: { ...(payload || {}), ...(data || {}) },
+        task: { ...(payload || {}), ...(data || {}), ...(enriched || {}) },
       };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -101,6 +119,36 @@ const projectColumnsSlice = createSlice({
     setProjectColumns: (state, action) => {
       state.projectId = action.payload?.projectId ?? null;
       state.items = action.payload?.columns || [];
+    },
+    updateTaskInColumn: (state, action) => {
+      const { columnId, taskId, patch } = action.payload || {};
+      if (!taskId || !patch) return;
+
+      const matchesTask = (t) =>
+        String(t?.id ?? t?.task_id ?? t?.uuid) === String(taskId);
+
+      state.items = (state.items || []).map((c) => {
+        if (columnId && String(c.id) !== String(columnId)) return c;
+
+        const tasks = Array.isArray(c.tasks) ? c.tasks : [];
+        let found = false;
+
+        const nextTasks = tasks.map((t) => {
+          if (!matchesTask(t)) return t;
+          found = true;
+          return { ...t, ...(patch || {}) };
+        });
+
+        if (!found && columnId && String(c.id) === String(columnId)) {
+          nextTasks.push({
+            id: taskId,
+            ...(patch || {}),
+          });
+        }
+
+        if (!found && !columnId) return c;
+        return { ...c, tasks: nextTasks };
+      });
     },
     removeTaskFromColumn: (state, action) => {
       const { columnId, taskId } = action.payload || {};
@@ -170,6 +218,6 @@ const projectColumnsSlice = createSlice({
   },
 });
 
-export const { clearProjectColumns, setProjectColumns, removeTaskFromColumn } =
+export const { clearProjectColumns, setProjectColumns, updateTaskInColumn, removeTaskFromColumn } =
   projectColumnsSlice.actions;
 export default projectColumnsSlice.reducer;

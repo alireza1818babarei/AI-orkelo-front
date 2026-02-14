@@ -32,6 +32,33 @@ const arrayMove = (arr, from, to) => {
   return next;
 };
 
+const getTaskAttachmentCount = (task) => {
+  const raw =
+    task?.files_count ??
+    task?.filesCount ??
+    task?.attachments_count ??
+    task?.attachmentsCount ??
+    task?.files ??
+    task?.attachments ??
+    null;
+
+  if (Array.isArray(raw)) return raw.length;
+  if (raw && typeof raw === "object") {
+    const maybeCount = raw.count ?? raw.total ?? raw.length ?? null;
+    if (typeof maybeCount === "number") return maybeCount;
+    if (typeof maybeCount === "string" && maybeCount.trim()) {
+      const n = Number(maybeCount);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "string") {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+};
+
 const parseId = (rawId) => {
   const id = String(rawId || "");
   if (id.startsWith("col-drop-")) return { type: "column-drop", id: id.slice(9) };
@@ -99,8 +126,32 @@ const dropAnimation = {
   }),
 };
 
-const TaskCard = memo(function TaskCard({ task, columnId, onTaskClick }) {
+const isTaskCompleted = (task) =>
+  !!task?.is_completed ||
+  String(task?.status || "").toLowerCase() === "done" ||
+  String(task?.status || "").toLowerCase() === "completed";
+
+const getTaskDueValue = (task) =>
+  task?.due_at ?? task?.dueAt ?? task?.due_date ?? task?.dueDate ?? task?.date ?? null;
+
+const formatTaskDate = (task) => {
+  const raw = getTaskDueValue(task);
+  if (!raw) return formatMonthDay(task?.created_at) || "";
+  const d = new Date(raw);
+  if (!Number.isNaN(d.getTime())) return formatMonthDay(raw) || "";
+  return String(raw);
+};
+
+const TaskCard = memo(function TaskCard({
+  task,
+  columnId,
+  onTaskClick,
+  flashCompleted,
+  enter,
+  enterIndex = 0,
+}) {
   if (!task) return null;
+  const completed = isTaskCompleted(task);
   const {
     attributes,
     listeners,
@@ -118,31 +169,36 @@ const TaskCard = memo(function TaskCard({ task, columnId, onTaskClick }) {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? "none" : transition || "transform 200ms ease",
     zIndex: isDragging ? 6 : 1,
+    ...(enter ? { "--enter-delay": `${Math.min(Number(enterIndex) || 0, 20) * 55}ms` } : null),
   };
 
   return (
-    <BoardItem
-      innerRef={setNodeRef}
-      style={style}
-      className={isDragging ? "is-dragging" : ""}
-      {...attributes}
-      {...listeners}
-      role="button"
-      tabIndex={0}
-      onClick={() => onTaskClick?.(task)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onTaskClick?.(task);
-        }
-      }}
-      taskTitle={task.title || task.name || task.text || "Task"}
-      taskBody={task.body || task.description || "-"}
-      taskDate={task.date || formatMonthDay(task.created_at) || ""}
-      taskFileAttachCount={task.files_count || task.attachments || "0"}
-      taskIcon={task.icon || "ti-device-desktop-analytics"}
-      taskUserImg={task.user_image || task.avatar || ""}
-    />
+      <BoardItem
+        innerRef={setNodeRef}
+        style={style}
+        className={`${isDragging ? "is-dragging" : ""} ${flashCompleted ? "task-completed-flash" : ""} ${
+          completed ? "task-completed" : ""
+        } ${enter ? "task-enter" : ""}`}
+        {...attributes}
+        {...listeners}
+        role="button"
+        tabIndex={0}
+        onClick={() => onTaskClick?.(task)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onTaskClick?.(task);
+          }
+        }}
+        taskTitle={task.title || task.name || task.text || "Task"}
+        taskBody={task.body || task.description || "-"}
+        taskDate={formatTaskDate(task)}
+        taskFileAttachCount={getTaskAttachmentCount(task) || "0"}
+        taskTags={task.tags ?? task.tag_list ?? task.task_tags ?? task.labels ?? []}
+        taskIcon={task.icon || "ti-device-desktop-analytics"}
+        taskUserImg={task.user_image || task.avatar || ""}
+        isCompleted={completed}
+      />
   );
 });
 
@@ -182,7 +238,11 @@ const Column = memo(function Column({
   onSubmitAddTask,
   activeTaskId,
   activeTaskHeight,
+  flashCompletedTaskIds,
+  enterTaskIds,
   onColumnNodeRef,
+  activeColumnId,
+  activeColumnSize,
 }) {
   const {
     attributes,
@@ -213,10 +273,23 @@ const Column = memo(function Column({
     [setNodeRef, onColumnNodeRef, column.id],
   );
 
+  const isActiveColumn =
+    activeColumnId != null &&
+    String(activeColumnId) === String(column.id);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? "none" : transition || "transform 220ms ease",
-    zIndex: isDragging ? 5 : 1,
+    zIndex: isDragging ? 50 : 1,
+    opacity: isDragging ? 0.95 : undefined,
+    boxShadow: isDragging ? "0 16px 32px rgba(0, 0, 0, 0.18)" : undefined,
+    width:
+      isActiveColumn && activeColumnSize?.width
+        ? `${activeColumnSize.width}px`
+        : undefined,
+    height:
+      isActiveColumn && activeColumnSize?.height
+        ? `${activeColumnSize.height}px`
+        : undefined,
   };
 
   const taskIds = column.taskIds || [];
@@ -258,11 +331,11 @@ const Column = memo(function Column({
           No tasks yet
         </div>
       ) : (
-        <SortableContext
-          items={sortableIds}
-          strategy={verticalListSortingStrategy}
-        >
-          {(displayIds || []).map((id) =>
+          <SortableContext
+            items={sortableIds}
+            strategy={verticalListSortingStrategy}
+          >
+          {(displayIds || []).map((id, index) =>
             id === placeholderId ? (
               <PlaceholderItem
                 key={placeholderId}
@@ -275,6 +348,9 @@ const Column = memo(function Column({
                 task={tasksById[id]}
                 columnId={column.id}
                 onTaskClick={onTaskClick}
+                flashCompleted={flashCompletedTaskIds?.has?.(String(id))}
+                enter={enterTaskIds?.has?.(String(id))}
+                enterIndex={index}
               />
             ),
           )}
@@ -335,14 +411,95 @@ const ProjectBoardColumns = ({
   const [activeTaskSize, setActiveTaskSize] = useState({ width: 0, height: 0 });
   const [addTaskColumnId, setAddTaskColumnId] = useState(null);
   const [addTaskText, setAddTaskText] = useState("");
+  const [flashCompletedTaskIds, setFlashCompletedTaskIds] = useState(() => new Set());
   const snapshotRef = useRef(null);
   const isDraggingRef = useRef(false);
   const columnNodeRefs = useRef({});
+  const completedByIdRef = useRef({});
+  const completeFlashTimeoutsRef = useRef({});
+  const [enterTaskIds, setEnterTaskIds] = useState(() => new Set());
+  const seenTaskIdsRef = useRef(new Set());
+  const enterTimeoutsRef = useRef({});
 
   useEffect(() => {
     if (isDraggingRef.current) return;
-    setBoard(normalizeBoard(columnsProp));
+    const nextBoard = normalizeBoard(columnsProp);
+
+    const prevCompletedById = completedByIdRef.current || {};
+    const nextCompletedById = {};
+    const toFlash = [];
+
+    Object.keys(nextBoard.tasksById || {}).forEach((id) => {
+      const nextCompleted = isTaskCompleted(nextBoard.tasksById[id]);
+      nextCompletedById[id] = nextCompleted;
+      if (!prevCompletedById[id] && nextCompleted) {
+        toFlash.push(id);
+      }
+    });
+
+    if (toFlash.length) {
+      setFlashCompletedTaskIds((prev) => {
+        const next = new Set(prev);
+        toFlash.forEach((id) => next.add(id));
+        return next;
+      });
+
+      toFlash.forEach((id) => {
+        if (completeFlashTimeoutsRef.current[id]) {
+          clearTimeout(completeFlashTimeoutsRef.current[id]);
+        }
+        completeFlashTimeoutsRef.current[id] = setTimeout(() => {
+          setFlashCompletedTaskIds((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+          delete completeFlashTimeoutsRef.current[id];
+        }, 1100);
+      });
+    }
+
+    completedByIdRef.current = nextCompletedById;
+    setBoard(nextBoard);
+
+    const newIds = [];
+    Object.keys(nextBoard.tasksById || {}).forEach((id) => {
+      if (seenTaskIdsRef.current.has(id)) return;
+      seenTaskIdsRef.current.add(id);
+      newIds.push(id);
+    });
+
+    if (newIds.length) {
+      setEnterTaskIds((prev) => {
+        const next = new Set(prev);
+        newIds.forEach((id) => next.add(id));
+        return next;
+      });
+
+      newIds.forEach((id) => {
+        if (enterTimeoutsRef.current[id]) clearTimeout(enterTimeoutsRef.current[id]);
+        enterTimeoutsRef.current[id] = setTimeout(() => {
+          setEnterTaskIds((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+          delete enterTimeoutsRef.current[id];
+        }, 650);
+      });
+    }
   }, [columnsProp]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(completeFlashTimeoutsRef.current || {}).forEach((t) => clearTimeout(t));
+      completeFlashTimeoutsRef.current = {};
+      Object.values(enterTimeoutsRef.current || {}).forEach((t) => clearTimeout(t));
+      enterTimeoutsRef.current = {};
+    };
+  }, []);
 
   const columnIds = useMemo(
     () => board.columns.map((c) => `col-${c.id}`),
@@ -644,7 +801,11 @@ const ProjectBoardColumns = ({
               onSubmitAddTask={submitAddTask}
               activeTaskId={activeType === "task" ? activeTaskId : null}
               activeTaskHeight={activeTaskSize.height}
+              flashCompletedTaskIds={flashCompletedTaskIds}
+              enterTaskIds={enterTaskIds}
               onColumnNodeRef={handleColumnNodeRef}
+              activeColumnId={activeType === "column" ? parseId(activeId).id : null}
+              activeColumnSize={activeTaskSize}
             />
           ))}
         </div>
@@ -673,9 +834,14 @@ const ProjectBoardColumns = ({
                   ""
                 }
                 taskFileAttachCount={
-                  board.tasksById[activeTaskId]?.files_count ||
-                  board.tasksById[activeTaskId]?.attachments ||
-                  "0"
+                  getTaskAttachmentCount(board.tasksById[activeTaskId]) || "0"
+                }
+                taskTags={
+                  board.tasksById[activeTaskId]?.tags ??
+                  board.tasksById[activeTaskId]?.tag_list ??
+                  board.tasksById[activeTaskId]?.task_tags ??
+                  board.tasksById[activeTaskId]?.labels ??
+                  []
                 }
                 taskIcon={
                   board.tasksById[activeTaskId]?.icon || "ti-device-desktop-analytics"
@@ -688,13 +854,13 @@ const ProjectBoardColumns = ({
               />
             </div>
           ) : null}
-
           {activeType === "column" && activeId ? (() => {
             const columnId = parseId(activeId).id;
             const column = board.columns.find(
               (c) => String(c.id) === String(columnId),
             );
             if (!column) return null;
+            const taskIds = column.taskIds || [];
             return (
               <div
                 style={{
@@ -706,7 +872,30 @@ const ProjectBoardColumns = ({
                   className="is-drag-overlay"
                   columnTitle={column.title || column.name || "Column"}
                   color={column.color}
-                />
+                >
+                  {taskIds.length ? (
+                    taskIds.map((id) => {
+                      const task = board.tasksById[id];
+                      if (!task) return null;
+                      return (
+                        <BoardItem
+                          key={id}
+                          taskTitle={task.title || task.name || task.text || "Task"}
+                          taskBody={task.body || task.description || "-"}
+                          taskDate={task.date || formatMonthDay(task.created_at) || ""}
+                          taskFileAttachCount={getTaskAttachmentCount(task) || "0"}
+                          taskTags={task.tags ?? task.tag_list ?? task.task_tags ?? task.labels ?? []}
+                          taskIcon={task.icon || "ti-device-desktop-analytics"}
+                          taskUserImg={task.user_image || task.avatar || ""}
+                        />
+                      );
+                    })
+                  ) : (
+                    <div className="d-flex align-items-center justify-content-center py-3 text-muted">
+                      No tasks yet
+                    </div>
+                  )}
+                </BoardColumn>
               </div>
             );
           })() : null}

@@ -38,7 +38,7 @@ const ActionDropdown = ({
         right: 0,
         margin: 0,
         zIndex: 1060,
-        minWidth: 180,
+        minWidth: 240,
       }}
     >
       {actions.length !== 0
@@ -53,7 +53,7 @@ const ActionDropdown = ({
               <button
                 key={a.key ?? index}
                 type="button"
-                className={`dropdown-item d-flex align-items-center py-1 px-2 ${
+                className={`dropdown-item d-flex align-items-center justify-content-between py-1 px-2 ${
                   a.destructive ? "text-danger" : ""
                 }`}
                 disabled={!!a.disabled}
@@ -64,13 +64,13 @@ const ActionDropdown = ({
                   onToggle(false);
                 }}
               >
-                {a.icon ? <i className={`ti ${a.icon} pe-2`}></i> : null}
-                <span>{a.label}</span>
+                <span className="text-truncate">{a.label}</span>
+                {a.icon ? <i className={`ti ${a.icon} fs-5`}></i> : null}
               </button>
             );
           })
         : null}
-        {children}
+      {children}
     </div>
   );
 };

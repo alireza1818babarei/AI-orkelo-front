@@ -3,6 +3,7 @@ import {getLocalStorageItem} from "@/_helper/index.js";
 import {Link} from 'react-router-dom'
 
 const themeName = "La-Theme";
+const COLOR_CLASSES = ["default", "gold", "warm", "happy", "nature", "cold", "hot"];
 
 const setLocalStorageItem = (key, value) => {
     localStorage.setItem(`${themeName}-${key}`, value);
@@ -17,6 +18,17 @@ function rgbToHex(r, g, b) {
     return '#' + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
+const setBootstrapThemeVars = ({primaryRgb, secondaryRgb}) => {
+    if (primaryRgb) {
+        document.documentElement.style.setProperty("--bs-primary-rgb", primaryRgb);
+        document.documentElement.style.setProperty("--bs-primary", `rgb(${primaryRgb})`);
+    }
+    if (secondaryRgb) {
+        document.documentElement.style.setProperty("--bs-secondary-rgb", secondaryRgb);
+        document.documentElement.style.setProperty("--bs-secondary", `rgb(${secondaryRgb})`);
+    }
+};
+
 const Customizer = () => {
     const [sidebarOption, setSidebarOption] = useState(getLocalStorageItem("sidebar-option", "vertical-sidebar"));
     const [layoutOption, setLayoutOption] = useState(getLocalStorageItem("layout-option", "ltr"));
@@ -24,19 +36,43 @@ const Customizer = () => {
     const [textOption, setTextOption] = useState(getLocalStorageItem("text-option", "medium-text"));
 
     useEffect(() => {
-        const loadConfiguration = () => {
-            setSidebarOption(getLocalStorageItem("sidebar-option", "vertical-sidebar"));
-            setLayoutOption(getLocalStorageItem("layout-option", "ltr"));
-            setColorOption(getLocalStorageItem("color-option", "default"));
-            setTextOption(getLocalStorageItem("text-option", "medium-text"));
-        };
+        const storedSidebar = getLocalStorageItem("sidebar-option", "vertical-sidebar");
+        const storedLayout = getLocalStorageItem("layout-option", "ltr");
+        const storedColor = getLocalStorageItem("color-option", "default");
+        const storedText = getLocalStorageItem("text-option", "medium-text");
 
-        $("nav").removeClass('dark-sidebar').addClass(sidebarOption);
-        $("body").attr("text", textOption);
-        $("body").attr("class", layoutOption);
-        $("html").attr("dir", layoutOption);
-        $(".app-wrapper").addClass(`${colorOption}`)
-        loadConfiguration();
+        setSidebarOption(storedSidebar);
+        setLayoutOption(storedLayout);
+        setColorOption(storedColor);
+        setTextOption(storedText);
+
+        $("nav").removeClass("dark-sidebar").addClass(storedSidebar);
+        $("body").attr("text", storedText);
+        $("body").attr("class", storedLayout);
+        $("html").attr("dir", storedLayout);
+        if (storedLayout === "box-layout") {
+            $("html").removeAttr("dir");
+        }
+
+        const appWrapper = document.querySelector(".app-wrapper");
+        if (appWrapper) {
+            COLOR_CLASSES.forEach((c) => appWrapper.classList.remove(c));
+            appWrapper.classList.add(storedColor);
+        }
+
+        COLOR_CLASSES.forEach((c) => document.documentElement.classList.remove(c));
+        document.documentElement.classList.add(storedColor);
+
+        const tempElement = document.createElement("div");
+        tempElement.className = storedColor;
+        tempElement.style.display = "none";
+        document.body.appendChild(tempElement);
+
+        const primaryRgb = getComputedStyle(tempElement).getPropertyValue("--primary").trim();
+        const secondaryRgb = getComputedStyle(tempElement).getPropertyValue("--secondary").trim();
+        setBootstrapThemeVars({primaryRgb, secondaryRgb});
+
+        document.body.removeChild(tempElement);
     }, []);
 
     const handleSidebarOptionChange = (option) => {
@@ -57,24 +93,21 @@ const Customizer = () => {
 
     const handleColorOptionChange = (option) => {
         setColorOption(option);
-        let colorOption = getLocalStorageItem("color-option", "default");
-
-        // Remove previous color class and add the new one
         const appWrapper = document.querySelector(".app-wrapper");
         if (appWrapper) {
-            appWrapper.classList.remove(colorOption);
+            COLOR_CLASSES.forEach((c) => appWrapper.classList.remove(c));
             appWrapper.classList.add(option);
         }
 
-        // Create a temporary element to access the CSS variables
+        COLOR_CLASSES.forEach((c) => document.documentElement.classList.remove(c));
+        document.documentElement.classList.add(option);
+
         const tempElement = document.createElement("div");
         tempElement.className = option;
-        tempElement.style.display = "none"; // Hide the element
+        tempElement.style.display = "none";
         document.body.appendChild(tempElement);
 
-        // Get primary color values
         const primaryColorValue = getComputedStyle(tempElement).getPropertyValue('--primary').trim();
-        console.log('Primary Color Value:', primaryColorValue);
 
         if (primaryColorValue) {
             let primaryColorValues = primaryColorValue.split(',');
@@ -86,13 +119,9 @@ const Customizer = () => {
                 );
                 setLocalStorageItem("color-primary", primaryColorHex);
             }
-        } else {
-            console.error(`--primary is undefined for class: ${option}`);
         }
 
-        // Get secondary color values
         const secondaryColorValue = getComputedStyle(tempElement).getPropertyValue('--secondary').trim();
-        console.log('Secondary Color Value:', secondaryColorValue);
 
         if (secondaryColorValue) {
             let secondaryColorValues = secondaryColorValue.split(',');
@@ -104,11 +133,10 @@ const Customizer = () => {
                 );
                 setLocalStorageItem("color-secondary", secondaryColorHex);
             }
-        } else {
-            console.error(`--secondary is undefined for class: ${option}`);
         }
 
-        // Clean up the temporary element
+        setBootstrapThemeVars({primaryRgb: primaryColorValue, secondaryRgb: secondaryColorValue});
+
         document.body.removeChild(tempElement);
 
         setLocalStorageItem("color-option", option);

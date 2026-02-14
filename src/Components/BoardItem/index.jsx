@@ -5,13 +5,31 @@ const BoardItem = ({
   taskBody,
   taskDate,
   taskFileAttachCount,
+  taskTags,
   taskIcon,
   taskUserImg,
+  isCompleted = false,
   innerRef,
   className = "",
   style,
   ...rest
 }) => {
+  const normalizeTags = (value) => {
+    const v = value?.data ?? value ?? [];
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string") {
+      return v
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((name) => ({ name }));
+    }
+    return [];
+  };
+
+  const tags = normalizeTags(taskTags);
+  const getTagName = (t) => t?.name ?? t?.title ?? t?.label ?? t?.text ?? String(t ?? "");
+
   return (
     <div
       ref={innerRef}
@@ -23,22 +41,64 @@ const BoardItem = ({
         <div className="gap-1 d-flex flex-column">
           <div className="d-flex justify-content-between align-items-center">
             <div>
-              <span className="badge text-light-success f-s-13">
+              <div className="fw-semibold text-dark text-truncate board-item-title">
                 {taskTitle}
-              </span>
+              </div>
             </div>
-            <div className="h-35 w-35 d-flex-center b-r-50 overflow-hidden text-bg-primary">
-              {/* FIXME Task User img */}
-              <img
-                src={taskUserImg || "/assets/images/avtar/3.png"}
-                alt=""
-                className="img-fluid"
-              />
+            <div className="d-flex align-items-center gap-1">
+              {isCompleted ? (
+                <span
+                  className="text-success"
+                  title="Completed"
+                  aria-label="Completed"
+                >
+                  <i className="ti ti-circle-check f-s-18" />
+                </span>
+              ) : null}
+              <div className="h-35 w-35 d-flex-center b-r-50 overflow-hidden text-bg-primary">
+                {/* FIXME Task User img */}
+                <img
+                  src={taskUserImg || "/assets/images/avtar/3.png"}
+                  alt=""
+                  className="img-fluid"
+                />
+              </div>
             </div>
           </div>
           <div>
-            <p>{taskBody}</p>
+            <div
+              className="text-muted small board-item-desc"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+              title={taskBody || ""}
+            >
+              {taskBody || ""}
+            </div>
           </div>
+
+          <div className="d-flex flex-wrap gap-1">
+            {tags.length ? (
+              tags.map((t, idx) => (
+                <span
+                  key={t?.id ?? `${getTagName(t)}-${idx}`}
+                  className="badge bg-light-primary text-primary"
+                  style={{ maxWidth: 110 }}
+                  title={getTagName(t)}
+                >
+                  <span className="text-truncate d-inline-block" style={{ maxWidth: 110 }}>
+                    {getTagName(t)}
+                  </span>
+                </span>
+              ))
+            ) : (
+              <span className="text-muted small">No tag</span>
+            )}
+          </div>
+
           <div className="d-flex align-items-center justify-content-between">
             <div>
               <span className=" text-secondary me-2">

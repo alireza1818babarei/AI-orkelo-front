@@ -1,54 +1,96 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader, Form, FormGroup, Input, Label } from "reactstrap";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Modal, ModalBody, Spinner } from "reactstrap";
 import api from "../../api/axios";
 import { alertConfirm, alertSuccess, toastError } from "../../utils/sweetAlert";
 import ActionDropdown from "../ActionDropdown";
-import { useDispatch, useSelector } from "react-redux";
-import { createTaskCommentThunk, getTaskCommentsThunk } from "../../store/tasks/commentSlice";
-import { formatCommentTimestamp } from "../../services/dateTime";
+import { useDispatch } from "react-redux";
+import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
 import TaskModalPlaceHolder from "../TaskModalPlaceHolder";
+import Flatpickr from "react-flatpickr";
+import TaskActivityConversation from "./TaskActivityConversation";
+import TaskAttachments from "./TaskAttachments";
+import TaskTagsDropdown from "./TaskTagsDropdown";
+import TaskWatchersDropdown from "./TaskWatchersDropdown";
 
 const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   const t = task || {};
+  const deriveCompleted = (obj) =>
+    !!obj?.is_completed ||
+    String(obj?.status || "").toLowerCase() === "done" ||
+    String(obj?.status || "").toLowerCase() === "completed";
+  const deriveDueAt = (obj) =>
+    obj?.due_at ??
+    obj?.dueAt ??
+    obj?.due_date ??
+    obj?.dueDate ??
+    obj?.date ??
+    null;
+  const deriveCompletedAt = (obj) =>
+    obj?.completed_at ??
+    obj?.completedAt ??
+    obj?.done_at ??
+    obj?.doneAt ??
+    obj?.finished_at ??
+    obj?.finishedAt ??
+    null;
+  const formatDateTime = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
   const [description, setDescription] = useState(t.description || "");
   const [savedDescription, setSavedDescription] = useState(t.description || "");
+  const [taskText, setTaskText] = useState(t.text || t.title || "");
+  const [savedTaskText, setSavedTaskText] = useState(t.text || t.title || "");
+  const taskTextInputRef = useRef(null);
+  const skipNextTaskTextBlurSaveRef = useRef(false);
+  const [taskCompleting, setTaskCompleting] = useState(false);
+  const [taskCompleted, setTaskCompleted] = useState(deriveCompleted(t));
+  const [taskCompletedAt, setTaskCompletedAt] = useState(deriveCompletedAt(t));
+  const [dueAt, setDueAt] = useState(deriveDueAt(t));
+  const [savedDueAt, setSavedDueAt] = useState(deriveDueAt(t));
+  const duePickerInstanceRef = useRef(null);
+  const [createdAt, setCreatedAt] = useState(t.created_at ?? null);
+  const [updatedAt, setUpdatedAt] = useState(t.updated_at ?? null);
   const [checklistItems, setChecklistItems] = useState([]);
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [checklistBusyId, setChecklistBusyId] = useState(null);
   const [subInputById, setSubInputById] = useState({});
   const [rootInput, setRootInput] = useState("");
   const [showRootInput, setShowRootInput] = useState(false);
-  const [commentText, setCommentText] = useState("");
   const [hoveredChecklistId, setHoveredChecklistId] = useState(null);
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const dispatch = useDispatch();
   const [actionOpen, setActionOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editText, setEditText] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editStatus, setEditStatus] = useState("active");
   const actionRef = useRef(null);
+
+  const bumpActivity = () => setActivityRefreshKey((k) => k + 1);
 
   const taskId = useMemo(
     () => t?.id ?? t?.task_id ?? t?.uuid ?? null,
     [t?.id, t?.task_id, t?.uuid],
   );
+  const taskColumnId = t?.column_id ?? t?.column?.id ?? null;
+  const getTaskUpdateUrl = () => {
+    if (!projectId || !taskId) return null;
+    return taskColumnId
+      ? `/projects/${projectId}/columns/${taskColumnId}/tasks/${taskId}`
+      : `/projects/${projectId}/tasks/${taskId}`;
+  };
+  const updateTask = async (payload) => {
+    const url = getTaskUpdateUrl();
+    if (!url) return;
+    return api.patch(url, payload);
+  };
 
-  const commentsState = useSelector((s) => s.comments);
-  const comments =
-    commentsState?.taskId === taskId && commentsState?.projectId === projectId
-      ? commentsState?.items || []
-      : [];
-  const commentsLoading = commentsState?.status === "loading";
-  const commentsSubmitting = commentsState?.status === "saving";
-  const getCommentAuthor = (c) =>
-    c?.user?.name ||
-    c?.user?.full_name ||
-    c?.user?.username ||
-    c?.author?.name ||
-    c?.created_by?.name ||
-    c?.created_by_name ||
-    c?.creator?.name ||
-    "User";
+  // comments + activity are rendered in TaskActivityConversation
 
   const isSaveCombo = (e) => e.key === "Enter" && !e.shiftKey;
 
@@ -80,12 +122,16 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       return item;
     });
 
+  useLayoutEffect(() => {
+    if (!isOpen || !taskId || !projectId) return;
+    setChecklistItems([]);
+    setChecklistLoading(true);
+  }, [isOpen, taskId, projectId]);
+
   useEffect(() => {
     if (!isOpen || !taskId || !projectId) return;
     const load = async () => {
       try {
-        setChecklistItems([]);
-        setChecklistLoading(true);
         const res = await api.get(
           `/projects/${projectId}/tasks/${taskId}/checklist-items`,
         );
@@ -105,18 +151,34 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   }, [isOpen, taskId, projectId]);
 
   useEffect(() => {
-    if (!isOpen || !taskId || !projectId) return;
-    dispatch(getTaskCommentsThunk({ projectId, taskId }));
-  }, [dispatch, isOpen, taskId, projectId]);
-
-  useEffect(() => {
     const next = t.description || "";
     setDescription(next);
     setSavedDescription(next);
-    setEditText(t.text || t.title || "");
-    setEditDescription(t.description || "");
-    setEditStatus(t.status || "active");
-  }, [t.description, t.id, t.task_id]);
+    const nextText = t.text || t.title || "";
+    setTaskText(nextText);
+    setSavedTaskText(nextText);
+    setTaskCompleted(deriveCompleted(t));
+    setTaskCompletedAt(deriveCompletedAt(t));
+    const nextDueAt = deriveDueAt(t);
+    setDueAt(nextDueAt);
+    setSavedDueAt(nextDueAt);
+    setCreatedAt(t.created_at ?? null);
+    setUpdatedAt(t.updated_at ?? null);
+  }, [
+    t.description,
+    t.text,
+    t.title,
+    t.status,
+    t.is_completed,
+    t.completed_at,
+    t.created_at,
+    t.updated_at,
+    t.due_at,
+    t.due_date,
+    t.date,
+    t.id,
+    t.task_id,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -130,6 +192,56 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     const id = requestAnimationFrame(resize);
     return () => cancelAnimationFrame(id);
   }, [isOpen, checklistItems]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (e) => {
+      const input = taskTextInputRef.current;
+      if (!input) return;
+      if (document.activeElement !== input) return;
+      if (input.contains(e.target)) return;
+      input.blur();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !projectId || !taskId) return;
+    if (createdAt && updatedAt) return;
+
+    const loadMeta = async () => {
+      try {
+        const res = await api.get(`/projects/${projectId}/tasks/${taskId}`);
+        const payload = res?.data?.data ?? res?.data ?? null;
+        const fetched = payload?.task ?? payload?.data?.task ?? payload ?? null;
+        if (!fetched || typeof fetched !== "object") return;
+
+        const nextCreated = fetched?.created_at ?? null;
+        const nextUpdated = fetched?.updated_at ?? null;
+        if (nextCreated) setCreatedAt(nextCreated);
+        if (nextUpdated) setUpdatedAt(nextUpdated);
+
+        const patch = {};
+        if (nextCreated) patch.created_at = nextCreated;
+        if (nextUpdated) patch.updated_at = nextUpdated;
+        if (Object.keys(patch).length) {
+          dispatch(
+            updateTaskInColumn({
+              columnId: taskColumnId,
+              taskId,
+              patch,
+            }),
+          );
+        }
+      } catch {
+        // ignore: meta is optional; board will eventually refresh from other calls
+      }
+    };
+
+    loadMeta();
+  }, [isOpen, projectId, taskId, createdAt, updatedAt, dispatch, taskColumnId]);
 
   const createChecklistItem = async ({ text, parentId = null }) => {
     if (!projectId || !taskId) return;
@@ -152,6 +264,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       setChecklistItems((prev) =>
         parentId ? addChildToTree(prev, parentId, nextItem) : [...prev, nextItem],
       );
+      bumpActivity();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -165,8 +278,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
 
   const updateChecklistText = async (item, text) => {
     if (!projectId || !taskId || !item?.id) return;
-    const effectiveTaskId = item.task_id ?? item.task?.id ?? taskId;
-    const effectiveProjectId = item.project_id ?? projectId;
     const trimmed = text.trim();
     if (!trimmed) return;
     const current = (item._savedText ?? item.text ?? "").trim();
@@ -174,7 +285,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     try {
       setChecklistBusyId(item.id);
       await api.patch(
-        `/projects/${effectiveProjectId}/tasks/${effectiveTaskId}/checklist-items/${item.id}`,
+        `/projects/${projectId}/tasks/${taskId}/checklist-items/${item.id}`,
         { text },
       );
       setChecklistItems((prev) =>
@@ -196,15 +307,21 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   };
 
   const updateTaskDescription = async (text) => {
-    if (!projectId || !taskId) return;
+    const url = getTaskUpdateUrl();
+    if (!url) return;
     const trimmed = text.trim();
-    if (!trimmed) return;
     const current = (savedDescription ?? "").trim();
     if (current === trimmed) return;
     try {
-      await api.patch(`/projects/${projectId}/tasks/${taskId}`, {
-        description: text,
-      });
+      await updateTask({ description: text });
+      dispatch(
+        updateTaskInColumn({
+          columnId: taskColumnId,
+          taskId,
+          patch: { description: text },
+        }),
+      );
+      bumpActivity();
       setSavedDescription(text);
     } catch (err) {
       const msg =
@@ -215,31 +332,74 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     }
   };
 
-  const openEditModal = () => {
-    setEditText(t.text || t.title || "");
-    setEditDescription(t.description || "");
-    setEditStatus(t.status || "active");
-    setEditOpen(true);
-  };
 
-  const submitEdit = async (e) => {
-    e.preventDefault();
-    if (!projectId || !taskId) return;
+  const updateTaskText = async (text) => {
+    const url = getTaskUpdateUrl();
+    if (!url) return;
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setTaskText(savedTaskText);
+      return;
+    }
+    const current = (savedTaskText ?? "").trim();
+    if (current === trimmed) return;
     try {
-      await api.patch(`/projects/${projectId}/tasks/${taskId}`, {
-        text: editText,
-        description: editDescription,
-        status: editStatus,
-      });
-      setSavedDescription(editDescription);
-      setDescription(editDescription);
-      setEditOpen(false);
+      await updateTask({ text: trimmed });
+      dispatch(
+        updateTaskInColumn({
+          columnId: taskColumnId,
+          taskId,
+          patch: { text: trimmed, title: trimmed },
+        }),
+      );
+      bumpActivity();
+      setSavedTaskText(trimmed);
+      setTaskText(trimmed);
     } catch (err) {
       const msg =
+        err?.message ||
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         "Update task failed";
       toastError(msg);
+      setTaskText(savedTaskText);
+    }
+  };
+
+  const updateTaskDueAt = async (isoValue) => {
+    const url = getTaskUpdateUrl();
+    if (!url) return;
+    if ((savedDueAt ?? "") === (isoValue ?? "")) return;
+    try {
+      await updateTask({ due_at: isoValue });
+      dispatch(
+        updateTaskInColumn({
+          columnId: taskColumnId,
+          taskId,
+          patch: { due_at: isoValue },
+        }),
+      );
+      bumpActivity();
+      setSavedDueAt(isoValue);
+      setDueAt(isoValue);
+    } catch (err) {
+      toastError(err?.message || "Update due date failed");
+      setDueAt(savedDueAt);
+    }
+  };
+
+  const handleClose = () => {
+    const active = document.activeElement;
+    if (active && typeof active.blur === "function") {
+      active.blur();
+    }
+    onClose?.();
+  };
+
+  const openDuePicker = () => {
+    const inst = duePickerInstanceRef.current;
+    if (inst && typeof inst.open === "function") {
+      inst.open();
     }
   };
 
@@ -274,12 +434,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
 
   const toggleChecklistItem = async (item, checked) => {
     if (!projectId || !taskId || !item?.id) return;
-    const effectiveTaskId = item.task_id ?? item.task?.id ?? taskId;
-    const effectiveProjectId = item.project_id ?? projectId;
     try {
       setChecklistBusyId(item.id);
       await api.patch(
-        `/projects/${effectiveProjectId}/tasks/${effectiveTaskId}/checklist-items/${item.id}`,
+        `/projects/${projectId}/tasks/${taskId}/checklist-items/${item.id}`,
         { is_completed: checked ? 1 : 0 },
       );
       setChecklistItems((prev) =>
@@ -288,6 +446,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
           is_completed: checked ? 1 : 0,
         })),
       );
+      bumpActivity();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -314,6 +473,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
             children: removeFromTree(i.children || []),
           }));
       setChecklistItems((prev) => removeFromTree(prev));
+      bumpActivity();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -325,19 +485,39 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     }
   };
 
-  const submitComment = async () => {
-    if (!projectId || !taskId) return;
-    const text = commentText.trim();
-    if (!text) return;
+  const handleCompleteTask = async () => {
+    if (taskCompleted || taskCompleting) return;
+    const url = getTaskUpdateUrl();
+    if (!url) return;
     try {
-      await dispatch(createTaskCommentThunk({ projectId, taskId, text })).unwrap();
-      setCommentText("");
+      setTaskCompleting(true);
+      let res;
+      try {
+        res = await updateTask({ status: "done" });
+      } catch (err) {
+        try {
+          res = await updateTask({ is_completed: 1 });
+        } catch (err2) {
+          res = await api.patch(`${url}/complete`);
+        }
+      }
+      const updated = res?.data?.data ?? res?.data ?? { status: "done" };
+      dispatch(
+        updateTaskInColumn({
+          columnId: taskColumnId,
+          taskId,
+          patch: updated,
+        }),
+      );
+      setTaskCompleted(deriveCompleted(updated) || true);
+      const completedAt = deriveCompletedAt(updated) ?? new Date().toISOString();
+      setTaskCompletedAt(completedAt);
+      alertSuccess("Task completed");
+      bumpActivity();
     } catch (err) {
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Create comment failed";
-      toastError(msg);
+      toastError(err?.message || "Complete task failed");
+    } finally {
+      setTaskCompleting(false);
     }
   };
 
@@ -494,19 +674,40 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
 
   return (
     <>
-    <Modal isOpen={isOpen} toggle={onClose} size="lg">
+    <Modal isOpen={isOpen} toggle={handleClose} size="lg">
       <div className="d-flex justify-content-between p-4 border border-bottom-1 rounded-top">
         <div className="d-flex align-items-end gap-2">
-          <button className="btn btn-outline-primary">
-            <i className="ti ti-check me-1"></i>
-            Complete Task
-          </button>
-          <button type="button" className="btn text-muted">
-            <i className="ti ti-user-plus me-1 fs-4"></i>
-            Assign
-          </button>
+          {taskCompleted ? (
+            <div className="d-flex align-items-center gap-2">
+              <span className="badge bg-success px-3 py-2">Completed</span>
+              {taskCompletedAt ? (
+                <span className="text-muted small">{formatDateTime(taskCompletedAt)}</span>
+              ) : null}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-outline-primary"
+              onClick={handleCompleteTask}
+              disabled={taskCompleting}
+            >
+              <i className="ti ti-check me-1"></i>
+              Complete Task
+            </button>
+          )}
+          {!taskCompleted ? (
+            <button type="button" className="btn text-muted">
+              <i className="ti ti-user-plus me-1 fs-4"></i>
+              Assign
+            </button>
+          ) : null}
         </div>
         <div className="ms-auto d-flex gap-2">
+          {checklistLoading ? (
+            <div className="d-flex align-items-center px-2">
+              <Spinner size="sm" color="primary" />
+            </div>
+          ) : null}
           <button type="button" className="btn text-muted icon-btn b-r-100">
             <i className="ti ti-pin fs-4"></i>
           </button>
@@ -528,14 +729,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
               onToggle={setActionOpen}
               rootRef={actionRef}
               actions={[
-                { key: "edit", label: "Edit", icon: "ti-pencil", onClick: openEditModal },
-                { type: "divider" },
                 { key: "delete", label: "Delete", icon: "ti-trash", destructive: true, onClick: deleteTask },
               ]}
             />
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             type="button"
             className="btn text-muted icon-btn b-r-100"
           >
@@ -544,18 +743,35 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
         </div>
       </div>
 
-      <ModalBody className="pt-2 pb-lg-5">
+      <ModalBody style={{ paddingRight: 0, paddingTop: 0, paddingBottom: 0 }}>
         {checklistLoading ? (
           <TaskModalPlaceHolder/>
         ) : (
           <div className="row g-4">
-            <div className="col-12 col-lg-8">
+            <div className="col-12 col-lg-8 pt-2 pb-5" style={{paddingRight: 0}}>
               <div className="pb-3">
                 <input
+                  ref={taskTextInputRef}
                   type="text"
                   className="form-control f-s-16 border-0 mb-3"
                   placeholder="Task title"
-                  defaultValue={t.text || t.title || ""}
+                  value={taskText}
+                  onChange={(e) => setTaskText(e.target.value)}
+                  onBlur={(e) => {
+                    if (skipNextTaskTextBlurSaveRef.current) {
+                      skipNextTaskTextBlurSaveRef.current = false;
+                      return;
+                    }
+                    updateTaskText(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.code === "NumpadEnter" || e.keyCode === 13) {
+                      e.preventDefault();
+                      updateTaskText(e.currentTarget.value);
+                      skipNextTaskTextBlurSaveRef.current = true;
+                      e.currentTarget.blur();
+                    }
+                  }}
                 />
                 <textarea
                   className="form-control f-s-14 border-0 autogrow-textarea"
@@ -583,7 +799,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
                 <div className="mt-2">{renderChecklist(checklistItems)}</div>
                 <button
                   type="button"
-                  className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-info"
+                  className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-primary"
                   onClick={() => {
                     setShowRootInput(true);
                     setRootInput("");
@@ -631,164 +847,127 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
                 ) : null}
               </div>
 
-              <div>
-                <button
-                  type="button"
-                  className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-info"
-                >
-                  <i className="fa-solid fa-plus fa-fw"></i>
-                  <span>Add attachment</span>
-                </button>
-              </div>
+              <TaskAttachments
+                projectId={projectId}
+                taskId={taskId}
+                columnId={taskColumnId}
+                onChanged={bumpActivity}
+                formatDateTime={formatDateTime}
+              />
 
-              <div className="pt-3">
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="fs-6">Activity</span>
-                </div>
-                <textarea
-                  className="form-control"
-                  rows="3"
-                  placeholder="Click to add a comment"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                ></textarea>
-                <div className="d-flex justify-content-between align-items-center">
-                  <small className="text-light-info small mt-2 align-self-start px-1 b-r-10">
-                    @to mention someone
-                  </small>
-                  <button
-                    type="button"
-                    className="btn btn-info m-2 px-2 py-0 b-r-5"
-                    onClick={submitComment}
-                    disabled={commentsSubmitting}
-                  >
-                    <i className="ti ti-arrow-right fs-5"></i>
-                  </button>
-                </div>
-                <div className="mt-3">
-                  {commentsLoading ? (
-                    <div className="text-muted small">Loading comments...</div>
-                  ) : comments.length ? (
-                    <div className="d-flex flex-column gap-2">
-                      {comments.map((c, idx) => (
-                        <div key={c.id ?? idx} className="bg-light rounded-3 p-2">
-                          <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="fw-semibold small">
-                              {getCommentAuthor(c)}
-                            </span>
-                            <span className="text-muted small">
-                              {formatCommentTimestamp(c.created_at)}
-                            </span>
-                          </div>
-                          <div className="small">
-                            {c.text ?? c.body ?? c.comment ?? "-"}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-muted small">No comments yet.</div>
-                  )}
-                </div>
-              </div>
+              <TaskActivityConversation
+                projectId={projectId}
+                taskId={taskId}
+                activityRefreshKey={activityRefreshKey}
+              />
             </div>
 
             <div className="col-12 col-lg-4">
-              <div className="bg-info-700 rounded-3 p-3 h-100">
+              <div className="bg-light-dark text-black p-3 h-100">
                 <div className="d-flex flex-column gap-3 mt-3">
                   <button
                     type="button"
-                    className="btn d-flex align-items-center justify-content-between px-0 text-white"
+                    className="btn d-flex align-items-center justify-content-between px-0 border-bottom"
+                    onClick={openDuePicker}
                   >
-                    <span className="d-flex align-items-center gap-2">
-                      <i className="ti ti-calendar fs-5"></i>
-                      Due date
+                    <span className="d-flex flex-column align-items-start">
+                      <span className="d-flex align-items-center gap-2">
+                        <i className="ti ti-calendar fs-5"></i>
+                        Due date
+                      </span>
+                      <span className="small">
+                        {dueAt ? formatDateTime(dueAt) : "Set date"}
+                      </span>
                     </span>
                     <i className="ti ti-chevron-down"></i>
                   </button>
-                  <button
-                    type="button"
-                    className="btn d-flex align-items-center justify-content-between px-0 text-white"
-                  >
-                    <span className="d-flex align-items-center gap-2">
-                      <i className="ti ti-tag fs-5"></i>
-                      Tags
-                    </span>
-                    <i className="ti ti-chevron-down"></i>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn d-flex align-items-center justify-content-between px-0 text-white"
-                  >
-                    <span className="d-flex align-items-center gap-2">
-                      <i className="ti ti-link fs-5"></i>
-                      Relations
-                    </span>
-                    <i className="ti ti-chevron-down"></i>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn d-flex align-items-center justify-content-between px-0 text-white"
-                  >
-                    <span className="d-flex align-items-center gap-2">
-                      <i className="ti ti-eye fs-5"></i>
-                      Watching
-                    </span>
-                    <i className="ti ti-chevron-down"></i>
-                  </button>
+                  <Flatpickr
+                    value={dueAt ? new Date(dueAt) : null}
+                    options={{
+                      enableTime: true,
+                      dateFormat: "Y-m-d H:i",
+                      time_24hr: true,
+                      allowInput: false,
+                    }}
+                    onReady={(_, __, instance) => {
+                      duePickerInstanceRef.current = instance;
+                    }}
+                    onChange={(selectedDates) => {
+                      const next = selectedDates?.[0] ? selectedDates[0].toISOString() : null;
+                      setDueAt(next);
+                      updateTaskDueAt(next);
+                    }}
+                    render={({ defaultValue, value, ...props }, ref) => (
+                      <input
+                        ref={ref}
+                        defaultValue={defaultValue}
+                        value={value ?? ""}
+                        readOnly
+                        {...props}
+                        style={{
+                          position: "absolute",
+                          width: 1,
+                          height: 1,
+                          opacity: 0,
+                          pointerEvents: "none",
+                        }}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      />
+                    )}
+                  />
+                  <TaskTagsDropdown projectId={projectId} />
+                  <TaskWatchersDropdown />
+
+                  <div className=" pt-2 border-top">
+                    <div className="d-flex flex-column gap-3">
+                      {createdAt ? (
+                        <div className="d-flex gap-2">
+                          <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
+                            <i className="ti ti-plus fs-5"></i>
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="small fw-semibold text-muted">Created</div>
+                            <div className="small text-muted">
+                              {formatDateTime(createdAt)}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {updatedAt ? (
+                        <div className="d-flex gap-2">
+                          <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
+                            <i className="ti ti-pencil fs-5"></i>
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="small fw-semibold text-muted">Updated</div>
+                            <div className="small text-muted">
+                              {formatDateTime(updatedAt)}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {taskId ? (
+                        <div className="d-flex gap-2">
+                          <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
+                            <i className="ti ti-id fs-5"></i>
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="small fw-semibold text-muted">Task ID</div>
+                            <div className="small text-muted text-truncate">{taskId}</div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
       </ModalBody>
-    </Modal>
-    <Modal isOpen={editOpen} toggle={() => setEditOpen(false)} centered>
-      <ModalHeader toggle={() => setEditOpen(false)}>Edit Task</ModalHeader>
-      <Form onSubmit={submitEdit}>
-        <ModalBody>
-          <FormGroup>
-            <Label for="task-edit-text">Text</Label>
-            <Input
-              id="task-edit-text"
-              type="text"
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label for="task-edit-description">Description</Label>
-            <Input
-              id="task-edit-description"
-              type="textarea"
-              rows="3"
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label for="task-edit-status">Status</Label>
-            <Input
-              id="task-edit-status"
-              type="select"
-              value={editStatus}
-              onChange={(e) => setEditStatus(e.target.value)}
-            >
-              <option value="active">Active</option>
-              <option value="deactive">Deactive</option>
-              <option value="done">Done</option>
-            </Input>
-          </FormGroup>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="secondary" type="button" onClick={() => setEditOpen(false)}>
-            Cancel
-          </Button>
-          <Button color="primary" type="submit">
-            Save
-          </Button>
-        </ModalFooter>
-      </Form>
     </Modal>
     </>
   );

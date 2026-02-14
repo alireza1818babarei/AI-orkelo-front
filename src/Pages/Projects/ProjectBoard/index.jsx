@@ -90,18 +90,35 @@ const ProjectBoard = () => {
           (t) => !removedSet.has(String(t.id ?? t.task_id ?? t.uuid)),
         );
       } else if (baseTasks && sliceTasks) {
-        const merged = [...baseTasks];
-        const seen = new Set(baseTasks.map((t) => String(t.id ?? t.task_id ?? t.uuid ?? t.text ?? "")));
-        sliceTasks.forEach((t) => {
-          const key = String(t.id ?? t.task_id ?? t.uuid ?? t.text ?? "");
-          if (!seen.has(key)) {
-            seen.add(key);
-            merged.push(t);
-          }
+        const getTaskKey = (t) =>
+          String(t?.id ?? t?.task_id ?? t?.uuid ?? t?.text ?? "");
+
+        const mergedByKey = new Map();
+        const order = [];
+        const seenKeys = new Set();
+        const pushKey = (key) => {
+          if (seenKeys.has(key)) return;
+          seenKeys.add(key);
+          order.push(key);
+        };
+
+        baseTasks.forEach((t) => {
+          const key = getTaskKey(t);
+          pushKey(key);
+          mergedByKey.set(key, t);
         });
-        next.tasks = merged.filter(
-          (t) => !removedSet.has(String(t.id ?? t.task_id ?? t.uuid)),
-        );
+
+        sliceTasks.forEach((t) => {
+          const key = getTaskKey(t);
+          const prev = mergedByKey.get(key);
+          pushKey(key);
+          mergedByKey.set(key, prev ? { ...prev, ...t } : t);
+        });
+
+        next.tasks = order
+          .map((k) => mergedByKey.get(k))
+          .filter(Boolean)
+          .filter((t) => !removedSet.has(String(t.id ?? t.task_id ?? t.uuid)));
       }
       return next;
     });
