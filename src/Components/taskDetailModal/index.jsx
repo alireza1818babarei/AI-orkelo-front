@@ -3,13 +3,14 @@ import { Modal, ModalBody, Spinner } from "reactstrap";
 import api from "../../api/axios";
 import { alertConfirm, alertSuccess, toastError } from "../../utils/sweetAlert";
 import ActionDropdown from "../ActionDropdown";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
 import TaskModalPlaceHolder from "../TaskModalPlaceHolder";
 import Flatpickr from "react-flatpickr";
 import TaskActivityConversation from "./TaskActivityConversation";
 import TaskAttachments from "./TaskAttachments";
 import TaskTagsDropdown from "./TaskTagsDropdown";
+import TaskAssigneeDropdown from "./TaskAssigneeDropdown";
 import TaskWatchersDropdown from "./TaskWatchersDropdown";
 
 const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
@@ -77,16 +78,30 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     () => t?.id ?? t?.task_id ?? t?.uuid ?? null,
     [t?.id, t?.task_id, t?.uuid],
   );
-  const taskColumnId = t?.column_id ?? t?.column?.id ?? null;
+  const taskColumnId = t?.column_id ?? t?.columnId ?? t?.column?.id ?? null;
+  const projectColumns = useSelector((s) => s.projectColumns?.items || []);
+
+  const resolvedColumnId = useMemo(() => {
+    if (taskColumnId != null) return taskColumnId;
+    if (!taskId) return null;
+
+    const matchesTask = (x) =>
+      String(x?.id ?? x?.task_id ?? x?.uuid ?? "") === String(taskId);
+
+    for (const col of projectColumns || []) {
+      const tasks = Array.isArray(col?.tasks) ? col.tasks : [];
+      if (tasks.some(matchesTask)) return col?.id ?? col?.column_id ?? null;
+    }
+    return null;
+  }, [taskColumnId, taskId, projectColumns]);
+
   const getTaskUpdateUrl = () => {
-    if (!projectId || !taskId) return null;
-    return taskColumnId
-      ? `/projects/${projectId}/columns/${taskColumnId}/tasks/${taskId}`
-      : `/projects/${projectId}/tasks/${taskId}`;
+    if (!projectId || !taskId || !resolvedColumnId) return null;
+    return `/projects/${projectId}/columns/${resolvedColumnId}/tasks/${taskId}`;
   };
   const updateTask = async (payload) => {
     const url = getTaskUpdateUrl();
-    if (!url) return;
+    if (!url) throw new Error("Project/column/task id missing");
     return api.patch(url, payload);
   };
 
@@ -308,7 +323,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
 
   const updateTaskDescription = async (text) => {
     const url = getTaskUpdateUrl();
-    if (!url) return;
+    if (!url) {
+      toastError("Project/column/task id missing");
+      return;
+    }
     const trimmed = text.trim();
     const current = (savedDescription ?? "").trim();
     if (current === trimmed) return;
@@ -316,7 +334,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       await updateTask({ description: text });
       dispatch(
         updateTaskInColumn({
-          columnId: taskColumnId,
+          columnId: resolvedColumnId,
           taskId,
           patch: { description: text },
         }),
@@ -335,7 +353,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
 
   const updateTaskText = async (text) => {
     const url = getTaskUpdateUrl();
-    if (!url) return;
+    if (!url) {
+      toastError("Project/column/task id missing");
+      return;
+    }
     const trimmed = text.trim();
     if (!trimmed) {
       setTaskText(savedTaskText);
@@ -347,7 +368,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       await updateTask({ text: trimmed });
       dispatch(
         updateTaskInColumn({
-          columnId: taskColumnId,
+          columnId: resolvedColumnId,
           taskId,
           patch: { text: trimmed, title: trimmed },
         }),
@@ -367,11 +388,20 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   };
 
   const updateTaskDueAt = async (isoValue) => {
-    const url = getTaskUpdateUrl();
-    if (!url) return;
+    if (!projectId || !taskId) return;
     if ((savedDueAt ?? "") === (isoValue ?? "")) return;
     try {
-      await updateTask({ due_at: isoValue });
+      try {
+        await api.patch(`/projects/${projectId}/tasks/${taskId}/due-time`, {
+          due_at: isoValue,
+          dueAt: isoValue,
+        });
+      } catch {
+        await api.post(`/projects/${projectId}/tasks/${taskId}/due-time`, {
+          due_at: isoValue,
+          dueAt: isoValue,
+        });
+      }
       dispatch(
         updateTaskInColumn({
           columnId: taskColumnId,
@@ -404,7 +434,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   };
 
   const deleteTask = async () => {
-    const columnId = t.column_id ?? t.column?.id ?? null;
+    const columnId = resolvedColumnId ?? t.column_id ?? t.columnId ?? t.column?.id ?? null;
     if (!projectId || !taskId || !columnId) {
       toastError("Project/column/task id missing");
       return;
@@ -487,24 +517,23 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
 
   const handleCompleteTask = async () => {
     if (taskCompleted || taskCompleting) return;
-    const url = getTaskUpdateUrl();
-    if (!url) return;
+    if (!projectId || !taskId) return;
     try {
       setTaskCompleting(true);
       let res;
       try {
-        res = await updateTask({ status: "done" });
+        res = resolvedColumnId ? await updateTask({ status: "done" }) : null;
       } catch (err) {
         try {
-          res = await updateTask({ is_completed: 1 });
+          res = resolvedColumnId ? await updateTask({ is_completed: 1 }) : null;
         } catch (err2) {
-          res = await api.patch(`${url}/complete`);
+          res = await api.patch(`/projects/${projectId}/tasks/${taskId}/complete`);
         }
       }
       const updated = res?.data?.data ?? res?.data ?? { status: "done" };
       dispatch(
         updateTaskInColumn({
-          columnId: taskColumnId,
+          columnId: resolvedColumnId,
           taskId,
           patch: updated,
         }),
@@ -696,10 +725,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
             </button>
           )}
           {!taskCompleted ? (
-            <button type="button" className="btn text-muted">
-              <i className="ti ti-user-plus me-1 fs-4"></i>
-              Assign
-            </button>
+            <TaskAssigneeDropdown
+              projectId={projectId}
+              taskId={taskId}
+              disabled={!projectId || !taskId}
+              variant="header"
+            />
           ) : null}
         </div>
         <div className="ms-auto d-flex gap-2">
@@ -916,8 +947,27 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
                       />
                     )}
                   />
-                  <TaskTagsDropdown projectId={projectId} />
-                  <TaskWatchersDropdown />
+                  <TaskTagsDropdown
+                    projectId={projectId}
+                    taskId={taskId}
+                    disabled={!projectId || !taskId}
+                    onChanged={(tags) => {
+                      if (!taskId) return;
+                      dispatch(
+                        updateTaskInColumn({
+                          columnId: taskColumnId,
+                          taskId,
+                          patch: { tags: Array.isArray(tags) ? tags : [] },
+                        }),
+                      );
+                      bumpActivity();
+                    }}
+                  />
+                  <TaskWatchersDropdown
+                    projectId={projectId}
+                    taskId={taskId}
+                    disabled={!projectId || !taskId}
+                  />
 
                   <div className=" pt-2 border-top">
                     <div className="d-flex flex-column gap-3">

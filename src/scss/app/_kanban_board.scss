@@ -1,4 +1,4 @@
-// >>-- 45 Kanban_board css start --<<
+// >>-- Kanban board (hello-pangea/dnd) --<<
 
 .kanban-board-container {
   overflow: auto;
@@ -10,98 +10,161 @@
   gap: 20px;
   padding: 0 10px;
   min-height: 200px;
+
   overflow-x: auto;
   overflow-y: hidden;
 }
+
+/* Column */
 .board-column {
   position: relative;
   width: 300px;
   flex: 0 0 300px;
   margin: 0;
   background: rgba(var(--secondary), 0.1);
-  border-radius: 3px;
+  border-radius: 8px;
   z-index: 1;
+
   transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease;
   will-change: transform;
-}
-.board-column {
-  &.muuri-item-releasing {
-    z-index: 2;
-  }
-  .muuri-item-dragging {
-    z-index: 3;
-    cursor: move;
-  }
 
   &.is-dragging {
-    transition: none;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
   }
 }
 
+/* Column Header */
 .board-column-header {
   position: relative;
   padding: 1rem;
-  border-top: none; border-radius: 8px 8px 0 0;
-  color: rgba(var(--dark), 0.75);
+  border-top: none;
+  border-radius: 8px 8px 0 0;
+  color: rgba(var(--dark), 0.9);
   font-weight: 600;
+  cursor: default;
 }
 
+// Drag handle: only the top strip of the header
+.board-column-drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  cursor: grab;
+  z-index: 2;
+}
+
+.board-column.is-dragging .board-column-drag-handle {
+  cursor: grabbing;
+}
+
+/* Column content wrapper */
 .board-column-content-wrapper {
   position: relative;
-  max-height: 640px;
-  overflow-y: auto;
-  &::-webkit-scrollbar {
-    position: absolute;
-    right: 0;
-    width: 4px;
-    height: 4px;
-    background-color: rgba(var(--secondary),0.1);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(var(--secondary),0.3);
-    border-radius: 20px;
-  }
-
+  // NOTE: @hello-pangea/dnd does not support nested scroll containers in dev.
+  // Keep columns non-scrollable (page scroll instead) to avoid DnD glitches.
+  overflow: visible;
+  max-height: none;
 }
-.board-column-content-wrapper {
-  position: relative;
-  max-height: 640px;
-  overflow-y: auto;
-}
+
 .board-column-content {
   position: relative;
   border: 10px solid transparent;
   min-height: 95px;
 }
 
+.board-column-content.is-over {
+  background: rgba(var(--secondary), 0.06);
+  border-radius: 10px;
+}
+
+.board-column-footer {
+  position: relative;
+}
+
+/* Task wrapper + handle */
+.board-item-shell {
+  position: relative;
+}
+
+.board-item-drag-handle {
+  position: absolute;
+  top: 12px;
+  left: 8px;
+  width: 18px;
+  height: 28px;
+  cursor: grab;
+  z-index: 2;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.board-item-drag-handle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: rgba(var(--secondary), 0.12);
+}
+
+/* Items */
 .board-item {
   position: relative;
   width: 100%;
   margin: 5px 0;
-  transition: transform 200ms ease;
-  will-change: transform;
+
+  &.is-dragging {
+    opacity: 0.6;
+  }
 }
 
-.board-item.is-dragging {
-  opacity: 0.4;
+/* Item Content */
+.board-item-content {
+  position: relative;
+  padding: 15px;
+  padding-left: 40px; // room for task drag handle
+  background: var(--white);
+  border-radius: 10px;
+  font-size: 17px;
+  cursor: pointer;
+  overflow: hidden;
+
+  .board-footer {
+    margin-top: 1rem;
+  }
+
+  h6 {
+    font-weight: 500;
+    margin-bottom: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
 }
 
+// Fix: if any ancestor creates a "fixed-position containing block" (transform/filter/etc),
+// dragging can be offset from the cursor. We portal dragged items to <body> and boost z-index.
+.board-drag-portal {
+  z-index: 999999;
+}
+
+/* Completed states */
 .board-item.task-completed .board-item-content {
   border: 2px solid rgba(25, 135, 84, 0.7);
 }
-
 .board-item.task-completed .board-item-title,
 .board-item.task-completed .board-item-desc {
   text-decoration: line-through;
   opacity: 0.85;
 }
-
 .board-item.task-completed .board-item-desc {
   opacity: 0.7;
 }
 
+/* Enter animation */
 .board-item.task-enter .board-item-content {
   animation: task-enter 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--enter-delay, 0ms);
@@ -125,6 +188,7 @@
   }
 }
 
+/* Flash completed */
 .board-item.task-completed-flash .board-item-content {
   animation: task-completed-flash 1100ms ease-out;
 }
@@ -145,89 +209,15 @@
   }
 }
 
-.board-item-placeholder {
-  border: 2px dashed rgba(var(--secondary), 0.4);
-  border-radius: 10px;
-  background: rgba(var(--secondary), 0.06);
-  margin: 5px 0;
-}
-
-.board-item.is-drag-overlay {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-}
-
-.board-column.is-drag-overlay {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-  background: rgba(var(--secondary), 0.12);
-}
-
-.dnd-overlay {
-  pointer-events: none;
-}
-
-.board-item.muuri-item-releasing {
-  z-index: 9998;
-}
-
-.board-item.muuri-item-dragging {
-  z-index: 9999;
-  cursor: move;
-}
-
-.board-item.muuri-item-hidden {
-  z-index: 0;
-}
-
-.board-item-content {
-  position: relative;
-  padding: 15px;
-  background: var(--white);
-  border-radius: 10px;
-  font-size: 17px;
-  cursor: pointer;
-  overflow: hidden;
-  .board-footer {
-    margin-top: 1rem;
-  }
-  h6 {
-    font-weight: 500;
-
-    margin-bottom: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-  }
-}
-
-.task-side-card {
-  background: var(--white);
-  border: 1px solid rgba(var(--secondary), 0.15);
-  border-radius: 12px;
-  padding: 12px;
-  display: grid;
-  gap: 12px;
-}
-
-.task-side-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  i {
-    color: rgba(var(--secondary), 0.8);
-  }
-}
-
-.task-side-row.space-between {
-  justify-content: space-between;
-}
-
+/* Responsive */
 @media (max-width: 991px) {
-  .task-detail-layout {
-    grid-template-columns: 1fr;
+  .board {
+    gap: 14px;
+  }
+  .board-column {
+    width: 280px;
+    flex: 0 0 280px;
   }
 }
 
-// >>-- 45 Kanban_board css end --<<
+// >>-- end --<<

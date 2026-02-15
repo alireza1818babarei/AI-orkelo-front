@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Col, Container, Row } from "reactstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -7,9 +7,10 @@ import {
   deleteProjectThunk,
   getProjectDetailsThunk,
   updateProjectThunk,
-} from "../../../store/projects/singleProjectSlice";
+} from "../../../store/projects/projectDetailsSlice";
 import {
   createProjectColumnThunk,
+  getColumnTasksThunk,
   createProjectTaskThunk,
   deleteProjectColumnThunk,
   getProjectColumnsThunk,
@@ -35,6 +36,13 @@ const ProjectBoard = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigat = useNavigate();
+  const tasksForcedProjectRef = useRef(null);
+  const lastRouteProjectIdRef = useRef(id);
+  const routeSwitched =
+    lastRouteProjectIdRef.current != null &&
+    id != null &&
+    String(lastRouteProjectIdRef.current) !== String(id);
+  lastRouteProjectIdRef.current = id;
 
   const [infoOpen, setInfoOpen] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -45,11 +53,13 @@ const ProjectBoard = () => {
   const [removedTaskIds, setRemovedTaskIds] = useState([]);
 
   const { data, error, loading } = useSelector((s) => s.projectDetails);
+  const pageError = routeSwitched ? null : error;
   const projectsList = useSelector((s) => s.projects?.items ?? []);
   const {
     items: projectColumns,
     status: columnsStatus,
     projectId: columnsProjectId,
+    tasksLoadingByColumnId,
   } = useSelector((s) => s.projectColumns);
 
   const fromList = useMemo(() => {
@@ -57,15 +67,26 @@ const ProjectBoard = () => {
     return projectsList.find((p) => p.id === numId) || null;
   }, [projectsList, id]);
 
-  const details = useMemo(() => data?.data ?? data ?? null, [data]);
-  const project =
-    details?.project || (details?.name ? details : null) || fromList;
-  const members = details?.members || [];
+  const detailsPayload = useMemo(() => data?.data ?? data ?? null, [data]);
+  const projectFromDetails = useMemo(() => {
+    const d = detailsPayload;
+    return d?.project || (d?.name ? d : null) || null;
+  }, [detailsPayload]);
+  const detailsProjectId = projectFromDetails?.id ?? detailsPayload?.id ?? null;
+  const detailsMatch =
+    detailsProjectId != null &&
+    id != null &&
+    String(detailsProjectId) === String(id);
+
+  const project = (detailsMatch ? projectFromDetails : null) || fromList;
+  const members = detailsMatch ? detailsPayload?.members || [] : [];
   const columnsFromSlice =
     columnsProjectId && String(columnsProjectId) === String(id)
       ? projectColumns
       : null;
-  const columnsFromDetails = details?.columns || [];
+  const columnsFromDetails = detailsMatch
+    ? detailsPayload?.columns || projectFromDetails?.columns || []
+    : [];
   const columnsFromList = fromList?.columns || [];
 
   const baseColumns = columnsFromDetails.length
@@ -129,6 +150,49 @@ const ProjectBoard = () => {
     dispatch(getProjectDetailsThunk(id));
     dispatch(getProjectColumnsThunk(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    setInfoOpen(false);
+    setEditModal(false);
+    setColumnModalOpen(false);
+    setEditingColumn(null);
+    setTaskInfoOpen(false);
+    setActiveTask(null);
+    setRemovedTaskIds([]);
+  }, [id]);
+
+  const columnIdsKey = useMemo(() => {
+    if (!columnsProjectId || String(columnsProjectId) !== String(id)) return "";
+    const ids = (projectColumns || [])
+      .map((c) => c?.id)
+      .filter((v) => v != null)
+      .map(String)
+      .sort();
+    return ids.join("|");
+  }, [columnsProjectId, id, projectColumns]);
+
+  useEffect(() => {
+    if (!id) return;
+    if (!columnsProjectId || String(columnsProjectId) !== String(id)) return;
+    if (!columnIdsKey) return;
+
+    const ids = columnIdsKey.split("|").filter(Boolean);
+    const shouldForce = String(tasksForcedProjectRef.current) !== String(id);
+    ids.forEach((columnId) => {
+      dispatch(
+        getColumnTasksThunk({ projectId: id, columnId, force: shouldForce }),
+      );
+    });
+    if (shouldForce) tasksForcedProjectRef.current = String(id);
+  }, [dispatch, id, columnsProjectId, columnIdsKey]);
+
+  const tasksPending =
+    tasksLoadingByColumnId && Object.keys(tasksLoadingByColumnId).length > 0;
+  const tasksNeedLoad =
+    columnsProjectId && String(columnsProjectId) === String(id)
+      ? (projectColumns || []).some((c) => c?.tasks == null)
+      : false;
+  const tasksLoading = tasksPending || tasksNeedLoad;
 
   const {
     handleSubmit,
@@ -375,13 +439,24 @@ const ProjectBoard = () => {
     }
   };
 
-  if (loading && !project)
+  const busy =
+    !project &&
+    !pageError &&
+    (loading ||
+      columnsStatus === "idle" ||
+      columnsStatus === "loading" ||
+      (detailsPayload != null && !detailsMatch));
+
+  if (busy)
     return (
       <div className="p-3">
         <iconify-icon icon="line-md:loading-loop" />
       </div>
     );
-  if (error && !project) return <div className="p-3">Error: {error}</div>;
+  if (pageError && !project)
+    return (
+      <div className="p-3">Error: {pageError?.message || pageError}</div>
+    );
   if (!project) return <div className="p-3">Project not found!</div>;
 
   return (
@@ -463,11 +538,11 @@ const ProjectBoard = () => {
 
           <Row>
             <Col xs={12}>
-              <div className="overflow-y-scroll app-scroll">
+              <div className="app-scroll">
                 <ProjectBoardColumns
                   columns={columns}
                   status={columnsStatus}
-                  tasksLoading={loading}
+                  tasksLoading={tasksLoading}
                   onEditColumn={openEditColumnModal}
                   onDeleteColumn={handleColumnDelete}
                   onAddTask={handleAddTask}

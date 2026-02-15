@@ -94,9 +94,7 @@ const BoardItem = ({
                   </span>
                 </span>
               ))
-            ) : (
-              <span className="text-muted small">No tag</span>
-            )}
+            ) : null}
           </div>
 
           <div className="d-flex align-items-center justify-content-between">

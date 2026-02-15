@@ -1,22 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Button, Input, Modal, ModalBody, ModalHeader, Spinner } from "reactstrap";
+import { useDispatch, useSelector } from "react-redux";
 import {
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalHeader,
-  Spinner,
-} from "reactstrap";
-import api from "../../api/axios";
+  createProjectTagThunk,
+  deleteProjectTagThunk,
+  getProjectTagsThunk,
+} from "../../store/tags/tagsSlice";
 import { alertSuccess, toastError } from "../../utils/sweetAlert";
 
 const getTagLabel = (tag) =>
   tag?.name ?? tag?.title ?? tag?.label ?? tag?.text ?? `Tag ${tag?.id ?? ""}`;
 
-const normalizeTags = (payload) => {
-  const items = payload?.data ?? payload ?? [];
-  return Array.isArray(items) ? items : [];
-};
+const getTagKey = (tag) => String(tag?.id ?? tag?.tag_id ?? tag?.uuid ?? "");
 
 const PRESET_COLORS = [
   "#3B82F6", // blue
@@ -31,32 +26,31 @@ const PRESET_COLORS = [
   "#6B7280", // gray
 ];
 
-export default function TaskTagsManagerModal({
-  projectId,
-  isOpen,
-  toggle,
-  onChanged,
-}) {
-  const [loading, setLoading] = useState(false);
-  const [tags, setTags] = useState([]);
+export default function TaskTagsManagerModal({ projectId, isOpen, toggle, onChanged }) {
+  const dispatch = useDispatch();
+  const tagsState = useSelector((s) => s.tags);
+
+  const items =
+    tagsState?.projectId != null && String(tagsState.projectId) === String(projectId)
+      ? tagsState?.items || []
+      : [];
+
+  const loading = isOpen && tagsState?.status === "loading";
+  const saving = !!tagsState?.saving;
+  const deletingByTagId = tagsState?.deletingByTagId || {};
 
   const [adding, setAdding] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState(PRESET_COLORS[0]);
-  const [saving, setSaving] = useState(false);
 
   const fetchTags = useCallback(async () => {
     if (!projectId) return;
     try {
-      setLoading(true);
-      const res = await api.get(`/projects/${projectId}/tags`);
-      setTags(normalizeTags(res?.data));
+      await dispatch(getProjectTagsThunk(projectId)).unwrap();
     } catch (err) {
-      toastError(err?.message || "Load tags failed");
-    } finally {
-      setLoading(false);
+      toastError(err?.message || err?.data?.message || "Load tags failed");
     }
-  }, [projectId]);
+  }, [dispatch, projectId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -70,23 +64,16 @@ export default function TaskTagsManagerModal({
     setNewTagColor(PRESET_COLORS[0]);
   }, [isOpen]);
 
-  const items = useMemo(() => tags || [], [tags]);
+  const list = useMemo(() => items || [], [items]);
 
   const createTag = async () => {
     if (!projectId) return;
     const name = newTagName.trim();
     if (!name) return;
     try {
-      setSaving(true);
       const payload = { name };
       if (newTagColor) payload.color = newTagColor;
-      const res = await api.post(`/projects/${projectId}/tags`, payload);
-      const created = res?.data?.data ?? res?.data ?? null;
-      if (created) {
-        setTags((prev) => [created, ...(prev || [])]);
-      } else {
-        await fetchTags();
-      }
+      await dispatch(createProjectTagThunk({ projectId, payload })).unwrap();
       alertSuccess();
       setNewTagName("");
       setAdding(false);
@@ -99,8 +86,6 @@ export default function TaskTagsManagerModal({
         err?.response?.data?.error ||
         "Create tag failed";
       toastError(msg);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -108,9 +93,7 @@ export default function TaskTagsManagerModal({
     const tagId = tag?.id ?? null;
     if (!projectId || !tagId) return;
     try {
-      setSaving(true);
-      await api.delete(`/projects/${projectId}/tags/${tagId}`);
-      setTags((prev) => (prev || []).filter((t) => String(t?.id) !== String(tagId)));
+      await dispatch(deleteProjectTagThunk({ projectId, tagId })).unwrap();
       alertSuccess();
       onChanged?.();
     } catch (err) {
@@ -120,8 +103,6 @@ export default function TaskTagsManagerModal({
         err?.response?.data?.error ||
         "Delete tag failed";
       toastError(msg);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -140,11 +121,13 @@ export default function TaskTagsManagerModal({
             <Spinner size="sm" />
             <span>Loading tags...</span>
           </div>
-        ) : items.length ? (
+        ) : list.length ? (
           <div className="d-flex flex-column gap-2">
-            {items.map((t, idx) => {
+            {list.map((t, idx) => {
               const label = getTagLabel(t);
               const color = String(t?.color || "").trim();
+              const idKey = getTagKey(t);
+              const deleting = !!deletingByTagId[idKey];
               return (
                 <div
                   key={t?.id ?? `${label}-${idx}`}
@@ -170,10 +153,10 @@ export default function TaskTagsManagerModal({
                     color="link"
                     className="p-0 text-muted"
                     title="Delete"
-                    disabled={saving}
+                    disabled={saving || deleting}
                     onClick={() => deleteTag(t)}
                   >
-                    <i className="ti ti-trash fs-5"></i>
+                    {deleting ? <Spinner size="sm" /> : <i className="ti ti-trash fs-5"></i>}
                   </Button>
                 </div>
               );
@@ -220,7 +203,8 @@ export default function TaskTagsManagerModal({
               <div className="d-flex align-items-center justify-content-between">
                 <div className="d-flex align-items-center gap-2 flex-wrap">
                   {PRESET_COLORS.map((c) => {
-                    const active = String(c).toLowerCase() === String(newTagColor).toLowerCase();
+                    const active =
+                      String(c).toLowerCase() === String(newTagColor).toLowerCase();
                     return (
                       <button
                         key={c}
@@ -238,7 +222,9 @@ export default function TaskTagsManagerModal({
                             width: 18,
                             height: 18,
                             background: c,
-                            border: active ? "2px solid rgba(0,0,0,0.35)" : "1px solid rgba(0,0,0,0.15)",
+                            border: active
+                              ? "2px solid rgba(0,0,0,0.35)"
+                              : "1px solid rgba(0,0,0,0.15)",
                             boxShadow: active ? "0 0 0 2px rgba(59,130,246,0.25)" : "none",
                           }}
                         />
@@ -248,11 +234,7 @@ export default function TaskTagsManagerModal({
                 </div>
 
                 <div className="d-flex align-items-center gap-2">
-                  <Button
-                    color="primary"
-                    onClick={createTag}
-                    disabled={saving || !newTagName.trim()}
-                  >
+                  <Button color="primary" onClick={createTag} disabled={saving || !newTagName.trim()}>
                     {saving ? "Saving..." : "Add"}
                   </Button>
                   <Button
@@ -286,3 +268,4 @@ export default function TaskTagsManagerModal({
     </Modal>
   );
 }
+

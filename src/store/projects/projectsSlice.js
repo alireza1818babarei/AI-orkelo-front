@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { deleteProjectThunk, updateProjectThunk } from "./singleProjectSlice";
+import { deleteProjectThunk, updateProjectThunk } from "./projectDetailsSlice";
 import api from "../../api/axios";
 import { getErrorMessage } from "../../utils/getError";
 

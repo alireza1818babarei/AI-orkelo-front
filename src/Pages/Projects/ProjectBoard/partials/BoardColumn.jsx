@@ -5,7 +5,7 @@ const BoardColumn = ({
   columnTitle,
   innerRef,
   headerRef,
-  headerProps,
+  dragHandleProps,
   color,
   className = "",
   style,
@@ -13,6 +13,8 @@ const BoardColumn = ({
   actions = [],
   contentRef,
   contentClassName = "",
+  contentProps,
+  footer,
   ...rest
 }) => {
   const [columnAction, setColumnAction] = useState(false);
@@ -32,8 +34,8 @@ const BoardColumn = ({
         style={{
           backgroundColor: `${color}`
         }}
-        {...headerProps}
       >
+        <div className="board-column-drag-handle" {...(dragHandleProps || {})} />
         <span>{columnTitle}</span>
         {hasActions ? (
           <div ref={rootRef} className="position-relative">
@@ -62,9 +64,11 @@ const BoardColumn = ({
         <div
           ref={contentRef}
           className={`board-column-content ${contentClassName}`}
+          {...(contentProps || {})}
         >
           {children}
         </div>
+        {footer ? <div className="board-column-footer">{footer}</div> : null}
       </div>
     </div>
   );

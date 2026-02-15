@@ -1,6 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle } from "reactstrap";
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownToggle,
+  Modal,
+  ModalBody,
+  ModalHeader,
+  Spinner,
+} from "reactstrap";
 import api from "../../api/axios";
 import { alertConfirm, alertSuccess, toastError } from "../../utils/sweetAlert";
 import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
@@ -101,6 +110,8 @@ export default function TaskAttachments({
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
 
   const safeFormatDateTime = (value) => {
     if (typeof formatDateTime === "function") return formatDateTime(value);
@@ -258,7 +269,10 @@ export default function TaskAttachments({
 
       <div className="mt-2">
         {attachmentsLoading ? (
-          <div className="text-muted small">Loading attachments...</div>
+          <div className="d-flex align-items-center gap-2 text-muted small">
+            <Spinner size="sm" color="primary" />
+            <span>Loading attachments...</span>
+          </div>
         ) : attachments?.length ? (
           <div className="row g-2">
             {attachments.map((a, idx) => {
@@ -321,11 +335,15 @@ export default function TaskAttachments({
 
                     <a
                       href={href || "#"}
-                      target={href ? "_blank" : undefined}
-                      rel={href ? "noreferrer" : undefined}
-                      className={`text-decoration-none ${href ? "" : "pe-none"}`}
-                      title={href ? "Open" : name}
-                      onClick={() => setMenuOpenId(null)}
+                      className="text-decoration-none"
+                      title={name}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setMenuOpenId(null);
+                        setPreviewAttachment(a);
+                        setPreviewOpen(true);
+                      }}
                     >
                       <div className="bg-light rounded-3 p-2 h-100">
                       <div
@@ -369,6 +387,97 @@ export default function TaskAttachments({
           <div className="text-muted small">No attachments yet.</div>
         )}
       </div>
+
+      <Modal
+        isOpen={previewOpen}
+        toggle={() => {
+          setPreviewOpen(false);
+          setPreviewAttachment(null);
+        }}
+        centered
+        size="lg"
+      >
+        <ModalHeader
+          toggle={() => {
+            setPreviewOpen(false);
+            setPreviewAttachment(null);
+          }}
+        >
+          {getAttachmentName(previewAttachment)}
+        </ModalHeader>
+        <ModalBody>
+          {previewAttachment ? (
+            (() => {
+              const name = getAttachmentName(previewAttachment);
+              const href = resolveAttachmentHref(previewAttachment?.url);
+              const isImg = isImageAttachment(previewAttachment) && !!href;
+              const iconSrc = toPublicAsset(resolveAttachmentIcon(previewAttachment));
+              const fallbackIconSrc = toPublicAsset("assets/images/icons/folder.png");
+
+              return (
+                <div className="d-flex flex-column gap-3">
+                  <div
+                    className="bg-light rounded-3 d-flex-center overflow-hidden"
+                    style={{ minHeight: 360 }}
+                  >
+                    {isImg ? (
+                      <img
+                        src={href}
+                        alt={name}
+                        style={{ maxWidth: "100%", maxHeight: 520, objectFit: "contain" }}
+                      />
+                    ) : (
+                      <div className="d-flex flex-column align-items-center gap-2 py-4">
+                        <img
+                          src={iconSrc}
+                          alt={name}
+                          onError={(e) => {
+                            if (e.currentTarget.src === fallbackIconSrc) return;
+                            e.currentTarget.src = fallbackIconSrc;
+                          }}
+                          style={{ width: 84, height: 84, objectFit: "contain" }}
+                        />
+                        <div className="text-muted small">{formatBytes(previewAttachment?.size)}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div className="text-muted small">
+                      {previewAttachment?.created_at
+                        ? `Uploaded: ${safeFormatDateTime(previewAttachment.created_at)}`
+                        : null}
+                    </div>
+                    <div className="d-flex gap-2">
+                      {href ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-outline-secondary"
+                        >
+                          Open
+                        </a>
+                      ) : null}
+                      {href ? (
+                        <a href={href} download className="btn btn-primary">
+                          <i className="ti ti-download me-1"></i>
+                          Download
+                        </a>
+                      ) : (
+                        <button type="button" className="btn btn-primary" disabled>
+                          <i className="ti ti-download me-1"></i>
+                          Download
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          ) : null}
+        </ModalBody>
+      </Modal>
     </div>
   );
 }

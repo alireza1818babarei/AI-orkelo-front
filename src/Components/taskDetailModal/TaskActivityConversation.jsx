@@ -336,7 +336,10 @@ export default function TaskActivityConversation({
 
       <div className="mt-3">
         {commentsLoading ? (
-          <div className="text-muted small">Loading comments...</div>
+          <div className="d-flex align-items-center gap-2 text-muted small">
+            <Spinner size="sm" color="primary" />
+            <span>Loading comments...</span>
+          </div>
         ) : comments.length ? (
           <ul className="app-timeline-box m-0">
             {comments.map((c, idx) => {
