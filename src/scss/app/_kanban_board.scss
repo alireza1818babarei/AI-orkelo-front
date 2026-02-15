@@ -12,7 +12,10 @@
   min-height: 200px;
 
   overflow-x: auto;
-  overflow-y: hidden;
+  // When a column grows (many tasks), keep the board area scrollable
+  // so the footer / remaining tasks stay reachable.
+  height: calc(100vh - 200px);
+  overflow-y: auto;
 }
 
 /* Column */
@@ -42,6 +45,18 @@
   color: rgba(var(--dark), 0.9);
   font-weight: 600;
   cursor: default;
+}
+
+.board-column-header-icon {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.18;
+  font-size: 44px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
 }
 
 // Drag handle: only the top strip of the header
@@ -90,22 +105,42 @@
 
 .board-item-drag-handle {
   position: absolute;
-  top: 12px;
-  left: 8px;
-  width: 18px;
-  height: 28px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 25px;
   cursor: grab;
-  z-index: 2;
+  z-index: 3;
   pointer-events: auto;
   user-select: none;
+  border-radius: 10px 10px 0 0;
+  background-color: rgba(0, 0, 0, 0.18);
 }
 
 .board-item-drag-handle::before {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
   background: rgba(var(--secondary), 0.12);
+}
+
+.board-item-drag-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 3px 3px,
+    rgba(var(--secondary), 0.45) 1.2px,
+    transparent 1.3px
+  );
+  background-size: 6px 6px;
 }
 
 /* Items */
@@ -123,13 +158,12 @@
 .board-item-content {
   position: relative;
   padding: 15px;
-  padding-left: 40px; // room for task drag handle
+  padding-top: 30px;
   background: var(--white);
   border-radius: 10px;
   font-size: 17px;
   cursor: pointer;
   overflow: hidden;
-
   .board-footer {
     margin-top: 1rem;
   }

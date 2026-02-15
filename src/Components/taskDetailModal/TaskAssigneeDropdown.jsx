@@ -13,12 +13,15 @@ import { toastError } from "../../utils/sweetAlert";
 const getUserKey = (u) => String(u?.id ?? u?.user_id ?? u?.uuid ?? "");
 const getUserLabel = (u) =>
   u?.name ?? u?.full_name ?? u?.username ?? u?.email ?? `User ${getUserKey(u)}`;
+const getUserAvatar = (u) => u?.avatar ?? u?.image ?? u?.photo ?? u?.avatar_url ?? null;
 
 export default function TaskAssigneeDropdown({
   projectId,
   taskId,
+  selectedAssignees = [],
   disabled = false,
   variant = "sidebar",
+  showSelectedInToggle = true,
 }) {
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
@@ -36,7 +39,12 @@ export default function TaskAssigneeDropdown({
     String(peopleState.taskId) === String(taskId);
 
   const people = matches ? peopleState?.people || [] : [];
-  const assignee = matches ? peopleState?.assignee ?? null : null;
+  const assigneeFromPeople = matches ? peopleState?.assignee ?? null : null;
+  const assigneeFromDetail =
+    Array.isArray(selectedAssignees) && selectedAssignees.length
+      ? selectedAssignees[0]
+      : null;
+  const assignee = assigneeFromPeople || assigneeFromDetail || null;
   const assigneeId = assignee ? getUserKey(assignee) : "";
   const loading = open && peopleState?.status === "loading";
   const saving = !!peopleState?.settingAssignee;
@@ -63,10 +71,51 @@ export default function TaskAssigneeDropdown({
   return (
     <Dropdown isOpen={open} toggle={toggle}>
       {variant === "header" ? (
-        <DropdownToggle tag="button" type="button" disabled={disabled} className="btn text-muted">
-          <i className="ti ti-user-plus me-1 fs-4"></i>
-          Assign
-          {saving ? <Spinner size="sm" color="primary" className="ms-2" /> : null}
+        <DropdownToggle
+          tag="button"
+          type="button"
+          disabled={disabled}
+          className="btn text-muted d-inline-flex align-items-center gap-2"
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            paddingRight: showSelectedInToggle && assignee ? 44 : undefined,
+          }}
+        >
+          {/* avatar as a subtle background on the right */}
+          {showSelectedInToggle && assignee && getUserAvatar(assignee) ? (
+            <span
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                right: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 26,
+                height: 26,
+                borderRadius: 999,
+                overflow: "hidden",
+                opacity: 0.95,
+                boxShadow: "0 0 0 2px rgba(255,255,255,0.7)",
+              }}
+            >
+              <img
+                src={getUserAvatar(assignee)}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            </span>
+          ) : null}
+
+          <i className="ti ti-user-plus fs-4" />
+          <span className="d-inline-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+            <span className="text-truncate" style={{ maxWidth: 220 }}>
+              {assignee ? `Assigned to ${getUserLabel(assignee)}` : "Assign to"}
+            </span>
+            <i className="ti ti-chevron-down" />
+          </span>
+
+          {saving ? <Spinner size="sm" color="primary" className="ms-1" /> : null}
         </DropdownToggle>
       ) : (
         <DropdownToggle

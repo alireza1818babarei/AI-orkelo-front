@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Form,
@@ -23,8 +23,118 @@ const ProjectColumnModal = ({
   colorRef,
   iconField,
   iconRef,
+  iconValue,
+  onPickIcon,
   isEdit,
 }) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTab, setPickerTab] = useState("phosphor"); // "phosphor" | "tabler" | "fontawesome"
+  const [q, setQ] = useState("");
+  const [lists, setLists] = useState({
+    phosphor: null,
+    tabler: null,
+    fontawesome: null,
+  });
+
+  const normalizedQuery = String(q || "").trim().toLowerCase();
+
+  const previewIconClass = useMemo(() => {
+    const raw = String(iconValue ?? "").trim();
+    if (!raw) return "";
+    if (raw.includes("ph-") || raw.includes("fa-") || raw.includes("ti ")) return raw;
+    if (raw.startsWith("ti-")) return `ti ${raw}`;
+    if (/^[a-z0-9-]+$/i.test(raw)) return `ti ti-${raw}`;
+    return raw;
+  }, [iconValue]);
+
+  const takeFirst = (arr, n = 220) => (Array.isArray(arr) ? arr.slice(0, n) : []);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+
+    let cancelled = false;
+    const load = async () => {
+      try {
+        if (pickerTab === "tabler") {
+          if (Array.isArray(lists.tabler)) return;
+          const mod = await import("../../../../Data/Icons/TablerIconsList");
+          const next = Array.isArray(mod?.TablerIconsList) ? mod.TablerIconsList : [];
+          if (cancelled) return;
+          setLists((prev) => ({ ...(prev || {}), tabler: next }));
+          return;
+        }
+
+        if (pickerTab === "fontawesome") {
+          if (Array.isArray(lists.fontawesome)) return;
+          const mod = await import("../../../../Data/Icons");
+          const next = Array.isArray(mod?.fontAwesomeIcons) ? mod.fontAwesomeIcons : [];
+          if (cancelled) return;
+          setLists((prev) => ({ ...(prev || {}), fontawesome: next }));
+          return;
+        }
+
+        // phosphor (default)
+        if (Array.isArray(lists.phosphor)) return;
+        const mod = await import("../../../../Data/Icons/phosphor");
+        const next = Array.isArray(mod?.PhosphorIcons) ? mod.PhosphorIcons : [];
+        if (cancelled) return;
+        setLists((prev) => ({ ...(prev || {}), phosphor: next }));
+      } catch {
+        // ignore
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [pickerOpen, pickerTab, lists.fontawesome, lists.phosphor, lists.tabler]);
+
+  const filtered = useMemo(() => {
+    const limit = 220;
+
+    if (pickerTab === "tabler") {
+      const list = lists.tabler || [];
+      if (!normalizedQuery) return takeFirst(list, limit);
+      return list
+        .filter((it) => {
+          const name = String(it?.name ?? "").toLowerCase();
+          const code = String(it?.code ?? "").toLowerCase();
+          return name.includes(normalizedQuery) || code.includes(normalizedQuery);
+        })
+        .slice(0, limit);
+    }
+
+    if (pickerTab === "fontawesome") {
+      const list = lists.fontawesome || [];
+      if (!normalizedQuery) return takeFirst(list, limit);
+      return list
+        .filter((it) => {
+          const name = String(it?.name ?? "").toLowerCase();
+          const icon = String(it?.icon ?? "").toLowerCase();
+          return name.includes(normalizedQuery) || icon.includes(normalizedQuery);
+        })
+        .slice(0, limit);
+    }
+
+    // phosphor (default)
+    const list = lists.phosphor || [];
+    if (!normalizedQuery) return takeFirst(list, limit);
+    return list
+      .filter((it) => {
+        const code = String(it?.iconCode ?? "").toLowerCase();
+        const cls = String(it?.className ?? "").toLowerCase();
+        return code.includes(normalizedQuery) || cls.includes(normalizedQuery);
+      })
+      .slice(0, limit);
+  }, [pickerTab, normalizedQuery]);
+
+  const pick = (value) => {
+    if (typeof onPickIcon === "function") onPickIcon(value);
+    setPickerOpen(false);
+    setQ("");
+  };
+
   return (
     <Modal isOpen={isOpen} toggle={onClose} centered>
       <ModalHeader toggle={onClose}>
@@ -58,14 +168,39 @@ const ProjectColumnModal = ({
 
           <FormGroup>
             <Label for="column-icon">Icon</Label>
-            <Input
-              id="column-icon"
-              type="text"
-              placeholder="e.g. list"
-              {...iconField}
-              innerRef={iconRef}
-              disabled={isSubmitting}
-            />
+            <div className="d-flex align-items-center gap-2">
+              <div
+                className="border rounded-3 bg-light d-flex align-items-center justify-content-center"
+                style={{ width: 44, height: 38, flex: "0 0 44px" }}
+                title={previewIconClass || ""}
+              >
+                {previewIconClass ? (
+                  <i className={previewIconClass} style={{ fontSize: 18 }} />
+                ) : (
+                  <span className="text-muted small">—</span>
+                )}
+              </div>
+              <Input
+                id="column-icon"
+                type="text"
+                placeholder="e.g. ph-duotone ph-gear  |  ti ti-list  |  fa-solid fa-star"
+                {...iconField}
+                innerRef={iconRef}
+                disabled={isSubmitting}
+              />
+              <Button
+                type="button"
+                color="primary"
+                outline
+                disabled={isSubmitting}
+                onClick={() => setPickerOpen(true)}
+              >
+                Choose
+              </Button>
+            </div>
+            <div className="text-muted small mt-1">
+              Pick an icon class and we send the full className to backend.
+            </div>
           </FormGroup>
         </ModalBody>
 
@@ -83,6 +218,114 @@ const ProjectColumnModal = ({
           </Button>
         </ModalFooter>
       </Form>
+
+      <Modal
+        isOpen={pickerOpen}
+        toggle={() => setPickerOpen(false)}
+        centered
+        size="lg"
+        scrollable
+      >
+        <ModalHeader toggle={() => setPickerOpen(false)}>
+          Choose Icon
+        </ModalHeader>
+        <ModalBody>
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <Button
+              type="button"
+              color={pickerTab === "phosphor" ? "primary" : "secondary"}
+              outline={pickerTab !== "phosphor"}
+              size="sm"
+              onClick={() => setPickerTab("phosphor")}
+            >
+              Phosphor
+            </Button>
+            <Button
+              type="button"
+              color={pickerTab === "tabler" ? "primary" : "secondary"}
+              outline={pickerTab !== "tabler"}
+              size="sm"
+              onClick={() => setPickerTab("tabler")}
+            >
+              Tabler (ti)
+            </Button>
+            <Button
+              type="button"
+              color={pickerTab === "fontawesome" ? "primary" : "secondary"}
+              outline={pickerTab !== "fontawesome"}
+              size="sm"
+              onClick={() => setPickerTab("fontawesome")}
+            >
+              FontAwesome
+            </Button>
+          </div>
+
+          <Input
+            type="text"
+            placeholder="Search icons..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <div className="text-muted small mt-1">
+            Showing up to 220 results. Use search to narrow.
+          </div>
+
+          <div
+            className="mt-3"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+              gap: 10,
+            }}
+          >
+            {filtered.map((it, idx) => {
+              const key =
+                it?.code ?? it?.className ?? it?.icon ?? `${pickerTab}-${idx}`;
+              const label =
+                it?.name ?? it?.iconCode ?? it?.code ?? it?.className ?? it?.icon ?? "icon";
+              const cls =
+                pickerTab === "tabler"
+                  ? String(it?.code ?? "")
+                  : pickerTab === "fontawesome"
+                    ? String(it?.icon ?? "")
+                    : String(it?.className ?? "");
+
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className="btn btn-light border text-start"
+                  onClick={() => pick(cls)}
+                  style={{ padding: 10, minHeight: 72 }}
+                  title={cls}
+                >
+                  <div className="d-flex align-items-center gap-2">
+                    <span
+                      className="d-inline-flex align-items-center justify-content-center border bg-white rounded-3"
+                      style={{ width: 34, height: 34, flex: "0 0 34px" }}
+                    >
+                      <i className={cls} style={{ fontSize: 18 }} />
+                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="small fw-semibold text-truncate">
+                        {String(label)}
+                      </div>
+                      <div className="text-muted small text-truncate">
+                        {cls}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button type="button" color="secondary" onClick={() => setPickerOpen(false)}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
     </Modal>
   );
 };

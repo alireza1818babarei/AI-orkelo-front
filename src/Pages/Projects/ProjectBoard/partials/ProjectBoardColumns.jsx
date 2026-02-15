@@ -19,6 +19,8 @@ const arrayMove = (arr, from, to) => {
 
 const getTaskAttachmentCount = (task) => {
   const raw =
+    task?.total_attachment ??
+    task?.totalAttachment ??
     task?.files_count ??
     task?.filesCount ??
     task?.attachments_count ??
@@ -72,11 +74,26 @@ const isTaskCompleted = (task) =>
 const getTaskDueValue = (task) =>
   task?.due_at ?? task?.dueAt ?? task?.due_date ?? task?.dueDate ?? task?.date ?? null;
 
+const formatTimeHHmm = (raw) => {
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "";
+  try {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+};
+
 const formatTaskDate = (task) => {
   const raw = getTaskDueValue(task);
   if (!raw) return formatMonthDay(task?.created_at) || "";
   const d = new Date(raw);
-  if (!Number.isNaN(d.getTime())) return formatMonthDay(raw) || "";
+  if (!Number.isNaN(d.getTime())) {
+    const base = formatMonthDay(raw) || "";
+    const time = formatTimeHHmm(raw);
+    return time ? `${base} ${time}` : base;
+  }
   return String(raw);
 };
 
@@ -236,6 +253,7 @@ const Column = memo(function Column({
             dropSnapshot.isDraggingOver ? "is-over" : ""
           }`}
           columnTitle={column.title || column.name || "Column"}
+          columnIcon={column.icon ?? column.iconClass ?? column.icon_code ?? null}
           actions={column.actions}
           contentRef={dropProvided.innerRef}
           contentClassName={dropSnapshot.isDraggingOver ? "is-over" : ""}

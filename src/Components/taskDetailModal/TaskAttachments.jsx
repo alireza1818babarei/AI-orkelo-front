@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   Dropdown,
@@ -35,6 +35,19 @@ const formatBytes = (bytes) => {
 const getAttachmentName = (a) =>
   a?.original_name ?? a?.name ?? a?.filename ?? a?.file_name ?? "Attachment";
 
+const getAttachmentUrl = (a) =>
+  a?.download_url ??
+  a?.downloadUrl ??
+  a?.url ??
+  a?.path ??
+  a?.file_path ??
+  a?.filePath ??
+  a?.storage_path ??
+  a?.storagePath ??
+  a?.src ??
+  a?.href ??
+  "";
+
 const getFileExt = (name) => {
   const str = String(name || "");
   const lastDot = str.lastIndexOf(".");
@@ -42,25 +55,82 @@ const getFileExt = (name) => {
   return str.slice(lastDot + 1).toLowerCase();
 };
 
+const getExtFromUrl = (url) => {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  try {
+    const u = new URL(raw, "http://localhost");
+    const path = String(u.pathname || "");
+    const lastDot = path.lastIndexOf(".");
+    if (lastDot === -1) return "";
+    return path.slice(lastDot + 1).toLowerCase();
+  } catch {
+    const noQuery = raw.split("?")[0].split("#")[0];
+    const lastDot = noQuery.lastIndexOf(".");
+    if (lastDot === -1) return "";
+    return noQuery.slice(lastDot + 1).toLowerCase();
+  }
+};
+
+const getAttachmentExt = (a) => {
+  const byName = getFileExt(getAttachmentName(a));
+  if (byName) return byName;
+  return getExtFromUrl(getAttachmentUrl(a) ?? a?.file ?? "");
+};
+
 const isImageAttachment = (a) => {
   const mime = String(a?.mime || "").toLowerCase();
   if (mime.startsWith("image/")) return true;
-  const ext = getFileExt(getAttachmentName(a));
-  return ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext);
+  const ext = getAttachmentExt(a);
+  return [
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "webp",
+    "svg",
+    "bmp",
+    "ico",
+    "tif",
+    "tiff",
+    "avif",
+    "heic",
+    "heif",
+  ].includes(ext);
 };
 
 const resolveAttachmentIcon = (a) => {
   const mime = String(a?.mime || "").toLowerCase();
-  const name = getAttachmentName(a);
-  const ext = getFileExt(name);
+  const ext = getAttachmentExt(a);
+
+  if (isImageAttachment(a)) return "assets/images/icons/gallary.png";
 
   if (mime.includes("pdf") || ext === "pdf") return "assets/images/icons/pdf.png";
   if (ext === "zip" || mime.includes("zip")) return "assets/images/icons/zip.png";
-  if (ext === "rar" || mime.includes("rar")) return "assets/images/icons/rar.png";
-  if (mime.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a"].includes(ext)) {
-    return "assets/images/icons/music.png";
+  if (ext === "rar" || mime.includes("rar") || ext === "7z") return "assets/images/icons/rar.png";
+  if (mime.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a"].includes(ext)) return "assets/images/icons/music.png";
+
+  if (mime.includes("spreadsheet") || mime.includes("excel")) {
+    return "assets/images/icons/excel.png";
   }
-  return "assets/images/icons/folder.png";
+
+  const officeMap = {
+    xls: "excel.png",
+    xlsx: "excel.png",
+    xlsm: "excel.png",
+    xlsb: "excel.png",
+    xlt: "excel.png",
+    xltx: "excel.png",
+    csv: "excel.png",
+    doc: "doc.png",
+    docx: "doc.png",
+    ppt: "ppt.png",
+    pptx: "ppt.png",
+  };
+  if (officeMap[ext]) return `assets/images/icons/${officeMap[ext]}`;
+
+  if (ext) return `assets/images/icons/${ext}.png`;
+  return "assets/images/icons/file.png";
 };
 
 const getBackendOrigin = () => {
@@ -75,6 +145,7 @@ const getBackendOrigin = () => {
 const resolveAttachmentHref = (url) => {
   const raw = String(url || "").trim();
   if (!raw) return "";
+  if (raw.startsWith("blob:") || raw.startsWith("data:")) return raw;
 
   const backendOrigin = getBackendOrigin();
   if (!backendOrigin) return raw;
@@ -91,10 +162,80 @@ const resolveAttachmentHref = (url) => {
 
     return raw;
   } catch {
-    let path = raw.startsWith("/") ? raw : `/${raw}`;
-    if (path.startsWith("/task_attachments/")) path = `/storage${path}`;
-    return `${backendOrigin}${path}`;
+    const cutIndex = raw.search(/[?#]/);
+    const pathPart = cutIndex === -1 ? raw : raw.slice(0, cutIndex);
+    const rest = cutIndex === -1 ? "" : raw.slice(cutIndex);
+
+    let path = String(pathPart || "");
+    path = path.startsWith("/") ? path : `/${path}`;
+
+    if (path.startsWith("/storage/")) return `${backendOrigin}${path}${rest}`;
+    if (path.startsWith("/task_attachments/")) return `${backendOrigin}/storage${path}${rest}`;
+    if (path.startsWith("/attachments/")) return `${backendOrigin}/storage${path}${rest}`;
+    if (path.startsWith("/project_images/")) return `${backendOrigin}/storage${path}${rest}`;
+
+    return `${backendOrigin}${path}${rest}`;
   }
+};
+
+const useAttachmentImageSrc = ({ attachment, href }) => {
+  const [src, setSrc] = useState("");
+  const [loading, setLoading] = useState(false);
+  const objectUrlRef = useRef(null);
+
+  const isImg = isImageAttachment(attachment) && !!href;
+  const shouldFetchAuthed = useMemo(() => {
+    if (!isImg) return false;
+    const h = String(href || "");
+    if (!h) return false;
+    if (h.includes("/storage/")) return false;
+    return h.includes("/api/");
+  }, [isImg, href]);
+
+  useEffect(() => {
+    setSrc(href || "");
+  }, [href]);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldFetchAuthed) return undefined;
+    if (!href) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(href, { responseType: "blob" });
+        const blob = res?.data instanceof Blob ? res.data : new Blob([res?.data]);
+        const url = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = url;
+        setSrc(url);
+      } catch {
+        setSrc(href);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldFetchAuthed, href]);
+
+  return { src: src || href || "", loading, isImg };
 };
 
 export default function TaskAttachments({
@@ -103,6 +244,8 @@ export default function TaskAttachments({
   columnId,
   onChanged,
   formatDateTime,
+  initialAttachments,
+  prefetched = false,
 }) {
   const dispatch = useDispatch();
   const [attachments, setAttachments] = useState([]);
@@ -112,6 +255,8 @@ export default function TaskAttachments({
   const [deletingId, setDeletingId] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState(null);
+  const [previewDownloading, setPreviewDownloading] = useState(false);
+  const seededRef = useRef(false);
 
   const safeFormatDateTime = (value) => {
     if (typeof formatDateTime === "function") return formatDateTime(value);
@@ -160,10 +305,48 @@ export default function TaskAttachments({
   }, [projectId, taskId]);
 
   useEffect(() => {
+    if (!prefetched) return;
+    if (!taskId) return;
+    if (!Array.isArray(initialAttachments)) return;
+    setAttachments(initialAttachments);
+    setBoardCounts(initialAttachments);
+    seededRef.current = true;
+  }, [prefetched, initialAttachments, taskId]);
+
+  const downloadAttachment = async (attachment) => {
+    const href = resolveAttachmentHref(getAttachmentUrl(attachment));
+    if (!href) return;
+
+    const fallbackName = getAttachmentName(attachment);
+    const name = String(fallbackName || "Attachment").trim() || "Attachment";
+
+    try {
+      setPreviewDownloading(true);
+      const res = await api.get(href, { responseType: "blob" });
+      const blob = res?.data instanceof Blob ? res.data : new Blob([res?.data]);
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = name;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      toastError(err?.message || "Download failed");
+    } finally {
+      setPreviewDownloading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (prefetched && seededRef.current) return;
     fetchAttachments();
   }, [fetchAttachments]);
 
-  const uploadAttachment = async (file) => {
+  const uploadAttachment = useCallback(async (file) => {
     if (!projectId || !taskId || !file) return;
     try {
       setAttachmentUploading(true);
@@ -208,7 +391,36 @@ export default function TaskAttachments({
     } finally {
       setAttachmentUploading(false);
     }
-  };
+  }, [fetchAttachments, onChanged, projectId, taskId]);
+
+  useEffect(() => {
+    if (!projectId || !taskId) return undefined;
+
+    const onPaste = (e) => {
+      const items = e?.clipboardData?.items;
+      if (!items || !items.length) return;
+
+      const files = [];
+      for (const item of items) {
+        if (!item) continue;
+        if (item.kind !== "file") continue;
+        const f = item.getAsFile?.();
+        if (f) files.push(f);
+      }
+
+      if (!files.length) return;
+
+      // Only intercept when clipboard actually contains files (so normal text paste is unaffected).
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Upload the first pasted file (common use-case: screenshot / single file copy).
+      uploadAttachment(files[0]);
+    };
+
+    document.addEventListener("paste", onPaste, true);
+    return () => document.removeEventListener("paste", onPaste, true);
+  }, [projectId, taskId, uploadAttachment]);
 
   const deleteAttachment = async (attachment) => {
     const attachmentId = attachment?.id ?? attachment?.attachment_id ?? null;
@@ -278,10 +490,10 @@ export default function TaskAttachments({
             {attachments.map((a, idx) => {
               const name = getAttachmentName(a);
               const attachmentId = a?.id ?? a?.attachment_id ?? null;
-              const href = resolveAttachmentHref(a?.url);
+              const href = resolveAttachmentHref(getAttachmentUrl(a));
               const isImg = isImageAttachment(a) && !!href;
               const iconSrc = toPublicAsset(resolveAttachmentIcon(a));
-              const fallbackIconSrc = toPublicAsset("assets/images/icons/folder.png");
+              const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
               const idKey = attachmentId != null ? String(attachmentId) : null;
               const menuOpen = idKey != null && menuOpenId === idKey;
               const deleting = idKey != null && deletingId === idKey;
@@ -346,28 +558,31 @@ export default function TaskAttachments({
                       }}
                     >
                       <div className="bg-light rounded-3 p-2 h-100">
-                      <div
-                        className="rounded-3 overflow-hidden bg-white d-flex-center"
-                        style={{ height: 84 }}
-                      >
-                        {isImg ? (
-                          <img
-                            src={href}
-                            alt={name}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        ) : (
-                          <img
-                            src={iconSrc}
-                            alt={name}
-                            onError={(e) => {
-                              if (e.currentTarget.src === fallbackIconSrc) return;
-                              e.currentTarget.src = fallbackIconSrc;
-                            }}
-                            style={{ width: 38, height: 38, objectFit: "contain" }}
-                          />
-                        )}
-                      </div>
+	                      <div
+	                        className="rounded-3 overflow-hidden bg-white d-flex-center"
+	                        style={{ height: 84 }}
+	                      >
+	                        {isImg ? (
+	                          <AttachmentImage
+	                            attachment={a}
+	                            href={href}
+	                            alt={name}
+	                            className="w-100 h-100"
+	                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+	                            fallbackIconSrc={fallbackIconSrc}
+	                          />
+	                        ) : (
+	                          <img
+	                            src={iconSrc}
+	                            alt={name}
+	                            onError={(e) => {
+	                              if (e.currentTarget.src === fallbackIconSrc) return;
+	                              e.currentTarget.src = fallbackIconSrc;
+	                            }}
+	                            style={{ width: 38, height: 38, objectFit: "contain" }}
+	                          />
+	                        )}
+	                      </div>
                       <div className="pt-2" style={{ minWidth: 0 }}>
                         <div className="small fw-semibold text-truncate text-dark">
                           {name}
@@ -407,30 +622,32 @@ export default function TaskAttachments({
         </ModalHeader>
         <ModalBody>
           {previewAttachment ? (
-            (() => {
-              const name = getAttachmentName(previewAttachment);
-              const href = resolveAttachmentHref(previewAttachment?.url);
-              const isImg = isImageAttachment(previewAttachment) && !!href;
-              const iconSrc = toPublicAsset(resolveAttachmentIcon(previewAttachment));
-              const fallbackIconSrc = toPublicAsset("assets/images/icons/folder.png");
+	            (() => {
+	              const name = getAttachmentName(previewAttachment);
+	              const href = resolveAttachmentHref(getAttachmentUrl(previewAttachment));
+	              const isImg = isImageAttachment(previewAttachment) && !!href;
+	              const iconSrc = toPublicAsset(resolveAttachmentIcon(previewAttachment));
+	              const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
 
-              return (
-                <div className="d-flex flex-column gap-3">
-                  <div
+	              return (
+	                <div className="d-flex flex-column gap-3">
+	                  <div
                     className="bg-light rounded-3 d-flex-center overflow-hidden"
                     style={{ minHeight: 360 }}
                   >
-                    {isImg ? (
-                      <img
-                        src={href}
-                        alt={name}
-                        style={{ maxWidth: "100%", maxHeight: 520, objectFit: "contain" }}
-                      />
-                    ) : (
-                      <div className="d-flex flex-column align-items-center gap-2 py-4">
-                        <img
-                          src={iconSrc}
-                          alt={name}
+	                    {isImg ? (
+	                      <AttachmentImage
+	                        attachment={previewAttachment}
+	                        href={href}
+	                        alt={name}
+	                        style={{ maxWidth: "100%", maxHeight: 520, objectFit: "contain" }}
+	                        fallbackIconSrc={fallbackIconSrc}
+	                      />
+	                    ) : (
+	                      <div className="d-flex flex-column align-items-center gap-2 py-4">
+	                        <img
+	                          src={iconSrc}
+	                          alt={name}
                           onError={(e) => {
                             if (e.currentTarget.src === fallbackIconSrc) return;
                             e.currentTarget.src = fallbackIconSrc;
@@ -449,27 +666,24 @@ export default function TaskAttachments({
                         : null}
                     </div>
                     <div className="d-flex gap-2">
-                      {href ? (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-outline-secondary"
-                        >
-                          Open
-                        </a>
-                      ) : null}
-                      {href ? (
-                        <a href={href} download className="btn btn-primary">
-                          <i className="ti ti-download me-1"></i>
-                          Download
-                        </a>
-                      ) : (
-                        <button type="button" className="btn btn-primary" disabled>
-                          <i className="ti ti-download me-1"></i>
-                          Download
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={!href || previewDownloading}
+                        onClick={() => downloadAttachment(previewAttachment)}
+                      >
+                        {previewDownloading ? (
+                          <span className="d-inline-flex align-items-center gap-2">
+                            <Spinner size="sm" />
+                            <span>Downloading...</span>
+                          </span>
+                        ) : (
+                          <>
+                            <i className="ti ti-download me-1"></i>
+                            Download
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -479,5 +693,57 @@ export default function TaskAttachments({
         </ModalBody>
       </Modal>
     </div>
+  );
+}
+
+function AttachmentImage({ attachment, href, alt, fallbackIconSrc, ...imgProps }) {
+  const { src, loading } = useAttachmentImageSrc({ attachment, href });
+  const [errored, setErrored] = useState(false);
+  const iconSrc = toPublicAsset(resolveAttachmentIcon(attachment));
+  const fallback = fallbackIconSrc || toPublicAsset("assets/images/icons/file.png");
+
+  if (!href) {
+    return (
+      <img
+        src={iconSrc}
+        alt={alt}
+        onError={(e) => {
+          if (e.currentTarget.src === fallback) return;
+          e.currentTarget.src = fallback;
+        }}
+        style={{ width: 38, height: 38, objectFit: "contain" }}
+      />
+    );
+  }
+
+  if (errored) {
+    return (
+      <img
+        src={iconSrc}
+        alt={alt}
+        onError={(e) => {
+          if (e.currentTarget.src === fallback) return;
+          e.currentTarget.src = fallback;
+        }}
+        style={{ width: 38, height: 38, objectFit: "contain" }}
+      />
+    );
+  }
+
+  if (loading && !src) {
+    return (
+      <div className="w-100 h-100 d-flex-center">
+        <Spinner size="sm" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src || href}
+      alt={alt}
+      onError={() => setErrored(true)}
+      {...imgProps}
+    />
   );
 }

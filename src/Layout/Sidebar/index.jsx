@@ -95,10 +95,47 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
     }
   };
 
+  const getBackendOrigin = () => {
+    const apiBase = import.meta.env.VITE_API_BASE_URL;
+    try {
+      return new URL(String(apiBase)).origin;
+    } catch {
+      return "";
+    }
+  };
+
+  const resolveProjectImageSrc = (project) => {
+    const raw =
+      project?.image_url ??
+      project?.image ??
+      project?.logo ??
+      project?.avatar ??
+      project?.icon ??
+      null;
+
+    const str = String(raw || "").trim();
+    if (!str) return "";
+    if (/^https?:\/\//i.test(str)) return str;
+
+    const origin = getBackendOrigin();
+    if (!origin) return str;
+    // Laravel storage: DB might store relative paths like "project_images/..."
+    // which are typically served from "/storage/project_images/...".
+    const cleaned = str.replace(/^\/+/, "");
+    const storagePath =
+      cleaned.startsWith("project_images/") || cleaned.startsWith("task_attachments/")
+        ? `storage/${cleaned}`
+        : cleaned;
+
+    return `${origin}/${storagePath}`;
+  };
+
   const projectLinks = useMemo(() => {
     return (projects || []).map((p) => ({
       name: p.name,
       path: `/projects/${p.id}`,
+      avatarSrc: resolveProjectImageSrc(p),
+      className: "project-submenu-item",
     }));
   }, [projects]);
 

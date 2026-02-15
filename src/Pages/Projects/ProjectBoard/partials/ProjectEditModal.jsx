@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Button,
   Form,
@@ -26,7 +26,36 @@ const ProjectEditModal = ({
   descriptionRef,
   setValue,
   statusOptions,
+  currentImageSrc,
+  selectedImageFile,
+  onClearSelectedImage,
 }) => {
+  const objectUrlRef = useRef(null);
+  const filePreview = useMemo(() => {
+    if (!(selectedImageFile instanceof File)) return "";
+    const url = URL.createObjectURL(selectedImageFile);
+    objectUrlRef.current = url;
+    return url;
+  }, [selectedImageFile]);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!(selectedImageFile instanceof File)) {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  }, [selectedImageFile]);
+
+  const effectivePreview = filePreview || String(currentImageSrc || "").trim();
+  const hasCurrent = !!String(currentImageSrc || "").trim();
+  const hasSelected = selectedImageFile instanceof File;
+
   return (
     <Modal isOpen={isOpen} toggle={onClose} centered>
       <ModalHeader toggle={onClose}>Edit Project</ModalHeader>
@@ -71,6 +100,43 @@ const ProjectEditModal = ({
 
           <FormGroup>
             <Label for="logo">Image</Label>
+
+            {effectivePreview ? (
+              <div className="d-flex align-items-center gap-3 mb-2">
+                <div
+                  className="rounded-3 overflow-hidden border bg-light"
+                  style={{ width: 84, height: 84 }}
+                >
+                  <img
+                    src={effectivePreview}
+                    alt="Project"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+                <div className="flex-grow-1">
+                  <div className="text-muted small">
+                    {hasSelected
+                      ? "Selected image (will be uploaded)"
+                      : hasCurrent
+                        ? "Current project image"
+                        : null}
+                  </div>
+                  {hasSelected ? (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary mt-1"
+                      onClick={() => {
+                        onClearSelectedImage?.();
+                      }}
+                      disabled={!isFormReady || isSubmitting}
+                    >
+                      Remove selected
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
             <Input
               id="logo"
               type="file"

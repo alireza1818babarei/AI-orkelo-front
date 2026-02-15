@@ -157,6 +157,61 @@ nav {
                                 }
                             }
 
+                            &.project-submenu-item {
+                                a {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.5rem;
+
+                                    &::before {
+                                        display: none;
+                                    }
+
+	                                    .sidebar-project-avatar {
+	                                        width: 26px;
+	                                        height: 26px;
+	                                        flex: 0 0 26px;
+	                                        border-radius: 50%;
+	                                        overflow: hidden;
+	                                        display: inline-flex;
+	                                        align-items: center;
+                                        justify-content: center;
+                                        background: rgba(var(--secondary), 0.16);
+                                        border: 1px solid rgba(var(--secondary), 0.25);
+
+                                        img {
+                                            width: 100%;
+                                            height: 100%;
+                                            object-fit: cover;
+                                            display: block;
+                                        }
+
+	                                        &.sidebar-project-avatar--fallback {
+	                                            font-size: 11px;
+	                                            font-weight: 700;
+	                                            color: rgba(var(--dark), 0.8);
+	                                            text-transform: uppercase;
+	                                        }
+                                    }
+
+                                    .sidebar-project-name {
+                                        min-width: 0;
+                                        overflow: hidden;
+                                        text-overflow: ellipsis;
+                                    }
+                                }
+
+                                &.active {
+                                    a {
+                                        .sidebar-project-avatar {
+                                            border-color: rgba(var(--primary), 0.8);
+                                            outline: 2px solid rgba(var(--primary), 0.2);
+                                            outline-offset: 2px;
+                                        }
+                                    }
+                                }
+                            }
+
                             &.add-project-item {
                                 a {
                                     display: flex;

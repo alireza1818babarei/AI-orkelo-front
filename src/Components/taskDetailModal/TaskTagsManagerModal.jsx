@@ -5,6 +5,7 @@ import {
   createProjectTagThunk,
   deleteProjectTagThunk,
   getProjectTagsThunk,
+  updateProjectTagThunk,
 } from "../../store/tags/tagsSlice";
 import { alertSuccess, toastError } from "../../utils/sweetAlert";
 
@@ -38,10 +39,15 @@ export default function TaskTagsManagerModal({ projectId, isOpen, toggle, onChan
   const loading = isOpen && tagsState?.status === "loading";
   const saving = !!tagsState?.saving;
   const deletingByTagId = tagsState?.deletingByTagId || {};
+  const updatingByTagId = tagsState?.updatingByTagId || {};
 
   const [adding, setAdding] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState(PRESET_COLORS[0]);
+
+  const [editingTagId, setEditingTagId] = useState(null);
+  const [editTagName, setEditTagName] = useState("");
+  const [editTagColor, setEditTagColor] = useState(PRESET_COLORS[0]);
 
   const fetchTags = useCallback(async () => {
     if (!projectId) return;
@@ -62,6 +68,9 @@ export default function TaskTagsManagerModal({ projectId, isOpen, toggle, onChan
     setAdding(false);
     setNewTagName("");
     setNewTagColor(PRESET_COLORS[0]);
+    setEditingTagId(null);
+    setEditTagName("");
+    setEditTagColor(PRESET_COLORS[0]);
   }, [isOpen]);
 
   const list = useMemo(() => items || [], [items]);
@@ -85,6 +94,41 @@ export default function TaskTagsManagerModal({ projectId, isOpen, toggle, onChan
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         "Create tag failed";
+      toastError(msg);
+    }
+  };
+
+  const startEditTag = (tag) => {
+    const tagId = tag?.id ?? null;
+    if (!tagId) return;
+    setEditingTagId(String(tagId));
+    setEditTagName(String(getTagLabel(tag) || ""));
+    setEditTagColor(String(tag?.color || PRESET_COLORS[0]));
+  };
+
+  const cancelEditTag = () => {
+    setEditingTagId(null);
+    setEditTagName("");
+    setEditTagColor(PRESET_COLORS[0]);
+  };
+
+  const updateTag = async () => {
+    const tagId = editingTagId;
+    const name = (editTagName || "").trim();
+    if (!projectId || !tagId || !name) return;
+    try {
+      const payload = { name };
+      if (editTagColor) payload.color = editTagColor;
+      await dispatch(updateProjectTagThunk({ projectId, tagId, payload })).unwrap();
+      alertSuccess();
+      cancelEditTag();
+      onChanged?.();
+    } catch (err) {
+      const msg =
+        err?.message ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Update tag failed";
       toastError(msg);
     }
   };
@@ -128,6 +172,8 @@ export default function TaskTagsManagerModal({ projectId, isOpen, toggle, onChan
               const color = String(t?.color || "").trim();
               const idKey = getTagKey(t);
               const deleting = !!deletingByTagId[idKey];
+              const updating = !!updatingByTagId[idKey];
+              const isEditing = editingTagId != null && String(editingTagId) === String(idKey);
               return (
                 <div
                   key={t?.id ?? `${label}-${idx}`}
@@ -139,25 +185,118 @@ export default function TaskTagsManagerModal({ projectId, isOpen, toggle, onChan
                       style={{
                         width: 34,
                         height: 34,
-                        border: color ? `2px solid ${color}` : "1px solid rgba(0,0,0,0.1)",
+                        border:
+                          (isEditing ? editTagColor : color)
+                            ? `2px solid ${isEditing ? editTagColor : color}`
+                            : "1px solid rgba(0,0,0,0.1)",
                         flex: "0 0 auto",
                       }}
                     >
                       <i className="ti ti-tag fs-5"></i>
                     </span>
-                    <span className="text-truncate">{label}</span>
+                    {isEditing ? (
+                      <Input
+                        value={editTagName}
+                        onChange={(e) => setEditTagName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") updateTag();
+                          if (e.key === "Escape") cancelEditTag();
+                        }}
+                        disabled={saving || deleting || updating}
+                        bsSize="sm"
+                        style={{ maxWidth: 260 }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="text-truncate">{label}</span>
+                    )}
                   </div>
 
-                  <Button
-                    type="button"
-                    color="link"
-                    className="p-0 text-muted"
-                    title="Delete"
-                    disabled={saving || deleting}
-                    onClick={() => deleteTag(t)}
-                  >
-                    {deleting ? <Spinner size="sm" /> : <i className="ti ti-trash fs-5"></i>}
-                  </Button>
+                  <div className="d-flex align-items-center gap-2">
+                    {isEditing ? (
+                      <>
+                        <div className="d-flex align-items-center gap-1 flex-wrap">
+                          {PRESET_COLORS.map((c) => {
+                            const active =
+                              String(c).toLowerCase() === String(editTagColor).toLowerCase();
+                            return (
+                              <button
+                                key={c}
+                                type="button"
+                                className="btn p-0"
+                                onClick={() => setEditTagColor(c)}
+                                disabled={saving || deleting || updating}
+                                title={c}
+                                aria-label={`Color ${c}`}
+                                style={{ width: 18, height: 18 }}
+                              >
+                                <span
+                                  className="d-inline-block rounded-circle"
+                                  style={{
+                                    width: 14,
+                                    height: 14,
+                                    background: c,
+                                    border: active
+                                      ? "2px solid rgba(0,0,0,0.35)"
+                                      : "1px solid rgba(0,0,0,0.15)",
+                                    boxShadow: active
+                                      ? "0 0 0 2px rgba(59,130,246,0.25)"
+                                      : "none",
+                                  }}
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <Button
+                          type="button"
+                          color="link"
+                          className="p-0 text-primary"
+                          title="Save"
+                          disabled={saving || deleting || updating || !editTagName.trim()}
+                          onClick={updateTag}
+                        >
+                          {updating ? <Spinner size="sm" /> : <i className="ti ti-check fs-5"></i>}
+                        </Button>
+
+                        <Button
+                          type="button"
+                          color="link"
+                          className="p-0 text-muted"
+                          title="Cancel"
+                          disabled={saving || deleting || updating}
+                          onClick={cancelEditTag}
+                        >
+                          <i className="ti ti-x fs-5"></i>
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          color="link"
+                          className="p-0 text-muted"
+                          title="Edit"
+                          disabled={saving || deleting || updating}
+                          onClick={() => startEditTag(t)}
+                        >
+                          <i className="ti ti-pencil fs-5"></i>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          color="link"
+                          className="p-0 text-muted"
+                          title="Delete"
+                          disabled={saving || deleting || updating}
+                          onClick={() => deleteTag(t)}
+                        >
+                          {deleting ? <Spinner size="sm" /> : <i className="ti ti-trash fs-5"></i>}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -268,4 +407,3 @@ export default function TaskTagsManagerModal({ projectId, isOpen, toggle, onChan
     </Modal>
   );
 }
-

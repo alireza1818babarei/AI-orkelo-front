@@ -199,6 +199,7 @@ const ProjectBoard = () => {
     register,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: yupResolver(updateProjectSchema),
@@ -219,6 +220,8 @@ const ProjectBoard = () => {
     handleSubmit: handleColumnSubmit,
     register: registerColumn,
     reset: resetColumn,
+    setValue: setColumnValue,
+    watch: watchColumn,
     formState: { errors: columnErrors, isSubmitting: isColumnSubmitting },
   } = useForm({
     defaultValues: {
@@ -233,6 +236,7 @@ const ProjectBoard = () => {
   });
   const { ref: colorRef, ...colorField } = registerColumn("color");
   const { ref: iconRef, ...iconField } = registerColumn("icon");
+  const currentColumnIcon = watchColumn("icon");
 
 
   const buildFormValues = (p) => ({
@@ -292,6 +296,44 @@ const ProjectBoard = () => {
   const closeColumnModal = () => setColumnModalOpen(false);
 
   const isFormReady = !!project && !loading;
+  const selectedProjectImage = watch("image");
+
+  const getBackendOrigin = () => {
+    const apiBase = import.meta.env.VITE_API_BASE_URL;
+    try {
+      return new URL(String(apiBase)).origin;
+    } catch {
+      return "";
+    }
+  };
+
+  const resolveProjectImageSrc = (p) => {
+    const raw =
+      p?.image_url ??
+      p?.image ??
+      p?.logo ??
+      p?.avatar ??
+      p?.icon ??
+      null;
+
+    const str = String(raw || "").trim();
+    if (!str) return "";
+    if (/^https?:\/\//i.test(str)) return str;
+
+    const origin = getBackendOrigin();
+    if (!origin) return str;
+
+    const cleaned = str.replace(/^\/+/, "");
+    const storagePath = cleaned.startsWith("project_images/")
+      ? `storage/${cleaned}`
+      : cleaned;
+    return `${origin}/${storagePath}`;
+  };
+
+  const currentProjectImageSrc = useMemo(
+    () => resolveProjectImageSrc(project),
+    [project],
+  );
 
   const onSubmit = async (values) => {
     if (!project?.id) return;
@@ -480,22 +522,27 @@ const ProjectBoard = () => {
             >
               Add Column
             </button>
-            <ProjectEditModal
-              isOpen={editModal}
-              onClose={closeEditModal}
-              onSubmit={handleSubmit(onSubmit)}
-              isFormReady={isFormReady}
-              isSubmitting={isSubmitting}
-              errors={errors}
-              nameField={nameField}
-              nameRef={nameRef}
-              statusField={statusField}
-              statusRef={statusRef}
-              descriptionField={descriptionField}
-              descriptionRef={descriptionRef}
-              setValue={setValue}
-              statusOptions={PROJECT_STATUS}
-            />
+      <ProjectEditModal
+        isOpen={editModal}
+        onClose={closeEditModal}
+        onSubmit={handleSubmit(onSubmit)}
+        isFormReady={isFormReady}
+        isSubmitting={isSubmitting}
+        errors={errors}
+        nameField={nameField}
+        nameRef={nameRef}
+        statusField={statusField}
+        statusRef={statusRef}
+        descriptionField={descriptionField}
+        descriptionRef={descriptionRef}
+        setValue={setValue}
+        statusOptions={PROJECT_STATUS}
+        currentImageSrc={currentProjectImageSrc}
+        selectedImageFile={selectedProjectImage}
+        onClearSelectedImage={() =>
+          setValue("image", null, { shouldValidate: true, shouldDirty: true })
+        }
+      />
             <ProjectDetailsModal
               infoOpen={infoOpen}
               project={project}
@@ -507,7 +554,13 @@ const ProjectBoard = () => {
               isOpen={taskInfoOpen}
               onClose={() => setTaskInfoOpen(false)}
               task={activeTask}
-              projectId={project?.id ?? id}
+              projectId={
+                activeTask?.project_id ??
+                activeTask?.projectId ??
+                activeTask?.project?.id ??
+                project?.id ??
+                id
+              }
               onDeleted={({ taskId, columnId }) => {
                 if (taskId && columnId) {
                   dispatch(removeTaskFromColumn({ taskId, columnId }));
@@ -532,6 +585,13 @@ const ProjectBoard = () => {
               colorRef={colorRef}
               iconField={iconField}
               iconRef={iconRef}
+              iconValue={currentColumnIcon}
+              onPickIcon={(value) =>
+                setColumnValue("icon", value, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
               isEdit={!!editingColumn}
             />
           </ProjectBoardHeader>

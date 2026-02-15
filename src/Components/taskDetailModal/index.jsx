@@ -1,10 +1,11 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Modal, ModalBody, Spinner } from "reactstrap";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Dropdown, DropdownMenu, DropdownToggle, Modal, ModalBody, Spinner } from "reactstrap";
 import api from "../../api/axios";
 import { alertConfirm, alertSuccess, toastError } from "../../utils/sweetAlert";
 import ActionDropdown from "../ActionDropdown";
 import { useDispatch, useSelector } from "react-redux";
 import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
+import { getTaskDetailThunk } from "../../store/tasks/taskDetailSlice";
 import TaskModalPlaceHolder from "../TaskModalPlaceHolder";
 import Flatpickr from "react-flatpickr";
 import TaskActivityConversation from "./TaskActivityConversation";
@@ -14,7 +15,29 @@ import TaskAssigneeDropdown from "./TaskAssigneeDropdown";
 import TaskWatchersDropdown from "./TaskWatchersDropdown";
 
 const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
-  const t = task || {};
+  const propTask = task || {};
+
+  const taskDetailState = useSelector((s) => s.taskDetail);
+  const taskDetailMatches =
+    taskDetailState?.projectId != null &&
+    taskDetailState?.taskId != null &&
+    String(taskDetailState.projectId) === String(projectId) &&
+    String(taskDetailState.taskId) === String(propTask?.id ?? propTask?.task_id ?? propTask?.uuid ?? "");
+
+  const detailLoading =
+    isOpen &&
+    taskDetailMatches &&
+    taskDetailState?.status === "loading" &&
+    !taskDetailState?.task;
+  const detailTask = taskDetailMatches ? taskDetailState?.task ?? null : null;
+  const t = detailTask || propTask;
+  const effectiveProjectId =
+    detailTask?.project?.id ??
+    t?.project?.id ??
+    t?.project_id ??
+    t?.projectId ??
+    projectId ??
+    null;
   const deriveCompleted = (obj) =>
     !!obj?.is_completed ||
     String(obj?.status || "").toLowerCase() === "done" ||
@@ -57,22 +80,29 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   const [taskCompletedAt, setTaskCompletedAt] = useState(deriveCompletedAt(t));
   const [dueAt, setDueAt] = useState(deriveDueAt(t));
   const [savedDueAt, setSavedDueAt] = useState(deriveDueAt(t));
-  const duePickerInstanceRef = useRef(null);
+  const [dueDraftDate, setDueDraftDate] = useState(
+    deriveDueAt(t) ? new Date(deriveDueAt(t)) : null,
+  );
+  const [dueDropdownOpen, setDueDropdownOpen] = useState(false);
+  const [dueSaving, setDueSaving] = useState(false);
   const [createdAt, setCreatedAt] = useState(t.created_at ?? null);
   const [updatedAt, setUpdatedAt] = useState(t.updated_at ?? null);
   const [checklistItems, setChecklistItems] = useState([]);
-  const [checklistLoading, setChecklistLoading] = useState(false);
+  const checklistLoading = detailLoading;
   const [checklistBusyId, setChecklistBusyId] = useState(null);
   const [subInputById, setSubInputById] = useState({});
   const [rootInput, setRootInput] = useState("");
   const [showRootInput, setShowRootInput] = useState(false);
+  const skipRootBlurRef = useRef(false);
+  const skipSubBlurByIdRef = useRef({});
   const [hoveredChecklistId, setHoveredChecklistId] = useState(null);
-  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const dispatch = useDispatch();
   const [actionOpen, setActionOpen] = useState(false);
   const actionRef = useRef(null);
-
-  const bumpActivity = () => setActivityRefreshKey((k) => k + 1);
+  const refreshDetail = () => {
+    if (!effectiveProjectId || !taskId) return;
+    dispatch(getTaskDetailThunk({ projectId: effectiveProjectId, taskId }));
+  };
 
   const taskId = useMemo(
     () => t?.id ?? t?.task_id ?? t?.uuid ?? null,
@@ -96,8 +126,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   }, [taskColumnId, taskId, projectColumns]);
 
   const getTaskUpdateUrl = () => {
-    if (!projectId || !taskId || !resolvedColumnId) return null;
-    return `/projects/${projectId}/columns/${resolvedColumnId}/tasks/${taskId}`;
+    if (!effectiveProjectId || !taskId || !resolvedColumnId) return null;
+    return `/projects/${effectiveProjectId}/columns/${resolvedColumnId}/tasks/${taskId}`;
   };
   const updateTask = async (payload) => {
     const url = getTaskUpdateUrl();
@@ -137,33 +167,16 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       return item;
     });
 
-  useLayoutEffect(() => {
-    if (!isOpen || !taskId || !projectId) return;
-    setChecklistItems([]);
-    setChecklistLoading(true);
-  }, [isOpen, taskId, projectId]);
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!effectiveProjectId || !taskId) return;
+    dispatch(getTaskDetailThunk({ projectId: effectiveProjectId, taskId }));
+  }, [isOpen, dispatch, effectiveProjectId, taskId]);
 
   useEffect(() => {
-    if (!isOpen || !taskId || !projectId) return;
-    const load = async () => {
-      try {
-        const res = await api.get(
-          `/projects/${projectId}/tasks/${taskId}/checklist-items`,
-        );
-        const items = res.data?.data ?? res.data ?? [];
-        setChecklistItems(normalizeTree(items));
-      } catch (err) {
-        const msg =
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          "Load checklist failed";
-        toastError(msg);
-      } finally {
-        setChecklistLoading(false);
-      }
-    };
-    load();
-  }, [isOpen, taskId, projectId]);
+    if (!isOpen) return;
+    setChecklistItems(normalizeTree(t?.checklist_items || []));
+  }, [isOpen, t?.checklist_items]);
 
   useEffect(() => {
     const next = t.description || "";
@@ -177,6 +190,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     const nextDueAt = deriveDueAt(t);
     setDueAt(nextDueAt);
     setSavedDueAt(nextDueAt);
+    setDueDraftDate(nextDueAt ? new Date(nextDueAt) : null);
+    setDueDropdownOpen(false);
+    setDueSaving(false);
     setCreatedAt(t.created_at ?? null);
     setUpdatedAt(t.updated_at ?? null);
   }, [
@@ -222,42 +238,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     return () => document.removeEventListener("pointerdown", handlePointerDown, true);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || !projectId || !taskId) return;
-    if (createdAt && updatedAt) return;
-
-    const loadMeta = async () => {
-      try {
-        const res = await api.get(`/projects/${projectId}/tasks/${taskId}`);
-        const payload = res?.data?.data ?? res?.data ?? null;
-        const fetched = payload?.task ?? payload?.data?.task ?? payload ?? null;
-        if (!fetched || typeof fetched !== "object") return;
-
-        const nextCreated = fetched?.created_at ?? null;
-        const nextUpdated = fetched?.updated_at ?? null;
-        if (nextCreated) setCreatedAt(nextCreated);
-        if (nextUpdated) setUpdatedAt(nextUpdated);
-
-        const patch = {};
-        if (nextCreated) patch.created_at = nextCreated;
-        if (nextUpdated) patch.updated_at = nextUpdated;
-        if (Object.keys(patch).length) {
-          dispatch(
-            updateTaskInColumn({
-              columnId: taskColumnId,
-              taskId,
-              patch,
-            }),
-          );
-        }
-      } catch {
-        // ignore: meta is optional; board will eventually refresh from other calls
-      }
-    };
-
-    loadMeta();
-  }, [isOpen, projectId, taskId, createdAt, updatedAt, dispatch, taskColumnId]);
-
   const createChecklistItem = async ({ text, parentId = null }) => {
     if (!projectId || !taskId) return;
     const trimmed = text.trim();
@@ -279,7 +259,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       setChecklistItems((prev) =>
         parentId ? addChildToTree(prev, parentId, nextItem) : [...prev, nextItem],
       );
-      bumpActivity();
+      refreshDetail();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -339,7 +319,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
           patch: { description: text },
         }),
       );
-      bumpActivity();
+      refreshDetail();
       setSavedDescription(text);
     } catch (err) {
       const msg =
@@ -373,7 +353,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
           patch: { text: trimmed, title: trimmed },
         }),
       );
-      bumpActivity();
+      refreshDetail();
       setSavedTaskText(trimmed);
       setTaskText(trimmed);
     } catch (err) {
@@ -387,19 +367,48 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     }
   };
 
+  const formatDueAtForApi = (value) => {
+    if (!value) return null;
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const y = d.getFullYear();
+    const m = pad2(d.getMonth() + 1);
+    const day = pad2(d.getDate());
+    const hh = pad2(d.getHours());
+    const mm = pad2(d.getMinutes());
+    const ss = pad2(d.getSeconds());
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+  };
+
+  const cancelDuePicker = () => {
+    setDueDraftDate(savedDueAt ? new Date(savedDueAt) : null);
+    setDueAt(savedDueAt);
+    setDueDropdownOpen(false);
+  };
+
+  const syncDueDraftFromCurrent = () => {
+    const base = dueAt ?? savedDueAt ?? null;
+    const nextDraft = base ? new Date(base) : null;
+    setDueDraftDate(nextDraft && !Number.isNaN(nextDraft.getTime()) ? nextDraft : null);
+  };
+
   const updateTaskDueAt = async (isoValue) => {
     if (!projectId || !taskId) return;
     if ((savedDueAt ?? "") === (isoValue ?? "")) return;
     try {
+      setDueSaving(true);
+      const dueAtForApi = formatDueAtForApi(isoValue) ?? isoValue;
       try {
         await api.patch(`/projects/${projectId}/tasks/${taskId}/due-time`, {
-          due_at: isoValue,
-          dueAt: isoValue,
+          due_at: dueAtForApi,
+          dueAt: dueAtForApi,
         });
       } catch {
         await api.post(`/projects/${projectId}/tasks/${taskId}/due-time`, {
-          due_at: isoValue,
-          dueAt: isoValue,
+          due_at: dueAtForApi,
+          dueAt: dueAtForApi,
         });
       }
       dispatch(
@@ -409,13 +418,26 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
           patch: { due_at: isoValue },
         }),
       );
-      bumpActivity();
+      refreshDetail();
       setSavedDueAt(isoValue);
       setDueAt(isoValue);
+      setDueDropdownOpen(false);
     } catch (err) {
       toastError(err?.message || "Update due date failed");
       setDueAt(savedDueAt);
+    } finally {
+      setDueSaving(false);
     }
+  };
+
+  const toggleDueDropdown = () => {
+    if (dueSaving) return;
+    if (dueDropdownOpen) {
+      cancelDuePicker();
+      return;
+    }
+    syncDueDraftFromCurrent();
+    setDueDropdownOpen(true);
   };
 
   const handleClose = () => {
@@ -424,13 +446,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       active.blur();
     }
     onClose?.();
-  };
-
-  const openDuePicker = () => {
-    const inst = duePickerInstanceRef.current;
-    if (inst && typeof inst.open === "function") {
-      inst.open();
-    }
   };
 
   const deleteTask = async () => {
@@ -476,7 +491,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
           is_completed: checked ? 1 : 0,
         })),
       );
-      bumpActivity();
+      refreshDetail();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -503,7 +518,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
             children: removeFromTree(i.children || []),
           }));
       setChecklistItems((prev) => removeFromTree(prev));
-      bumpActivity();
+      refreshDetail();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -542,7 +557,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       const completedAt = deriveCompletedAt(updated) ?? new Date().toISOString();
       setTaskCompletedAt(completedAt);
       alertSuccess("Task completed");
-      bumpActivity();
+      refreshDetail();
     } catch (err) {
       toastError(err?.message || "Complete task failed");
     } finally {
@@ -656,34 +671,40 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
                       [item.id]: e.target.value,
                     }))
                   }
-                  onBlur={async () => {
-                    const text = (subInputById[item.id] || "").trim();
-                    if (text) await createChecklistItem({ text, parentId: item.id });
-                    setSubInputById((prev) => {
-                      const next = { ...prev };
-                      delete next[item.id];
+	                  onBlur={async () => {
+	                    if (skipSubBlurByIdRef.current?.[item.id]) {
+	                      delete skipSubBlurByIdRef.current[item.id];
+	                      return;
+	                    }
+	                    const text = (subInputById[item.id] || "").trim();
+	                    if (text) await createChecklistItem({ text, parentId: item.id });
+	                    setSubInputById((prev) => {
+	                      const next = { ...prev };
+	                      delete next[item.id];
                       return next;
                     });
                   }}
-                  onKeyDown={async (e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      const text = (subInputById[item.id] || "").trim();
-                      if (text) await createChecklistItem({ text, parentId: item.id });
-                      setSubInputById((prev) => {
-                        const next = { ...prev };
-                        delete next[item.id];
+	                  onKeyDown={async (e) => {
+	                    if (e.key === "Enter" && !e.shiftKey) {
+	                      e.preventDefault();
+	                      skipSubBlurByIdRef.current[item.id] = true;
+	                      const text = (subInputById[item.id] || "").trim();
+	                      if (text) await createChecklistItem({ text, parentId: item.id });
+	                      setSubInputById((prev) => {
+	                        const next = { ...prev };
+	                        delete next[item.id];
                         return next;
                       });
-                    } else if (e.key === "Escape") {
-                      e.preventDefault();
-                      setSubInputById((prev) => {
-                        const next = { ...prev };
-                        delete next[item.id];
-                        return next;
-                      });
-                    }
-                  }}
+	                    } else if (e.key === "Escape") {
+	                      e.preventDefault();
+	                      skipSubBlurByIdRef.current[item.id] = true;
+	                      setSubInputById((prev) => {
+	                        const next = { ...prev };
+	                        delete next[item.id];
+	                        return next;
+	                      });
+	                    }
+	                  }}
                   onInput={(e) => {
                     e.currentTarget.style.height = "auto";
                     e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
@@ -726,9 +747,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
           )}
           {!taskCompleted ? (
             <TaskAssigneeDropdown
-              projectId={projectId}
+              projectId={effectiveProjectId}
               taskId={taskId}
-              disabled={!projectId || !taskId}
+              selectedAssignees={detailTask?.assignees ?? t?.assignees ?? []}
+              disabled={!effectiveProjectId || !taskId}
               variant="header"
             />
           ) : null}
@@ -845,27 +867,33 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
                       className="form-control autogrow-textarea"
                       rows="1"
                       placeholder="Write an item..."
-                      value={rootInput}
-                      onChange={(e) => setRootInput(e.target.value)}
-                      onBlur={async () => {
-                        const text = rootInput.trim();
-                        if (text) await createChecklistItem({ text });
-                        setRootInput("");
-                        setShowRootInput(false);
-                      }}
-                      onKeyDown={async (e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          const text = rootInput.trim();
-                          if (text) await createChecklistItem({ text });
-                          setRootInput("");
-                          setShowRootInput(false);
-                        } else if (e.key === "Escape") {
-                          e.preventDefault();
-                          setRootInput("");
-                          setShowRootInput(false);
-                        }
-                      }}
+	                      value={rootInput}
+	                      onChange={(e) => setRootInput(e.target.value)}
+	                      onBlur={async () => {
+	                        if (skipRootBlurRef.current) {
+	                          skipRootBlurRef.current = false;
+	                          return;
+	                        }
+	                        const text = rootInput.trim();
+	                        if (text) await createChecklistItem({ text });
+	                        setRootInput("");
+	                        setShowRootInput(false);
+	                      }}
+	                      onKeyDown={async (e) => {
+	                        if (e.key === "Enter" && !e.shiftKey) {
+	                          e.preventDefault();
+	                          skipRootBlurRef.current = true;
+	                          const text = rootInput.trim();
+	                          if (text) await createChecklistItem({ text });
+	                          setRootInput("");
+	                          setShowRootInput(false);
+	                        } else if (e.key === "Escape") {
+	                          e.preventDefault();
+	                          skipRootBlurRef.current = true;
+	                          setRootInput("");
+	                          setShowRootInput(false);
+	                        }
+	                      }}
                       onInput={(e) => {
                         e.currentTarget.style.height = "auto";
                         e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
@@ -879,78 +907,105 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
               </div>
 
               <TaskAttachments
-                projectId={projectId}
+                projectId={effectiveProjectId}
                 taskId={taskId}
                 columnId={taskColumnId}
-                onChanged={bumpActivity}
+                prefetched={!!detailTask}
+                initialAttachments={detailTask?.attachments}
+                onChanged={refreshDetail}
                 formatDateTime={formatDateTime}
               />
 
               <TaskActivityConversation
-                projectId={projectId}
+                projectId={effectiveProjectId}
                 taskId={taskId}
-                activityRefreshKey={activityRefreshKey}
+                activities={detailTask?.activities ?? t?.activities ?? []}
+                comments={detailTask?.comments ?? t?.comments ?? []}
+                onRefresh={refreshDetail}
               />
             </div>
 
             <div className="col-12 col-lg-4">
               <div className="bg-light-dark text-black p-3 h-100">
                 <div className="d-flex flex-column gap-3 mt-3">
-                  <button
-                    type="button"
-                    className="btn d-flex align-items-center justify-content-between px-0 border-bottom"
-                    onClick={openDuePicker}
-                  >
-                    <span className="d-flex flex-column align-items-start">
-                      <span className="d-flex align-items-center gap-2">
-                        <i className="ti ti-calendar fs-5"></i>
-                        Due date
+                  <Dropdown isOpen={dueDropdownOpen} toggle={toggleDueDropdown}>
+                    <DropdownToggle
+                      tag="button"
+                      type="button"
+                      disabled={dueSaving}
+                      className="btn d-flex align-items-center justify-content-between px-0 border-bottom w-100"
+                      style={{ boxShadow: "none" }}
+                    >
+                      <span className="d-flex flex-column align-items-start">
+                        <span className="d-flex align-items-center gap-2">
+                          <i className="ti ti-calendar fs-5"></i>
+                          Due time
+                        </span>
+                        <span className="small">
+                          {dueAt ? formatDateTime(dueAt) : "Set time"}
+                        </span>
                       </span>
-                      <span className="small">
-                        {dueAt ? formatDateTime(dueAt) : "Set date"}
-                      </span>
-                    </span>
-                    <i className="ti ti-chevron-down"></i>
-                  </button>
-                  <Flatpickr
-                    value={dueAt ? new Date(dueAt) : null}
-                    options={{
-                      enableTime: true,
-                      dateFormat: "Y-m-d H:i",
-                      time_24hr: true,
-                      allowInput: false,
-                    }}
-                    onReady={(_, __, instance) => {
-                      duePickerInstanceRef.current = instance;
-                    }}
-                    onChange={(selectedDates) => {
-                      const next = selectedDates?.[0] ? selectedDates[0].toISOString() : null;
-                      setDueAt(next);
-                      updateTaskDueAt(next);
-                    }}
-                    render={({ defaultValue, value, ...props }, ref) => (
-                      <input
-                        ref={ref}
-                        defaultValue={defaultValue}
-                        value={value ?? ""}
-                        readOnly
-                        {...props}
-                        style={{
-                          position: "absolute",
-                          width: 1,
-                          height: 1,
-                          opacity: 0,
-                          pointerEvents: "none",
-                        }}
-                        tabIndex={-1}
-                        aria-hidden="true"
-                      />
-                    )}
-                  />
+                      <i className="ti ti-chevron-down"></i>
+                    </DropdownToggle>
+
+                    <DropdownMenu
+                      end
+                      className="p-2"
+                      style={{ minWidth: 320 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Flatpickr
+                          value={dueDraftDate}
+                          options={{
+                            inline: true,
+                            enableTime: true,
+                            dateFormat: "Y-m-d H:i",
+                            time_24hr: true,
+                            allowInput: false,
+                          }}
+                          onChange={(selectedDates) => {
+                            const next = selectedDates?.[0] ?? null;
+                            setDueDraftDate(next);
+                          }}
+                        />
+
+                        <div className="d-flex justify-content-end gap-2 mt-2">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-light"
+                            disabled={dueSaving}
+                            onClick={cancelDuePicker}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            disabled={dueSaving || !dueDraftDate}
+                            onClick={() => {
+                              if (!dueDraftDate) return;
+                              updateTaskDueAt(dueDraftDate.toISOString());
+                            }}
+                          >
+                            {dueSaving ? (
+                              <span className="d-inline-flex align-items-center gap-2">
+                                <Spinner size="sm" />
+                                <span>Saving...</span>
+                              </span>
+                            ) : (
+                              "Done"
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </DropdownMenu>
+                  </Dropdown>
                   <TaskTagsDropdown
-                    projectId={projectId}
+                    projectId={effectiveProjectId}
                     taskId={taskId}
-                    disabled={!projectId || !taskId}
+                    selectedTags={detailTask?.tags ?? t?.tags ?? []}
+                    disabled={!effectiveProjectId || !taskId || detailLoading || !detailTask}
                     onChanged={(tags) => {
                       if (!taskId) return;
                       dispatch(
@@ -960,13 +1015,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
                           patch: { tags: Array.isArray(tags) ? tags : [] },
                         }),
                       );
-                      bumpActivity();
+                      refreshDetail();
                     }}
                   />
                   <TaskWatchersDropdown
-                    projectId={projectId}
+                    projectId={effectiveProjectId}
                     taskId={taskId}
-                    disabled={!projectId || !taskId}
+                    disabled={!effectiveProjectId || !taskId}
                   />
 
                   <div className=" pt-2 border-top">

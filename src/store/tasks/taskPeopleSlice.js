@@ -17,7 +17,11 @@ const pickAssignee = ({ userId, assignee, people }) => {
   const key = String(userId ?? getUserKey(assignee) ?? "");
   if (!key) return assignee ?? null;
   const fromPeople = (people || []).find((p) => getUserKey(p) === key) || null;
-  if (!assignee) return fromPeople || { id: userId };
+  if (fromPeople) {
+    if (assignee && typeof assignee === "object") return { ...fromPeople, ...assignee };
+    return fromPeople;
+  }
+  if (!assignee) return userId != null ? { id: userId } : null;
   if (fromPeople && typeof assignee === "object") return { ...fromPeople, ...assignee };
   return assignee;
 };
@@ -53,8 +57,12 @@ const taskPeopleSlice = createSlice({
       state.taskId = action.payload?.taskId ?? null;
       state.people = action.payload?.people || [];
       state.watcherIds = normalizeWatcherIds(action.payload?.watchers);
+      const assigneeUserId =
+        typeof action.payload?.assignee === "string" || typeof action.payload?.assignee === "number"
+          ? action.payload.assignee
+          : null;
       state.assignee = pickAssignee({
-        userId: null,
+        userId: assigneeUserId,
         assignee: action.payload?.assignee ?? null,
         people: state.people,
       });
@@ -146,4 +154,3 @@ export {
   removeTaskWatcherThunk,
   setTaskAssigneeThunk,
 };
-

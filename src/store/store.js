@@ -6,6 +6,7 @@ import projectColumnsReducer from "./projects/projectColumnsSlice";
 import tagsReducer from "./tags/tagsSlice";
 import commentsReducer from "./tasks/commentSlice";
 import taskPeopleReducer from "./tasks/taskPeopleSlice";
+import taskDetailReducer from "./tasks/taskDetailSlice";
 
 export const store = configureStore({
   reducer: {
@@ -16,5 +17,6 @@ export const store = configureStore({
     tags: tagsReducer,
     comments: commentsReducer,
     taskPeople: taskPeopleReducer,
+    taskDetail: taskDetailReducer,
   }
 })

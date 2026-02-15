@@ -1,6 +1,16 @@
 import { Fragment, useMemo } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
+const getInitials = (name) => {
+  const raw = String(name || "").trim();
+  if (!raw) return "?";
+  const parts = raw.split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] || "";
+  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+  const out = `${first}${last}`.toUpperCase();
+  return out || raw.slice(0, 2).toUpperCase();
+};
+
 function MenuItem(props) {
   const { iconClass, type, path, badgeCount, children: links, name, collapseId, title } = props;
 
@@ -83,7 +93,18 @@ function MenuItem(props) {
                       {link.name}
                     </Link>
                   ) : (
-                    <NavLink to={link.path}>{link.name}</NavLink>
+                    <NavLink to={link.path}>
+                      {link.avatarSrc ? (
+                        <span className="sidebar-project-avatar" aria-hidden="true">
+                          <img src={link.avatarSrc} alt="" />
+                        </span>
+                      ) : link.className?.includes("project-submenu-item") ? (
+                        <span className="sidebar-project-avatar sidebar-project-avatar--fallback" aria-hidden="true">
+                          {getInitials(link.name)}
+                        </span>
+                      ) : null}
+                      <span className="sidebar-project-name">{link.name}</span>
+                    </NavLink>
                   )}
                 </li>
               );

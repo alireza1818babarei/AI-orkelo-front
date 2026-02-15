@@ -196,17 +196,17 @@ export const createTaskTagThunk = createAsyncThunk(
 
       if (!tagId || !taskId) return { projectId, taskId, tag, tags: null };
 
-      const toggleRes = await api.patch(
-        `/projects/${projectId}/tags/${tagId}/toggle`,
-        { task_id: taskId, taskId },
+      // Attach the newly created tag to this task (current backend route)
+      const attachRes = await api.post(
+        `/projects/${projectId}/tags/${tagId}/tasks/${taskId}`,
       );
-      const toggleRaw = toggleRes?.data?.data ?? toggleRes?.data ?? null;
-      const tags = Array.isArray(toggleRaw)
-        ? toggleRaw
-        : Array.isArray(toggleRaw?.tags)
-          ? toggleRaw.tags
-          : Array.isArray(toggleRaw?.data?.tags)
-            ? toggleRaw.data.tags
+      const attachRaw = attachRes?.data?.data ?? attachRes?.data ?? null;
+      const tags = Array.isArray(attachRaw)
+        ? attachRaw
+        : Array.isArray(attachRaw?.tags)
+          ? attachRaw.tags
+          : Array.isArray(attachRaw?.data?.tags)
+            ? attachRaw.data.tags
             : null;
 
       return { projectId, taskId, tag, tags };
@@ -220,10 +220,17 @@ export const toggleTaskTagThunk = createAsyncThunk(
   "tags/toggleTaskTag",
   async ({ projectId, taskId, tagId }, { rejectWithValue }) => {
     try {
-      const res = await api.patch(`/projects/${projectId}/tags/${tagId}/toggle`, {
-        task_id: taskId,
-        taskId,
-      });
+      // Attach tag to task (current backend):
+      // Route::prefix('projects/{project}')->group(...)
+      // Route::post('tags/{tag}/tasks/{task}', ...)
+      let res;
+      try {
+        res = await api.post(`/projects/${projectId}/tags/${tagId}/tasks/${taskId}`);
+      } catch {
+        // Backward-compatible fallback (if backend mounts it globally)
+        res = await api.post(`/tags/${tagId}/tasks/${taskId}`);
+      }
+
       const raw = res?.data?.data ?? res?.data ?? null;
       const tags = Array.isArray(raw)
         ? raw
@@ -232,8 +239,25 @@ export const toggleTaskTagThunk = createAsyncThunk(
           : Array.isArray(raw?.data?.tags)
             ? raw.data.tags
             : null;
-      return { projectId, taskId, tagId, tags };
+      const tagIds =
+        Array.isArray(raw?.tag_ids)
+          ? raw.tag_ids
+          : Array.isArray(raw?.data?.tag_ids)
+            ? raw.data.tag_ids
+            : Array.isArray(raw?.tagIds)
+              ? raw.tagIds
+              : Array.isArray(raw?.data?.tagIds)
+                ? raw.data.tagIds
+                : null;
+
+      return { projectId, taskId, tagId, tags, tagIds };
     } catch (err) {
+      const status = err?.response?.status ?? err?.status ?? null;
+      if (status === 404) {
+        return rejectWithValue(
+          "Tag یا Task متعلق به این پروژه نیست (یا دسترسی ندارید).",
+        );
+      }
       return rejectWithValue(getErrorMessage(err));
     }
   },
@@ -280,11 +304,37 @@ const normalizePeoplePayload = (payload) => {
 
   const obj = normalizeObject(root) ?? {};
 
+  // New backend payload:
+  // { success, message, data: { items: [...], meta: { assignee_ids: [], watcher_ids: [] } } }
   const people = normalizeArray(
-    obj?.people ?? obj?.users ?? obj?.members ?? obj?.data ?? [],
+    obj?.items ?? obj?.people ?? obj?.users ?? obj?.members ?? obj?.data ?? [],
   );
-  const watchers = normalizeArray(obj?.watchers ?? obj?.data?.watchers ?? []);
+
+  const watchers =
+    normalizeArray(obj?.watchers ?? obj?.data?.watchers ?? []) ||
+    [];
+
+  const watcherIds = normalizeArray(
+    obj?.meta?.watcher_ids ??
+      obj?.data?.meta?.watcher_ids ??
+      obj?.meta?.watcherIds ??
+      obj?.data?.meta?.watcherIds ??
+      [],
+  );
+
+  const assigneeIds = normalizeArray(
+    obj?.meta?.assignee_ids ??
+      obj?.data?.meta?.assignee_ids ??
+      obj?.meta?.assigneeIds ??
+      obj?.data?.meta?.assigneeIds ??
+      [],
+  );
+
+  // Prefer explicit meta ids if present, otherwise keep legacy fields.
+  const mergedWatchers = watcherIds.length ? watcherIds : watchers;
+
   const assignee =
+    (assigneeIds.length ? assigneeIds[0] : null) ??
     obj?.assignee ??
     obj?.data?.assignee ??
     obj?.assignee_user ??
@@ -293,7 +343,7 @@ const normalizePeoplePayload = (payload) => {
     obj?.data?.assigneeUser ??
     null;
 
-  return { people, watchers, assignee };
+  return { people, watchers: mergedWatchers, assignee };
 };
 
 export const getTaskPeopleThunk = createAsyncThunk(
@@ -315,18 +365,33 @@ export const setTaskAssigneeThunk = createAsyncThunk(
   async ({ projectId, taskId, userId }, { rejectWithValue }) => {
     try {
       const res = await api.patch(`/projects/${projectId}/tasks/${taskId}/assignee`, {
-        user_id: userId,
-        userId,
+        user_id: userId ?? null,
       });
       const raw = res?.data?.data ?? res?.data ?? null;
       const obj = normalizeObject(raw);
-      const assignee =
-        obj?.assignee ??
-        obj?.data?.assignee ??
-        obj?.user ??
-        obj?.data?.user ??
-        obj ??
+
+      const assigneeIdsCandidate =
+        obj?.assignee_ids ??
+        obj?.data?.assignee_ids ??
+        obj?.meta?.assignee_ids ??
+        obj?.data?.meta?.assignee_ids ??
         null;
+
+      const hasAssigneeIdsField = Array.isArray(assigneeIdsCandidate);
+      const assigneeFromIds =
+        hasAssigneeIdsField && assigneeIdsCandidate.length
+          ? assigneeIdsCandidate[0]
+          : null;
+
+      const assignee =
+        hasAssigneeIdsField
+          ? assigneeFromIds
+          : obj?.assignee ??
+            obj?.data?.assignee ??
+            obj?.user ??
+            obj?.data?.user ??
+            obj ??
+            null;
       return { projectId, taskId, userId, assignee };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -343,7 +408,13 @@ export const addTaskWatcherThunk = createAsyncThunk(
         userId,
       });
       const raw = res?.data?.data ?? res?.data ?? null;
-      const watchers = normalizeArray(raw?.watchers ?? raw?.data?.watchers ?? raw);
+      const watchers = normalizeArray(
+        raw?.watchers ??
+          raw?.data?.watchers ??
+          raw?.meta?.watcher_ids ??
+          raw?.data?.meta?.watcher_ids ??
+          raw,
+      );
       return { projectId, taskId, userId, watchers };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));

@@ -3,6 +3,7 @@ import ActionDropdown from "../../../../Components/ActionDropdown";
 
 const BoardColumn = ({
   columnTitle,
+  columnIcon,
   innerRef,
   headerRef,
   dragHandleProps,
@@ -21,6 +22,17 @@ const BoardColumn = ({
   const rootRef = useRef();
   const hasActions = actions.length > 0;
 
+  const normalizeIconClass = (raw) => {
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    if (s.includes("ph-") || s.includes("fa-") || s.includes("ti ")) return s;
+    if (s.startsWith("ti-")) return `ti ${s}`;
+    if (/^[a-z0-9-]+$/i.test(s)) return `ti ti-${s}`;
+    return s;
+  };
+
+  const iconClass = normalizeIconClass(columnIcon);
+
   return (
     <div
       ref={innerRef}
@@ -35,6 +47,11 @@ const BoardColumn = ({
           backgroundColor: `${color}`
         }}
       >
+        {iconClass ? (
+          <span className="board-column-header-icon" aria-hidden="true">
+            <i className={iconClass} />
+          </span>
+        ) : null}
         <div className="board-column-drag-handle" {...(dragHandleProps || {})} />
         <span>{columnTitle}</span>
         {hasActions ? (

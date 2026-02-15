@@ -29,6 +29,20 @@ const BoardItem = ({
 
   const tags = normalizeTags(taskTags);
   const getTagName = (t) => t?.name ?? t?.title ?? t?.label ?? t?.text ?? String(t ?? "");
+  const getTagColor = (t) => String(t?.color ?? t?.hex ?? "").trim();
+
+  const getContrastText = (hex) => {
+    const raw = String(hex || "").trim();
+    if (!raw) return "#111";
+    const m = raw.startsWith("#") ? raw.slice(1) : raw;
+    const full = m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
+    if (!/^[0-9a-fA-F]{6}$/.test(full)) return "#fff";
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    const y = (r * 299 + g * 587 + b * 114) / 1000;
+    return y >= 170 ? "#111" : "#fff";
+  };
 
   return (
     <div
@@ -85,10 +99,29 @@ const BoardItem = ({
               tags.map((t, idx) => (
                 <span
                   key={t?.id ?? `${getTagName(t)}-${idx}`}
-                  className="badge bg-light-primary text-primary"
-                  style={{ maxWidth: 110 }}
+                  className="badge d-inline-flex align-items-center gap-1"
+                  style={{
+                    maxWidth: 140,
+                    fontSize: 11,
+                    borderRadius: 12,
+                    padding: "0.2rem 0.6rem",
+                    background: getTagColor(t) ? getTagColor(t) : "rgba(var(--primary), 0.12)",
+                    color: getTagColor(t) ? getContrastText(getTagColor(t)) : "rgba(var(--primary), 1)",
+                  }}
                   title={getTagName(t)}
                 >
+                  {getTagColor(t) ? null : (
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 999,
+                        background: "rgba(var(--primary), 0.8)",
+                        flex: "0 0 8px",
+                      }}
+                    />
+                  )}
                   <span className="text-truncate d-inline-block" style={{ maxWidth: 110 }}>
                     {getTagName(t)}
                   </span>
