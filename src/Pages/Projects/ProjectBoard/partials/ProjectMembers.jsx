@@ -56,56 +56,59 @@ const ProjectMembers = ({
   onAddMember,
   onDeleteMember,
   removingByMemberId = {},
+  collapsed = false,
 }) => {
   const data = useMemo(() => normalizeMembers(members), [members]);
 
   return (
-    <aside className="project-members-panel mt-1">
-      <div className="project-members-panel__head">
-        <button
-          type="button"
-          className="project-members-panel__add-btn"
-          aria-label="Add user"
-          onClick={onAddMember}
-        >
-          <i className="ph ph-user-plus" />
-        </button>
-      </div>
+    <aside className={`project-members-panel mt-1 ${collapsed ? "is-collapsed" : ""}`}>
+      <div className="project-members-panel__inner">
+        <div className="project-members-panel__head">
+          <button
+            type="button"
+            className="project-members-panel__add-btn"
+            aria-label="Add user"
+            onClick={onAddMember}
+          >
+            <i className="ph ph-user-plus" />
+          </button>
+        </div>
 
-      <div className="project-members-panel__list app-scroll">
-        {loading ? (
-          <div className="project-members-panel__loading">
-            <iconify-icon icon="line-md:loading-loop" />
-          </div>
-        ) : (
-          data.map((member) => (
-            <div key={member.id} className="project-members-panel__item">
-              {member.removeId ? (
-                <button
-                  type="button"
-                  className="project-members-panel__delete"
-                  onClick={() => onDeleteMember?.(member)}
-                  disabled={!!removingByMemberId[String(member.removeId)]}
-                  aria-label={`Remove ${member.name || "member"}`}
-                >
-                  {removingByMemberId[String(member.removeId)] ? (
-                    <iconify-icon icon="line-md:loading-loop" />
-                  ) : (
-                    <i className="ph ph-trash" />
-                  )}
-                </button>
-              ) : null}
-              <div className="project-members-panel__avatar">
-                {member.avatar ? (
-                  <img src={member.avatar} alt={member.name} />
-                ) : (
-                  <span>{member.initials}</span>
-                )}
-              </div>
-              <h6 className="project-members-panel__name">{member.name}</h6>
+        <div className="project-members-panel__list app-scroll">
+          {loading ? (
+            <div className="project-members-panel__loading">
+              <iconify-icon icon="line-md:loading-loop" />
             </div>
-          ))
-        )}
+          ) : (
+            data.map((member) => (
+              <div key={member.id} className="project-members-panel__item">
+                {member.removeId ? (
+                  <button
+                    type="button"
+                    className="project-members-panel__delete"
+                    onClick={() => onDeleteMember?.(member)}
+                    disabled={!!removingByMemberId[String(member.removeId)]}
+                    aria-label={`Remove ${member.name || "member"}`}
+                  >
+                    {removingByMemberId[String(member.removeId)] ? (
+                      <iconify-icon icon="line-md:loading-loop" />
+                    ) : (
+                      <i className="ph ph-trash" />
+                    )}
+                  </button>
+                ) : null}
+                <div className="project-members-panel__avatar">
+                  {member.avatar ? (
+                    <img src={member.avatar} alt={member.name} />
+                  ) : (
+                    <span>{member.initials}</span>
+                  )}
+                </div>
+                <h6 className="project-members-panel__name">{member.name}</h6>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </aside>
   );

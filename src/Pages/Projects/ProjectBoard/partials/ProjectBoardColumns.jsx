@@ -273,7 +273,7 @@ const Column = memo(function Column({
       <div className="d-flex align-items-center justify-content-center py-3">
         <button
           type="button"
-          className="btn btn-outline-primary btn-sm"
+          className="btn btn-primary btn-sm"
           onClick={() => onStartAddTask?.(column)}
           disabled={tasksLoading || status === "loading"}
         >

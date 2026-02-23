@@ -124,6 +124,7 @@ const ProjectBoard = () => {
   const [activeTask, setActiveTask] = useState(null);
   const [removedTaskIds, setRemovedTaskIds] = useState([]);
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
+  const [membersPanelCollapsed, setMembersPanelCollapsed] = useState(false);
 
   const { data, error, loading } = useSelector((s) => s.projectDetails);
   const pageError = routeSwitched ? null : error;
@@ -241,6 +242,7 @@ const ProjectBoard = () => {
     setActiveTask(null);
     setRemovedTaskIds([]);
     setAddMemberModalOpen(false);
+    setMembersPanelCollapsed(false);
   }, [id]);
 
   const columnIdsKey = useMemo(() => {
@@ -751,27 +753,22 @@ const ProjectBoard = () => {
   if (!project) return <div className="p-3">Project not found!</div>;
 
   return (
-    <section className="project-board-layout">
+    <section
+      className={`project-board-layout ${membersPanelCollapsed ? "members-collapsed" : ""}`}
+    >
       <div className="project-board-main">
         <Container fluid className="project-board-main__container">
           <ProjectBoardHeader
             projectName={project.name}
+            onAddColumn={openCreateColumnModal}
             onDelete={handleProjectDelete}
             onEdit={openEditModal}
             onInfo={() => project && setInfoOpen(true)}
+            disableAddColumn={!project?.id}
             disableDelete={!project}
             disableEdit={!id}
             disableInfo={!project}
-          >
-            <button
-              type="button"
-              className="btn btn-primary ms-2"
-              onClick={openCreateColumnModal}
-              disabled={!project?.id}
-            >
-              Add Column
-            </button>
-          </ProjectBoardHeader>
+          />
 
           <div className="project-board-main__content">
             <div className="project-board-main__scroll app-scroll">
@@ -791,12 +788,28 @@ const ProjectBoard = () => {
         </Container>
       </div>
 
+      <button
+        type="button"
+        className="project-members-fab"
+        onClick={() => setMembersPanelCollapsed((prev) => !prev)}
+        aria-expanded={!membersPanelCollapsed}
+        aria-label={membersPanelCollapsed ? "Show project members" : "Hide project members"}
+      >
+        <i
+          className={`ph ${
+            membersPanelCollapsed ? "ph-users-three" : "ph-caret-right"
+          }`}
+        />
+        <span>{membersPanelCollapsed ? "Members" : "Hide"}</span>
+      </button>
+
       <ProjectMembers
         members={members}
         loading={membersLoading}
         onAddMember={openAddMemberModal}
         onDeleteMember={handleDeleteProjectMember}
         removingByMemberId={projectMemberRemovingByMemberId}
+        collapsed={membersPanelCollapsed}
       />
 
       <ProjectEditModal
