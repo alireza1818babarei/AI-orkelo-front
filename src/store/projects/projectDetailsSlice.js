@@ -2,15 +2,28 @@ import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 import api from "../../api/axios";
 import { getErrorMessage } from "../../utils/getError";
 
+const toArrayIfListLike = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return null;
+
+  // Some endpoints may serialize list payloads as keyed objects: { "0": {...}, "1": {...} }.
+  const keys = Object.keys(value);
+  if (!keys.length) return [];
+  if (!keys.every((k) => /^\d+$/.test(String(k)))) return null;
+  return Object.values(value);
+};
+
 const normalizeArray = (payload) => {
   const d = payload?.data ?? payload ?? [];
-  if (Array.isArray(d)) return d;
-  if (Array.isArray(d?.data)) return d.data;
-  if (Array.isArray(d?.items)) return d.items;
-  if (Array.isArray(d?.tags)) return d.tags;
-  if (Array.isArray(d?.people)) return d.people;
-  if (Array.isArray(d?.users)) return d.users;
-  if (Array.isArray(d?.members)) return d.members;
+  const direct = toArrayIfListLike(d);
+  if (direct) return direct;
+
+  const candidates = [d?.data, d?.items, d?.tags, d?.people, d?.users, d?.members];
+  for (const candidate of candidates) {
+    const arr = toArrayIfListLike(candidate);
+    if (arr) return arr;
+  }
+
   return [];
 };
 

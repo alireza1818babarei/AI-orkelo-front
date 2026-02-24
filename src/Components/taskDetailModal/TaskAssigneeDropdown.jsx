@@ -8,12 +8,45 @@ import {
 } from "reactstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { getTaskPeopleThunk, setTaskAssigneeThunk } from "../../store/tasks/taskPeopleSlice";
+import { getProjectMembersThunk } from "../../store/projects/projectMembersSlice";
 import { toastError } from "../../utils/sweetAlert";
 
 const getUserKey = (u) => String(u?.id ?? u?.user_id ?? u?.uuid ?? "");
 const getUserLabel = (u) =>
   u?.name ?? u?.full_name ?? u?.username ?? u?.email ?? `User ${getUserKey(u)}`;
 const getUserAvatar = (u) => u?.avatar ?? u?.image ?? u?.photo ?? u?.avatar_url ?? null;
+const mapProjectMembersToPeople = (members) => {
+  const list = Array.isArray(members) ? members : [];
+  const byId = new Map();
+
+  list.forEach((member) => {
+    const nestedUser = member?.user && typeof member.user === "object" ? member.user : null;
+    const person = {
+      ...(member && typeof member === "object" ? member : {}),
+      ...(nestedUser && typeof nestedUser === "object" ? nestedUser : {}),
+      id: nestedUser?.id ?? member?.user_id ?? member?.id ?? null,
+      name:
+        nestedUser?.name ??
+        nestedUser?.full_name ??
+        member?.name ??
+        member?.full_name ??
+        "",
+      email: nestedUser?.email ?? member?.email ?? "",
+      avatar:
+        nestedUser?.avatar ??
+        nestedUser?.avatar_url ??
+        member?.avatar ??
+        member?.avatar_url ??
+        null,
+    };
+
+    const key = getUserKey(person);
+    if (!key || byId.has(key)) return;
+    byId.set(key, person);
+  });
+
+  return Array.from(byId.values());
+};
 
 export default function TaskAssigneeDropdown({
   projectId,
@@ -32,13 +65,25 @@ export default function TaskAssigneeDropdown({
   };
 
   const peopleState = useSelector((s) => s.taskPeople);
+  const projectMembersState = useSelector((s) => s.projectMembers);
   const matches =
     peopleState?.projectId != null &&
     peopleState?.taskId != null &&
     String(peopleState.projectId) === String(projectId) &&
     String(peopleState.taskId) === String(taskId);
+  const projectMembersMatch =
+    projectMembersState?.projectId != null &&
+    String(projectMembersState.projectId) === String(projectId);
 
-  const people = matches ? peopleState?.people || [] : [];
+  const taskPeople = matches ? peopleState?.people || [] : [];
+  const projectMemberPeople = useMemo(
+    () =>
+      projectMembersMatch
+        ? mapProjectMembersToPeople(projectMembersState?.items || [])
+        : [],
+    [projectMembersMatch, projectMembersState?.items],
+  );
+  const people = taskPeople.length ? taskPeople : projectMemberPeople;
   const assigneeFromPeople = matches ? peopleState?.assignee ?? null : null;
   const assigneeFromDetail =
     Array.isArray(selectedAssignees) && selectedAssignees.length
@@ -56,6 +101,17 @@ export default function TaskAssigneeDropdown({
     if (!projectId || !taskId) return;
     dispatch(getTaskPeopleThunk({ projectId, taskId }));
   }, [open, dispatch, projectId, taskId]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!projectId) return;
+
+    const needsProjectMembers =
+      !projectMembersMatch || projectMembersState?.status === "idle";
+    if (!needsProjectMembers) return;
+
+    dispatch(getProjectMembersThunk(projectId));
+  }, [open, dispatch, projectId, projectMembersMatch, projectMembersState?.status]);
 
   const setAssignee = async (userId) => {
     if (!projectId || !taskId) return;

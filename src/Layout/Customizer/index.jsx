@@ -26,6 +26,9 @@ const WALLPAPER_FILES = [
   "w12.jpg",
 ];
 const WALLPAPER_NONE = "none";
+const LAYOUT_CLASSES = ["ltr", "rtl", "box-layout"];
+const THEME_CLASSES = ["light", "dark"];
+const THEME_STORAGE_KEY = "theme-mode";
 
 const wallpaperOptions = [
   { id: WALLPAPER_NONE, label: "Default", preview: null },
@@ -118,6 +121,11 @@ const Customizer = ({ showLauncher = true }) => {
     const normalizedWallpaper = hasValidWallpaper
       ? storedWallpaper
       : WALLPAPER_NONE;
+    const normalizedLayout = LAYOUT_CLASSES.includes(storedLayout)
+      ? storedLayout
+      : "ltr";
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    const normalizedTheme = storedTheme === "dark" ? "dark" : "light";
 
     setSidebarOption(storedSidebar);
     setColorOption(storedColor);
@@ -126,9 +134,11 @@ const Customizer = ({ showLauncher = true }) => {
 
     $("nav").removeClass("dark-sidebar").addClass(storedSidebar);
     $("body").attr("text", storedText);
-    $("body").attr("class", storedLayout);
-    $("html").attr("dir", storedLayout);
-    if (storedLayout === "box-layout") {
+    $("body")
+      .removeClass([...LAYOUT_CLASSES, ...THEME_CLASSES].join(" "))
+      .addClass(`${normalizedLayout} ${normalizedTheme}`);
+    $("html").attr("dir", normalizedLayout);
+    if (normalizedLayout === "box-layout") {
       $("html").removeAttr("dir");
     }
 

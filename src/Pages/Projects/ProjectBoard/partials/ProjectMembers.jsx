@@ -61,7 +61,7 @@ const ProjectMembers = ({
   const data = useMemo(() => normalizeMembers(members), [members]);
 
   return (
-    <aside className={`project-members-panel mt-1 ${collapsed ? "is-collapsed" : ""}`}>
+    <aside className={`project-members-panel mt-1  ${collapsed ? "is-collapsed" : ""}`}>
       <div className="project-members-panel__inner">
         <div className="project-members-panel__head">
           <button

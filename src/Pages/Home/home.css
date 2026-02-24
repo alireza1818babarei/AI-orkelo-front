@@ -9,6 +9,11 @@
   margin-bottom: 1.25rem;
   text-align: center;
   margin-top: 5em;
+  padding: 1.5em;
+  background-color:rgba(var(--primary));
+  border-radius: 1em;
+  max-width: 50%;
+  margin-inline: auto;
 }
 
 .home-dashboard__date {

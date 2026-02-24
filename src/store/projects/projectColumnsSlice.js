@@ -329,6 +329,10 @@ export const reorderProjectTaskThunk = createAsyncThunk(
       const normalizedDestinationColumnId = Number(destinationColumnId);
       const normalizedSourceTaskIds = normalizeTaskIds(sourceTaskIds);
       const normalizedDestinationTaskIds = normalizeTaskIds(destinationTaskIds);
+      const toOrderedIntIds = (ids) =>
+        (Array.isArray(ids) ? ids : [])
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && id > 0);
 
       if (
         !Number.isInteger(normalizedProjectId) ||
@@ -344,16 +348,18 @@ export const reorderProjectTaskThunk = createAsyncThunk(
       }
 
       const sameColumn = normalizedSourceColumnId === normalizedDestinationColumnId;
+      const reorderColumnTasks = async (columnId, orderedTaskIds) => {
+        const orderedIds = toOrderedIntIds(orderedTaskIds);
+        if (!orderedIds.length) return;
+
+        await api.patch(
+          `/projects/${normalizedProjectId}/columns/${columnId}/tasks/reorder`,
+          { ordered_ids: orderedIds },
+        );
+      };
 
       if (sameColumn) {
-        for (let i = 0; i < normalizedSourceTaskIds.length; i += 1) {
-          const id = Number(normalizedSourceTaskIds[i]);
-          if (!Number.isInteger(id) || id <= 0) continue;
-          await api.patch(
-            `/projects/${normalizedProjectId}/columns/${normalizedSourceColumnId}/tasks/${id}`,
-            { position: i + 1 },
-          );
-        }
+        await reorderColumnTasks(normalizedSourceColumnId, normalizedSourceTaskIds);
 
         return {
           projectId: normalizedProjectId,
@@ -365,36 +371,17 @@ export const reorderProjectTaskThunk = createAsyncThunk(
         };
       }
 
-      const destinationIndex = normalizedDestinationTaskIds.findIndex(
-        (id) => String(id) === String(normalizedTaskId),
-      );
-      const movedTaskPosition = destinationIndex >= 0 ? destinationIndex + 1 : null;
-
       await api.patch(
         `/projects/${normalizedProjectId}/columns/${normalizedSourceColumnId}/tasks/${normalizedTaskId}`,
         {
           column_id: normalizedDestinationColumnId,
-          ...(movedTaskPosition ? { position: movedTaskPosition } : {}),
         },
       );
 
-      for (let i = 0; i < normalizedSourceTaskIds.length; i += 1) {
-        const id = Number(normalizedSourceTaskIds[i]);
-        if (!Number.isInteger(id) || id <= 0 || id === normalizedTaskId) continue;
-        await api.patch(
-          `/projects/${normalizedProjectId}/columns/${normalizedSourceColumnId}/tasks/${id}`,
-          { position: i + 1 },
-        );
-      }
-
-      for (let i = 0; i < normalizedDestinationTaskIds.length; i += 1) {
-        const id = Number(normalizedDestinationTaskIds[i]);
-        if (!Number.isInteger(id) || id <= 0 || id === normalizedTaskId) continue;
-        await api.patch(
-          `/projects/${normalizedProjectId}/columns/${normalizedDestinationColumnId}/tasks/${id}`,
-          { position: i + 1 },
-        );
-      }
+      await reorderColumnTasks(
+        normalizedDestinationColumnId,
+        normalizedDestinationTaskIds,
+      );
 
       return {
         projectId: normalizedProjectId,

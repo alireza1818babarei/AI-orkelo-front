@@ -6,6 +6,7 @@ import ActionDropdown from "../ActionDropdown";
 import { useDispatch, useSelector } from "react-redux";
 import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
 import { getTaskDetailThunk } from "../../store/tasks/taskDetailSlice";
+import { reorderTaskChecklistItemsThunk } from "../../store/tasks/checklistSlice";
 import TaskModalPlaceHolder from "../TaskModalPlaceHolder";
 import Flatpickr from "react-flatpickr";
 import TaskActivityConversation from "./TaskActivityConversation";
@@ -39,7 +40,13 @@ const arrayMove = (list, from, to) => {
   return next;
 };
 
-const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
+const TaskDetailModal = ({
+  isOpen,
+  onClose,
+  task,
+  projectId,
+  onDeleted,
+}) => {
   const propTask = task || {};
 
   const taskDetailState = useSelector((s) => s.taskDetail);
@@ -228,6 +235,29 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
       }
       return item;
     });
+  };
+
+  const collectChecklistSiblingIds = (items, parentId) => {
+    const toIds = (list) =>
+      (Array.isArray(list) ? list : [])
+        .map((item) => Number(item?.id))
+        .filter((id) => Number.isInteger(id) && id > 0);
+
+    if (parentId == null) {
+      return toIds(items);
+    }
+
+    for (const item of items || []) {
+      if (String(item?.id) === String(parentId)) {
+        return toIds(item?.children);
+      }
+      if (item?.children?.length) {
+        const nested = collectChecklistSiblingIds(item.children, parentId);
+        if (nested.length) return nested;
+      }
+    }
+
+    return [];
   };
 
   useEffect(() => {
@@ -628,10 +658,45 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
     }
   };
 
-  const handleChecklistReorder = (parentId, sourceIndex, destinationIndex) => {
-    setChecklistItems((prev) =>
-      reorderChecklistSiblings(prev, parentId, sourceIndex, destinationIndex),
+  const handleChecklistReorder = async (parentId, sourceIndex, destinationIndex) => {
+    const normalizedProjectId = Number(effectiveProjectId ?? projectId);
+    const normalizedTaskId = Number(taskId);
+    const isValidContext =
+      Number.isInteger(normalizedProjectId) &&
+      normalizedProjectId > 0 &&
+      Number.isInteger(normalizedTaskId) &&
+      normalizedTaskId > 0;
+
+    const previousItems = checklistItems;
+    const nextItems = reorderChecklistSiblings(
+      previousItems,
+      parentId,
+      sourceIndex,
+      destinationIndex,
     );
+    const orderedIds = collectChecklistSiblingIds(nextItems, parentId);
+
+    if (!orderedIds.length) return;
+    setChecklistItems(nextItems);
+    if (!isValidContext) return;
+
+    const busyKey = parentId ?? "root";
+    try {
+      setChecklistBusyId(busyKey);
+      await dispatch(
+        reorderTaskChecklistItemsThunk({
+          projectId: normalizedProjectId,
+          taskId: normalizedTaskId,
+          orderedIds,
+          parentItemId: parentId,
+        }),
+      ).unwrap();
+    } catch (err) {
+      setChecklistItems(previousItems);
+      toastError(err?.message || "Checklist reorder failed");
+    } finally {
+      setChecklistBusyId(null);
+    }
   };
 
   const handleChecklistTextChange = (itemId, value) => {
@@ -642,7 +707,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
 
   return (
     <>
-    <Modal isOpen={isOpen} toggle={handleClose} size="lg">
+    <Modal
+      isOpen={isOpen}
+      toggle={handleClose}
+      size="lg"
+      className="task-detail-modal-dialog"
+    >
       <div className="d-flex justify-content-between p-4 border border-bottom-1 rounded-top">
         <div className="d-flex align-items-end gap-2">
           {taskCompleted ? (
@@ -714,7 +784,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
         </div>
       </div>
 
-      <ModalBody style={{ paddingRight: 0, paddingTop: 0, paddingBottom: 0 }}>
+      <ModalBody style={{ paddingRight: 0, paddingTop: 0, paddingBottom: 0, paddingLeft: 20 }}>
         {checklistLoading ? (
           <TaskModalPlaceHolder/>
         ) : (

@@ -100,7 +100,9 @@
 
 .board-column-content {
   position: relative;
+  // Keep vertical/horizontal breathing room, but pull the scrollbar a bit to the right.
   border: 10px solid transparent;
+  border-right-width: 6px;
   min-height: 95px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -134,6 +136,15 @@
     display: none;
     width: 0;
     height: 0;
+  }
+
+  &::-webkit-scrollbar-button:single-button,
+  &::-webkit-scrollbar-button:vertical:decrement,
+  &::-webkit-scrollbar-button:vertical:increment {
+    display: none;
+    width: 0;
+    height: 0;
+    background: transparent;
   }
 
   &::-webkit-scrollbar-corner {
@@ -289,11 +300,13 @@
 .project-board-header__actions-wrap {
   display: flex;
   justify-content: flex-end;
+
 }
 
 .project-board-header__actions {
   display: inline-flex;
   align-items: center;
+  margin-right: 100px;
   gap: 0.32rem;
   padding: 0.38rem;
   border-radius: 16px;
@@ -436,7 +449,7 @@ nav.dark-sidebar ~ .app-content .project-board-header__icon-btn.danger:hover:not
 .project-board-main {
   flex: 1 1 auto;
   min-width: 0;
-  padding-right: 140px;
+  padding-right: 10px;
   transition: padding-right 0.28s ease;
 }
 
@@ -462,6 +475,22 @@ nav.dark-sidebar ~ .app-content .project-board-header__icon-btn.danger:hover:not
   height: 100%;
   min-height: 100%;
   margin-bottom: 0;
+  -ms-overflow-style: none; // IE/Edge legacy
+  scrollbar-width: none; // Firefox
+}
+
+.project-board-main__scroll .board::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+// Keep reactstrap size="lg", but make only task detail modal slightly wider.
+@media (min-width: 992px) {
+  .task-detail-modal-dialog.modal-lg {
+    --bs-modal-width: 920px;
+    max-width: var(--bs-modal-width);
+  }
 }
 
 .project-members-panel {

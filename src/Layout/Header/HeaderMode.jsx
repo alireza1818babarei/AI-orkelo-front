@@ -1,19 +1,19 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 
+const THEME_STORAGE_KEY = 'theme-mode';
+const normalizeTheme = (value) => (value === 'dark' ? 'dark' : 'light');
+
 const HeaderMode = () => {
 
     const [theme, setTheme] = useState('light'); // default to 'light' theme
 
     useEffect(() => {
-        const storedTheme = localStorage.getItem('theme-mode');
-        if (storedTheme) {
-            setTheme(storedTheme);
-            document.body.classList.add(storedTheme);
-        } else {
-            document.body.classList.add('light');
-            setTheme('light');
-        }
+        const resolvedTheme = normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
+        setTheme(resolvedTheme);
+        document.body.classList.remove('light', 'dark');
+        document.body.classList.add(resolvedTheme);
+        localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
     }, []);
 
     const toggleTheme = () => {
@@ -21,7 +21,7 @@ const HeaderMode = () => {
         setTheme(newTheme);
         document.body.classList.remove('light', 'dark');
         document.body.classList.add(newTheme);
-        localStorage.setItem('theme-mode', newTheme);
+        localStorage.setItem(THEME_STORAGE_KEY, newTheme);
     };
 
 

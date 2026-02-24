@@ -10,6 +10,7 @@ import tagsReducer from "./tags/tagsSlice";
 import commentsReducer from "./tasks/commentSlice";
 import taskPeopleReducer from "./tasks/taskPeopleSlice";
 import taskDetailReducer from "./tasks/taskDetailSlice";
+import taskChecklistReducer from "./tasks/checklistSlice";
 
 export const store = configureStore({
   reducer: {
@@ -24,5 +25,6 @@ export const store = configureStore({
     comments: commentsReducer,
     taskPeople: taskPeopleReducer,
     taskDetail: taskDetailReducer,
+    taskChecklist: taskChecklistReducer,
   }
 })
