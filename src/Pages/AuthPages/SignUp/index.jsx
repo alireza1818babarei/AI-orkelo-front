@@ -5,7 +5,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { signupSchema } from "../../../validation/auth/signup.schema";
-import { signUpThunk } from "../../../store/auth/authSlice";
+import {
+  assignRandomAvatarThunk,
+  signUpThunk,
+} from "../../../store/auth/authSlice";
 import { toastError } from "../../../utils/sweetAlert";
 
 const SignUp = () => {
@@ -34,6 +37,11 @@ const SignUp = () => {
   const onSubmit = async (data) => {
     try {
       const res = await dispatch(signUpThunk(data)).unwrap();
+      try {
+        await dispatch(assignRandomAvatarThunk()).unwrap();
+      } catch {
+        // Keep signup successful even if random avatar upload fails.
+      }
       navigate("/", {
         replace: true,
         state: { flash: res?.message || "Registration Successfull"},

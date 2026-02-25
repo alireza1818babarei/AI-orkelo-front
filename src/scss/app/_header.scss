@@ -365,6 +365,17 @@ header {
               right: -6px;
             }
           }
+          .header-notification__count-badge {
+            top: -2px !important;
+            right: -8px !important;
+            left: auto !important;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            font-size: 10px;
+            line-height: 16px;
+            font-weight: 600;
+          }
           .header-notification-canvas {
             border-radius: 18px;
             top: 64px;
@@ -381,6 +392,38 @@ header {
               position: absolute;
               top: 22px;
             }
+            .header-notification__avatar {
+              border-radius: 50%;
+              overflow: hidden;
+            }
+            .header-notification__avatar--image {
+              background: rgba(var(--secondary), 1);
+            }
+            .header-notification__avatar--fallback {
+              background: #fff;
+              border: 1px solid rgba(var(--secondary), 0.24);
+            }
+            .header-notification__avatar-img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              border-radius: 50%;
+            }
+            .header-notification__avatar-fallback {
+              width: 100%;
+              height: 100%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 50%;
+              background: transparent;
+              color: rgba(var(--dark), 0.85);
+
+              i {
+                font-size: 17px;
+                line-height: 1;
+              }
+            }
             .message-content-box {
               margin-left: 45px;
               a {
@@ -394,6 +437,19 @@ header {
             .notification-avtar{
              bottom: 30px;
 
+            }
+            .notification-item-actions {
+              margin-top: 10px;
+              display: flex;
+              align-items: center;
+            }
+            .notification-mark-read-btn {
+              height: 24px;
+              padding: 0 8px;
+              border-radius: 999px;
+              font-size: 11px;
+              line-height: 22px;
+              font-weight: 500;
             }
           }
         }

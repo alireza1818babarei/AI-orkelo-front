@@ -11,6 +11,7 @@ import commentsReducer from "./tasks/commentSlice";
 import taskPeopleReducer from "./tasks/taskPeopleSlice";
 import taskDetailReducer from "./tasks/taskDetailSlice";
 import taskChecklistReducer from "./tasks/checklistSlice";
+import notificationsReducer from "./notifications/notificationsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -26,5 +27,6 @@ export const store = configureStore({
     taskPeople: taskPeopleReducer,
     taskDetail: taskDetailReducer,
     taskChecklist: taskChecklistReducer,
+    notifications: notificationsReducer,
   }
 })

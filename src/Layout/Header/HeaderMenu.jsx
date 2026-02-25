@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  weatherData,
   initialCartItems,
-  initialnotifications,
   searchData,
 } from "../../Data/HeaderMenuData.js";
 import { Link } from "react-router-dom";
@@ -19,7 +17,16 @@ import ActionDropdown from "../../Components/ActionDropdown/index.jsx";
 import CompanyMembersModal from "./CompanyMembersModal.jsx";
 import AddCompanyMemberModal from "./AddCompanyMemberModal.jsx";
 import { alertConfirm, toastError, toastSuccess } from "../../utils/sweetAlert.js";
-import { resolveUserAvatarWithFallback } from "../../utils/mediaUrl.js";
+import {
+  resolveUserAvatarUrl,
+  resolveUserAvatarWithFallback,
+} from "../../utils/mediaUrl.js";
+import { formatCommentTimestamp } from "../../services/dateTime.js";
+import {
+  fetchNotificationsThunk,
+  markAllNotificationsReadThunk,
+  markNotificationAsReadThunk,
+} from "../../store/notifications/notificationsSlice.js";
 
 const HeaderMenu = () => {
   const dispatch = useDispatch();
@@ -40,6 +47,15 @@ const HeaderMenu = () => {
     addLoading: companyMemberAddLoading,
     removingByUserId: companyMembersRemovingByUserId,
   } = useSelector((s) => s.companyMembers || {});
+  const {
+    items: notificationsItems = [],
+    unreadCount: notificationsUnreadCount = 0,
+    status: notificationsStatus = "idle",
+    error: notificationsError = null,
+    refreshing: notificationsRefreshing = false,
+    markingAll: notificationsMarkingAll = false,
+    markingById: notificationsMarkingById = {},
+  } = useSelector((s) => s.notifications || {});
 
   const companyMenuRef = useRef(null);
   const [companyActionOpen, setCompanyActionOpen] = useState(false);
@@ -61,20 +77,15 @@ const HeaderMenu = () => {
     setCompanyAddMemberModalOpen(false);
   }, [canManageCurrentCompany]);
 
+  useEffect(() => {
+    if (notificationsStatus !== "idle") return;
+    dispatch(fetchNotificationsThunk());
+  }, [dispatch, notificationsStatus]);
+
 
   const handleRemoveItem = (id) => {
     const updatedCartItems = cartItems.filter((item) => item.id !== id);
     setCartItems(updatedCartItems);
-  };
-
-  const [notificationsItems, setNotificationsItems] =
-    useState(initialnotifications);
-
-  const handleRemoveItem1 = (id) => {
-    const updatedNotificationsItems = notificationsItems.filter(
-      (item) => item.id !== id,
-    );
-    setNotificationsItems(updatedNotificationsItems);
   };
 
   const [currentIcon1, setCurrentIcon1] = useState("usa");
@@ -144,6 +155,31 @@ const HeaderMenu = () => {
     }
   };
 
+  const handleRefreshNotifications = async () => {
+    try {
+      await dispatch(fetchNotificationsThunk()).unwrap();
+    } catch (err) {
+      toastError(err?.message || "Failed to refresh notifications");
+    }
+  };
+
+  const handleMarkAllAsSeen = async () => {
+    if (!notificationsUnreadCount) return;
+    try {
+      await dispatch(markAllNotificationsReadThunk()).unwrap();
+    } catch (err) {
+      toastError(err?.message || "Failed to mark all notifications as seen");
+    }
+  };
+
+  const handleMarkAsSeen = async (notificationId) => {
+    try {
+      await dispatch(markNotificationAsReadThunk({ notificationId })).unwrap();
+    } catch (err) {
+      toastError(err?.message || "Failed to mark notification as seen");
+    }
+  };
+
   const companyMenuActions = [
     {
       key: "company-members",
@@ -176,7 +212,13 @@ const HeaderMenu = () => {
             aria-controls="notificationcanvasRight"
           >
             <i className="ph ph-bell"></i>
-            <span className="position-absolute translate-middle p-1 bg-success border border-light rounded-circle animate__animated animate__fadeIn animate__infinite animate__slower"></span>
+            {notificationsUnreadCount > 0 ? (
+              <>
+                <span className="header-notification__count-badge position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                  {notificationsUnreadCount > 99 ? "99+" : notificationsUnreadCount}
+                </span>
+              </>
+            ) : null}
           </a>
           <div
             className="offcanvas offcanvas-end header-notification-canvas"
@@ -195,46 +237,109 @@ const HeaderMenu = () => {
                 aria-label="Close"
               ></button>
             </div>
+            <div className="px-3 pb-2 d-flex align-items-center gap-2">
+              <Button
+                type="button"
+                color="light"
+                size="sm"
+                className="btn btn-sm border"
+                onClick={handleRefreshNotifications}
+                disabled={notificationsStatus === "loading" || notificationsRefreshing}
+              >
+                <i className="ph ph-arrow-clockwise me-1"></i>
+                Refresh
+              </Button>
+              <Button
+                type="button"
+                color="primary"
+                size="sm"
+                className="btn btn-sm"
+                onClick={handleMarkAllAsSeen}
+                disabled={notificationsMarkingAll || notificationsUnreadCount === 0}
+              >
+                {notificationsMarkingAll ? "..." : "Mark all as seen"}
+              </Button>
+            </div>
             <div className="offcanvas-body app-scroll p-0">
               <div className="head-container">
-                {notificationsItems.length > 0 ? (
-                  notificationsItems.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className="notification-message head-box"
-                    >
-                      <div className="message-images">
-                        <span className="bg-secondary h-35 w-35 d-flex-center b-r-10 position-relative">
-                          <img
-                            src={notification.imageSrc}
-                            alt={notification.title}
-                            className="img-fluid b-r-10"
-                          />
-                          <span className="position-absolute bottom-30 end-0 p-1 bg-secondary border border-light rounded-circle notification-avtar"></span>
-                        </span>
-                      </div>
-                      <div className="message-content-box flex-grow-1 ps-2">
-                        <Link
-                          href="/apps/email-page/read-email"
-                          className="f-s-15 text-secondary mb-0"
-                        >
-                          <span className="f-w-500 text-secondary">
-                            {notification.title}
+                {notificationsStatus === "loading" && notificationsItems.length === 0 ? (
+                  <div className="hidden-massage py-4 px-3">
+                    <p className="text-secondary mb-0">Loading notifications...</p>
+                  </div>
+                ) : notificationsItems.length > 0 ? (
+                  notificationsItems.map((notification) => {
+                    const notificationId = String(notification?.id ?? "");
+                    const isRead = Boolean(notification?.is_read);
+                    const actorName =
+                      notification?.actor?.name ??
+                      notification?.title ??
+                      "Notification";
+                    const actorAvatar = resolveUserAvatarUrl(
+                      notification?.actor?.avatar ?? "",
+                    );
+
+                    return (
+                      <div
+                        key={notificationId || notification?.created_at}
+                        className="notification-message head-box"
+                      >
+                        <div className="message-images">
+                          <span
+                            className={`header-notification__avatar h-35 w-35 d-flex-center position-relative ${
+                              actorAvatar
+                                ? "header-notification__avatar--image bg-secondary"
+                                : "header-notification__avatar--fallback"
+                            }`}
+                          >
+                            {actorAvatar ? (
+                              <img
+                                src={actorAvatar}
+                                alt={actorName}
+                                className="header-notification__avatar-img img-fluid"
+                              />
+                            ) : (
+                              <span className="header-notification__avatar-fallback">
+                                <i className="ph-fill ph-user-circle"></i>
+                              </span>
+                            )}
+                            {!isRead ? (
+                              <span className="position-absolute bottom-30 end-0 p-1 bg-success border border-light rounded-circle notification-avtar"></span>
+                            ) : null}
                           </span>
-                          {notification.message}
-                        </Link>
-                        <span className="badge text-light-secondary mt-2">
-                          {notification.date}
-                        </span>
+                        </div>
+                        <div className="message-content-box flex-grow-1 ps-2">
+                          <p className="f-s-15 text-secondary mb-1">
+                            <span className="f-w-500 text-secondary">
+                              {notification?.title ?? "Notification"}
+                            </span>
+                          </p>
+                          <p className="mb-0 text-secondary">
+                            {notification?.body ?? ""}
+                          </p>
+                          <span className="badge text-light-secondary mt-2">
+                            {formatCommentTimestamp(notification?.created_at) ||
+                              "Just now"}
+                          </span>
+                          <div className="notification-item-actions">
+                            {isRead ? (
+                              <span className="badge text-bg-light">Seen</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="notification-mark-read-btn btn btn-outline-primary mt-1"
+                                onClick={() => handleMarkAsSeen(notificationId)}
+                                disabled={Boolean(notificationsMarkingById[notificationId])}
+                              >
+                                {notificationsMarkingById[notificationId]
+                                  ? "..."
+                                  : "Mark as seen"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="align-self-start text-end">
-                        <i
-                          className="ph ph-trash f-s-18 text-danger close-btn"
-                          onClick={() => handleRemoveItem1(notification.id)}
-                        ></i>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="hidden-massage py-4 px-3">
                     <img
@@ -244,10 +349,14 @@ const HeaderMenu = () => {
                     />
                     <div>
                       <h6 className="mb-0">Notification Not Found</h6>
-                      <p className="text-secondary">
-                        When you have any notifications added here, they will
-                        appear here.
-                      </p>
+                      {notificationsError?.message ? (
+                        <p className="text-danger mb-2">{notificationsError.message}</p>
+                      ) : (
+                        <p className="text-secondary">
+                          When you have any notifications added here, they will
+                          appear here.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

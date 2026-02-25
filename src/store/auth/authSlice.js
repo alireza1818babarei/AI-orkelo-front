@@ -6,6 +6,7 @@ import {
   getToken,
   setToken,
 } from "../../utils/tokenStorage";
+import { resolveRandomAiAvatar } from "../../utils/mediaUrl";
 
 const PROFILE_RECORD_FIELDS = [
   "about_me",
@@ -86,6 +87,45 @@ const buildAvatarUpdateBody = (avatarFile) => {
   return formData;
 };
 
+const getFileExtensionFromPath = (path) => {
+  const value = String(path || "");
+  const clean = value.split("?")[0].split("#")[0];
+  const parts = clean.split(".");
+  if (parts.length < 2) return "jpg";
+  return (parts.pop() || "jpg").toLowerCase();
+};
+
+const createRandomAvatarFormData = async () => {
+  if (typeof fetch !== "function") {
+    throw new Error("Avatar fetch is not available");
+  }
+  if (typeof File === "undefined") {
+    throw new Error("File API is not available");
+  }
+
+  const randomAvatarPath = resolveRandomAiAvatar(
+    `${Date.now()}-${Math.random()}`,
+  );
+  if (!randomAvatarPath) {
+    throw new Error("Random avatar path not found");
+  }
+
+  const res = await fetch(randomAvatarPath);
+  if (!res.ok) {
+    throw new Error("Failed to load random avatar");
+  }
+
+  const blob = await res.blob();
+  const extension = getFileExtensionFromPath(randomAvatarPath);
+  const avatarFile = new File(
+    [blob],
+    `signup-avatar-${Date.now()}.${extension}`,
+    { type: blob.type || "image/jpeg" },
+  );
+
+  return buildAvatarUpdateBody(avatarFile);
+};
+
 // NOTE: LOGIN THUNK
 export const loginThunk = createAsyncThunk(
   "auth/login",
@@ -105,6 +145,19 @@ export const signUpThunk = createAsyncThunk(
   async (payload, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/register", payload);
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+export const assignRandomAvatarThunk = createAsyncThunk(
+  "auth/assignRandomAvatar",
+  async (_, { rejectWithValue }) => {
+    try {
+      const body = await createRandomAvatarFormData();
+      const res = await api.post("/auth/profile/avatar", body);
       return res.data;
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -260,6 +313,10 @@ const authSlice = createSlice({
       }
 
       s.user = user;
+    });
+    b.addCase(assignRandomAvatarThunk.fulfilled, (s, a) => {
+      const user = normalizeUserFromPayload(a.payload);
+      if (user) s.user = { ...(s.user || {}), ...user };
     });
 
     // NOTE: Me
