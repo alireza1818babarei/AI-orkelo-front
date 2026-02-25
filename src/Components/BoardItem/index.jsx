@@ -1,5 +1,7 @@
 import React from "react";
 
+const DEFAULT_UNASSIGNED_AVATAR = "/assets/images/ai_avtar/unassigned.png";
+
 const BoardItem = ({
   taskTitle,
   taskBody,
@@ -68,12 +70,16 @@ const BoardItem = ({
                   <i className="ti ti-circle-check f-s-18" />
                 </span>
               ) : null}
-              <div className="h-35 w-35 d-flex-center b-r-50 overflow-hidden text-bg-primary">
-                {/* FIXME Task User img */}
+              <div className="h-40 w-40 d-flex-center b-r-50 overflow-hidden text-bg-primary">
                 <img
-                  src={taskUserImg || "/assets/images/avtar/3.png"}
+                  src={taskUserImg || DEFAULT_UNASSIGNED_AVATAR}
                   alt=""
                   className="img-fluid"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_UNASSIGNED_AVATAR;
+                  }}
                 />
               </div>
             </div>

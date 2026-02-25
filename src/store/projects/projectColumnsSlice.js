@@ -26,7 +26,7 @@ const sortColumnsByPosition = (columns) => {
   });
 };
 
-const toTaskIdKey = (task) => String(task?.id ?? task?.task_id ?? task?.uuid ?? "");
+const toTaskIdKey = (task) => String(task?.id ?? "");
 
 const normalizeTaskIds = (taskIds) =>
   (Array.isArray(taskIds) ? taskIds : [])
@@ -260,7 +260,7 @@ export const createProjectTaskThunk = createAsyncThunk(
         payload,
       );
       const data = res.data?.data ?? res.data;
-      const createdTaskId = data?.id ?? data?.task_id ?? data?.uuid ?? null;
+      const createdTaskId = data?.id ?? null;
 
       const missingMeta = createdTaskId && (!data?.created_at || !data?.updated_at);
       let enriched = null;
@@ -490,7 +490,7 @@ const projectColumnsSlice = createSlice({
       if (!taskId || !patch) return;
 
       const matchesTask = (t) =>
-        String(t?.id ?? t?.task_id ?? t?.uuid) === String(taskId);
+        String(t?.id) === String(taskId);
 
       state.items = (state.items || []).map((c) => {
         if (columnId && String(c.id) !== String(columnId)) return c;
@@ -524,7 +524,7 @@ const projectColumnsSlice = createSlice({
         return {
           ...c,
           tasks: nextTasks.filter(
-            (t) => String(t.id ?? t.task_id ?? t.uuid) !== String(taskId),
+            (t) => String(t.id) !== String(taskId),
           ),
         };
       });

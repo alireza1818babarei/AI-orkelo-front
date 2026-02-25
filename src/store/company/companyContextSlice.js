@@ -20,7 +20,7 @@ const normalizeCompany = (item) => {
     id,
     name: String(item.name ?? "").trim(),
     status: item.status ?? null,
-    image: item.image ?? item.image_url ?? null,
+    image: item.image ?? null,
     is_default: Boolean(item.is_default),
     is_active: Boolean(item.is_active),
     membership:

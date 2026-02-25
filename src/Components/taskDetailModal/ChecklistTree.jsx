@@ -25,6 +25,11 @@ const parseChecklistParentId = (droppableId) => {
 };
 
 const isSaveCombo = (e) => e.key === "Enter" && !e.shiftKey;
+const getChecklistItemIdentity = (item, index, parentId = null) =>
+  String(
+    item?.id ??
+      `${parentId ?? "root"}-${index}`,
+  );
 
 const ChecklistTree = ({
   items = [],
@@ -62,6 +67,7 @@ const ChecklistTree = ({
     parentCompleted,
     dragProvided = null,
     dragSnapshot = null,
+    itemIdentity = null,
   ) => {
     const isCompleted = parentCompleted || !!item.is_completed;
     const isItemBusy = checklistBusyId === item.id;
@@ -70,6 +76,7 @@ const ChecklistTree = ({
 
     return (
       <div
+        key={`checklist-item-${itemIdentity ?? getChecklistItemIdentity(item, index)}`}
         ref={dragProvided?.innerRef}
         {...(dragProvided?.draggableProps || {})}
         {...(dragProvided?.dragHandleProps || {})}
@@ -255,9 +262,18 @@ const ChecklistTree = ({
     if (depth > 0 || parentId != null) {
       return (
         <div>
-          {siblingItems.map((item, index) =>
-            renderChecklistItem(item, index, depth, parentCompleted),
-          )}
+          {siblingItems.map((item, index) => {
+            const itemIdentity = getChecklistItemIdentity(item, index, parentId);
+            return renderChecklistItem(
+              item,
+              index,
+              depth,
+              parentCompleted,
+              null,
+              null,
+              itemIdentity,
+            );
+          })}
         </div>
       );
     }
@@ -267,25 +283,29 @@ const ChecklistTree = ({
       <Droppable droppableId={droppableId} type="CHECKLIST" direction="vertical">
         {(dropProvided) => (
           <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
-            {siblingItems.map((item, index) => (
-              <Draggable
-                key={`checklist-${item.id}`}
-                draggableId={`checklist-${item.id}`}
-                index={index}
-                isDragDisabled={!!checklistBusyId}
-              >
-                {(dragProvided, dragSnapshot) =>
-                  renderChecklistItem(
-                    item,
-                    index,
-                    depth,
-                    parentCompleted,
-                    dragProvided,
-                    dragSnapshot,
-                  )
-                }
-              </Draggable>
-            ))}
+            {siblingItems.map((item, index) => {
+              const itemIdentity = getChecklistItemIdentity(item, index, null);
+              return (
+                <Draggable
+                  key={`checklist-${itemIdentity}`}
+                  draggableId={`checklist-${itemIdentity}`}
+                  index={index}
+                  isDragDisabled={!!checklistBusyId}
+                >
+                  {(dragProvided, dragSnapshot) =>
+                    renderChecklistItem(
+                      item,
+                      index,
+                      depth,
+                      parentCompleted,
+                      dragProvided,
+                      dragSnapshot,
+                      itemIdentity,
+                    )
+                  }
+                </Draggable>
+              );
+            })}
             {dropProvided.placeholder}
           </div>
         )}

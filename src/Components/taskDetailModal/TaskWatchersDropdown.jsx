@@ -14,33 +14,43 @@ import {
 } from "../../store/tasks/taskPeopleSlice";
 import { getProjectMembersThunk } from "../../store/projects/projectMembersSlice";
 import { toastError } from "../../utils/sweetAlert";
+import { resolveUserAvatarWithFallback } from "../../utils/mediaUrl";
 
-const getUserKey = (u) => String(u?.id ?? u?.user_id ?? u?.uuid ?? "");
+const getUserKey = (u) => String(u?.id ?? "");
 const getUserLabel = (u) =>
-  u?.name ?? u?.full_name ?? u?.username ?? u?.email ?? `User ${getUserKey(u)}`;
+  u?.name ?? u?.email ?? `User ${getUserKey(u)}`;
+const DEFAULT_WATCHER_AVATAR = "/assets/images/avtar/3.png";
+
+const normalizeAvatarUrl = (value, seed = "") =>
+  resolveUserAvatarWithFallback(value, seed);
+
+const getUserAvatar = (u) =>
+  normalizeAvatarUrl(
+    u?.avatar ?? "",
+    getUserKey(u) || u?.email || getUserLabel(u),
+  );
+
+const getUserInitials = (u) => {
+  const name = String(
+    u?.name ?? u?.email ?? "",
+  ).trim();
+  if (!name) return "NA";
+  const parts = name.split(/\s+/).slice(0, 2);
+  return parts.map((item) => item[0]?.toUpperCase() || "").join("") || "NA";
+};
+
 const mapProjectMembersToPeople = (members) => {
   const list = Array.isArray(members) ? members : [];
   const byId = new Map();
 
   list.forEach((member) => {
-    const nestedUser = member?.user && typeof member.user === "object" ? member.user : null;
+    const src = member ?? {};
     const person = {
-      ...(member && typeof member === "object" ? member : {}),
-      ...(nestedUser && typeof nestedUser === "object" ? nestedUser : {}),
-      id: nestedUser?.id ?? member?.user_id ?? member?.id ?? null,
-      name:
-        nestedUser?.name ??
-        nestedUser?.full_name ??
-        member?.name ??
-        member?.full_name ??
-        "",
-      email: nestedUser?.email ?? member?.email ?? "",
-      avatar:
-        nestedUser?.avatar ??
-        nestedUser?.avatar_url ??
-        member?.avatar ??
-        member?.avatar_url ??
-        null,
+      ...(src && typeof src === "object" ? src : {}),
+      id: src?.id ?? null,
+      name: src?.name ?? "",
+      email: src?.email ?? "",
+      avatar: src?.avatar ?? null,
     };
 
     const key = getUserKey(person);
@@ -53,6 +63,7 @@ const mapProjectMembersToPeople = (members) => {
 
 export default function TaskWatchersDropdown({
   projectId,
+  columnId = null,
   taskId,
   disabled = false,
 }) {
@@ -97,8 +108,8 @@ export default function TaskWatchersDropdown({
   useEffect(() => {
     if (!open) return;
     if (!projectId || !taskId) return;
-    dispatch(getTaskPeopleThunk({ projectId, taskId }));
-  }, [open, dispatch, projectId, taskId]);
+    dispatch(getTaskPeopleThunk({ projectId, taskId, columnId }));
+  }, [open, dispatch, projectId, taskId, columnId]);
 
   useEffect(() => {
     if (!open) return;
@@ -113,15 +124,19 @@ export default function TaskWatchersDropdown({
 
   const toggleWatcher = async (user) => {
     if (!projectId || !taskId) return;
-    const userId = user?.id ?? user?.user_id ?? user?.uuid ?? null;
+    const userId = user?.id ?? null;
     if (userId == null) return;
     const key = String(userId);
     const isWatcher = watcherSet.has(key);
     try {
       if (isWatcher) {
-        await dispatch(removeTaskWatcherThunk({ projectId, taskId, userId })).unwrap();
+        await dispatch(
+          removeTaskWatcherThunk({ projectId, taskId, columnId, userId }),
+        ).unwrap();
       } else {
-        await dispatch(addTaskWatcherThunk({ projectId, taskId, userId })).unwrap();
+        await dispatch(
+          addTaskWatcherThunk({ projectId, taskId, columnId, userId }),
+        ).unwrap();
       }
     } catch (err) {
       const msg = err?.message || err?.data?.message || "Update watchers failed";
@@ -155,6 +170,7 @@ export default function TaskWatchersDropdown({
             const key = getUserKey(u) || `${idx}`;
             const selected = watcherSet.has(String(key));
             const busy = !!updatingByUserId[String(key)];
+            const avatar = getUserAvatar(u);
             return (
               <DropdownItem
                 key={key}
@@ -167,7 +183,24 @@ export default function TaskWatchersDropdown({
                 disabled={busy}
               >
                 <div className="d-flex align-items-center justify-content-between gap-2">
-                  <span className="text-truncate">{getUserLabel(u)}</span>
+                  <span className="d-flex align-items-center gap-2 text-truncate">
+                    <span className="h-25 w-25 d-flex-center b-r-50 overflow-hidden text-bg-primary">
+                      {avatar ? (
+                        <img
+                          src={avatar}
+                          alt={getUserLabel(u)}
+                          className="img-fluid"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = DEFAULT_WATCHER_AVATAR;
+                          }}
+                        />
+                      ) : (
+                        <span className="small fw-semibold">{getUserInitials(u)}</span>
+                      )}
+                    </span>
+                    <span className="text-truncate">{getUserLabel(u)}</span>
+                  </span>
                   {busy ? (
                     <Spinner size="sm" color="primary" />
                   ) : selected ? (

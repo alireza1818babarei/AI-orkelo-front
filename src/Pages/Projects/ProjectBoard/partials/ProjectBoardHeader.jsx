@@ -19,15 +19,13 @@ const ProjectBoardHeader = ({
         <div className="project-board-header__meta">
           <ul className="app-line-breadcrumbs">
             <li>
-              <Link to="/projects" className="f-s-14 f-w-500">
                 <span>
                   <i className="ph-duotone ph-rocket-launch f-s-16"></i>{" "}
                   Projects
                 </span>
-              </Link>
             </li>
           </ul>
-          <h4 className="main-title mb-1">{projectName || ""}</h4>
+          <h4 className="main-title mb-1 text-primary">{projectName || ""}</h4>
           <p className="project-board-header__subtitle mb-0">
             Manage your project board from one place.
           </p>

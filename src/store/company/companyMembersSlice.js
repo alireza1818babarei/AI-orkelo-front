@@ -3,21 +3,15 @@ import api from "../../api/axios";
 import { getErrorMessage } from "../../utils/getError";
 
 const normalizeMembersPayload = (payload) => {
-  const root = payload?.data ?? payload ?? null;
-  if (Array.isArray(root)) return root;
-  if (Array.isArray(root?.data)) return root.data;
-  if (Array.isArray(root?.items)) return root.items;
-  if (Array.isArray(root?.members)) return root.members;
-  if (Array.isArray(root?.users)) return root.users;
-  if (Array.isArray(payload?.members)) return payload.members;
-  if (Array.isArray(payload?.users)) return payload.users;
+  const root = payload?.data ?? payload ?? {};
+  const data = root?.data ?? root;
+  if (Array.isArray(data?.members)) return data.members;
+  if (Array.isArray(data)) return data;
   return [];
 };
 
 const getUserIdFromMember = (member) =>
   String(
-    member?.user?.id ??
-      member?.user_id ??
       member?.id ??
       "",
   );
@@ -40,15 +34,8 @@ export const addCompanyMemberThunk = createAsyncThunk(
     try {
       const payload = { email };
       const res = await api.post("/companies/my/members", payload);
-      const data = res?.data?.data ?? res?.data ?? null;
-
-      const added =
-        data?.member ??
-        data?.user ??
-        data?.data?.member ??
-        data?.data?.user ??
-        data ??
-        null;
+      const data = res?.data?.data ?? {};
+      const added = data?.user ?? null;
 
       return added;
     } catch (err) {
@@ -112,13 +99,13 @@ const companyMembersSlice = createSlice({
       if (!member || typeof member !== "object") return;
 
       const memberKey = String(
-        member?.id ?? member?.user_id ?? member?.user?.id ?? member?.email ?? "",
+        member?.id ?? member?.email ?? "",
       );
       if (!memberKey) return;
 
       const exists = (state.items || []).some((item) => {
         const key = String(
-          item?.id ?? item?.user_id ?? item?.user?.id ?? item?.email ?? "",
+          item?.id ?? item?.email ?? "",
         );
         return key === memberKey;
       });

@@ -76,7 +76,6 @@ const pickString = (...vals) => {
 const shouldShowActivityItem = (item) => {
   const action = String(item?.action || "").toLowerCase();
   if (!action) return true;
-  // Comments are already shown in Conversations; hide them from Activity.
   if (action.startsWith("comment.")) return false;
   if (action.includes("comment.created")) return false;
   if (action.includes("comment.deleted")) return false;
@@ -84,10 +83,14 @@ const shouldShowActivityItem = (item) => {
 };
 
 const toDateKey = (raw) => {
-  if (!raw) return "—";
+  if (!raw) return "-";
   const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
 };
 
 export default function TaskActivityConversation({
@@ -98,9 +101,8 @@ export default function TaskActivityConversation({
   onRefresh,
 }) {
   const authUser = useSelector((s) => s?.auth?.user ?? null);
-  const currentUserId =
-    authUser?.id ?? authUser?.user_id ?? authUser?.uuid ?? null;
-  const currentUserName = pickString(authUser?.username, authUser?.name, authUser?.full_name);
+  const currentUserId = authUser?.id ?? null;
+  const currentUserName = pickString(authUser?.name);
 
   const [view, setView] = useState("all"); // "all" | "conversation"
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
@@ -123,34 +125,17 @@ export default function TaskActivityConversation({
     return Array.from(map.entries()).map(([date, items]) => ({ date, items }));
   }, [activities]);
 
-  const activityCount = useMemo(() => {
-    return (activities || []).filter(shouldShowActivityItem).length;
-  }, [activities]);
+  const activityCount = useMemo(
+    () => (activities || []).filter(shouldShowActivityItem).length,
+    [activities],
+  );
 
-  const getCommentAuthor = (c) => {
-    const authorId =
-      c?.user?.id ??
-      c?.user?.user_id ??
-      c?.user_id ??
-      c?.author?.id ??
-      c?.author_id ??
-      c?.created_by?.id ??
-      c?.created_by_id ??
-      c?.creator?.id ??
-      c?.creator_id ??
-      null;
+  const getCommentAuthor = (comment) => {
+    const authorId = comment?.user_id ?? comment?.user?.id ?? null;
     const authorName = pickString(
-      c?.user_name,
-      c?.username,
-      c?.name,
-      c?.full_name,
-      c?.user?.username,
-      c?.user?.name,
-      c?.user?.full_name,
-      c?.author?.name,
-      c?.author_name,
-      c?.created_by_name,
-      c?.creator?.name,
+      comment?.user_name,
+      comment?.user?.name,
+      comment?.name,
     );
 
     const sameById =
@@ -160,26 +145,18 @@ export default function TaskActivityConversation({
     const sameByName =
       authorName &&
       currentUserName &&
-      String(authorName).toLowerCase() === String(currentUserName).toLowerCase();
+      authorName.toLowerCase() === currentUserName.toLowerCase();
 
     if (sameById || sameByName) return pickString(currentUserName, "You");
     return authorName || "User";
   };
 
-  const canDeleteComment = (c) => {
-    const commentId = c?.id ?? c?.comment_id ?? null;
+  const canDeleteComment = (comment) => {
+    const commentId = comment?.id ?? null;
     if (commentId == null) return false;
 
-    const authorId =
-      c?.user?.id ??
-      c?.user?.user_id ??
-      c?.user_id ??
-      c?.author?.id ??
-      c?.author_id ??
-      c?.created_by_id ??
-      c?.creator_id ??
-      null;
-    const authorName = pickString(c?.user_name, c?.user?.username, c?.username);
+    const authorId = comment?.user_id ?? comment?.user?.id ?? null;
+    const authorName = pickString(comment?.user_name, comment?.user?.name);
 
     const sameById =
       authorId != null &&
@@ -188,7 +165,7 @@ export default function TaskActivityConversation({
     const sameByName =
       authorName &&
       currentUserName &&
-      String(authorName).toLowerCase() === String(currentUserName).toLowerCase();
+      authorName.toLowerCase() === currentUserName.toLowerCase();
 
     return sameById || sameByName;
   };
@@ -197,6 +174,7 @@ export default function TaskActivityConversation({
     if (!projectId || !taskId) return;
     const text = commentText.trim();
     if (!text) return;
+
     try {
       setCommentSubmitting(true);
       await api.post(`/projects/${projectId}/tasks/${taskId}/comments`, { body: text });
@@ -213,6 +191,7 @@ export default function TaskActivityConversation({
   const deleteComment = async (comment) => {
     const commentId = comment?.id ?? comment?.comment_id ?? null;
     if (!projectId || !taskId || !commentId) return;
+
     try {
       const { isConfirmed } = await alertConfirm({
         title: "Delete comment",
@@ -224,6 +203,7 @@ export default function TaskActivityConversation({
 
       const key = String(commentId);
       setCommentDeletingIds((prev) => ({ ...(prev || {}), [key]: true }));
+
       await api.delete(`/projects/${projectId}/tasks/${taskId}/comments/${commentId}`);
       alertSuccess();
       onRefresh?.();
@@ -232,25 +212,22 @@ export default function TaskActivityConversation({
         err?.message ||
         err?.response?.data?.message ||
         err?.response?.data?.error ||
-        err ||
         "Delete comment failed";
       toastError(msg);
     } finally {
-      const key = commentId != null ? String(commentId) : null;
-      if (key) {
-        setCommentDeletingIds((prev) => {
-          const next = { ...(prev || {}) };
-          delete next[key];
-          return next;
-        });
-      }
+      const key = String(commentId);
+      setCommentDeletingIds((prev) => {
+        const next = { ...(prev || {}) };
+        delete next[key];
+        return next;
+      });
     }
   };
 
   const countLabel =
     view === "conversation"
       ? `${(comments || []).length} comments`
-      : `${activityCount} activity \u2022 ${(comments || []).length} comments`;
+      : `${activityCount} activity | ${(comments || []).length} comments`;
 
   const viewLabel = view === "conversation" ? "Conversations" : "Activity";
 
@@ -280,12 +257,13 @@ export default function TaskActivityConversation({
       <div className="mt-3">
         {(comments || []).length ? (
           <ul className="app-timeline-box m-0">
-            {(comments || []).map((c, idx) => {
-              const commentId = c?.id ?? c?.comment_id ?? idx;
-              const deleting = commentId != null && !!commentDeletingIds[String(commentId)];
-              const author = getCommentAuthor(c);
-              const text = pickString(c?.body, c?.text, c?.message, c?.content, c?.description);
-              const ts = pickString(c?.created_at, c?.createdAt);
+            {(comments || []).map((comment, idx) => {
+              const commentId = comment?.id ?? comment?.comment_id ?? idx;
+              const deleting =
+                commentId != null && !!commentDeletingIds[String(commentId)];
+              const author = getCommentAuthor(comment);
+              const text = pickString(comment?.comment, comment?.body, comment?.text);
+              const ts = pickString(comment?.created_at, comment?.createdAt);
 
               return (
                 <li
@@ -310,20 +288,24 @@ export default function TaskActivityConversation({
                     </p>
                   </div>
 
-                  {canDeleteComment(c) ? (
+                  {canDeleteComment(comment) ? (
                     <button
                       type="button"
                       className="btn p-0 text-danger"
-	                      title="Delete comment"
-	                      onClick={() => deleteComment(c)}
-	                      disabled={deleting}
-	                      style={{ position: "absolute", right: 10, bottom: 10 }}
-	                    >
-	                      {deleting ? <Spinner size="sm" /> : <i className="ti ti-trash fs-4"></i>}
-	                    </button>
-	                  ) : null}
-	                </li>
-	              );
+                      title="Delete comment"
+                      onClick={() => deleteComment(comment)}
+                      disabled={deleting}
+                      style={{ position: "absolute", right: 10, bottom: 10 }}
+                    >
+                      {deleting ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <i className="ti ti-trash fs-4"></i>
+                      )}
+                    </button>
+                  ) : null}
+                </li>
+              );
             })}
           </ul>
         ) : (
@@ -337,17 +319,16 @@ export default function TaskActivityConversation({
     <div>
       {activityByDate.length ? (
         <div className="d-flex flex-column gap-3">
-          {activityByDate.map((g) => (
-            <div key={g?.date ?? "—"}>
-              <div className="text-muted small mb-2">{g?.date ?? "—"}</div>
+          {activityByDate.map((group) => (
+            <div key={group?.date ?? "-"}>
+              <div className="text-muted small mb-2">{group?.date ?? "-"}</div>
               <ul className="app-timeline-box m-0">
-                {(g?.items || []).map((it, itIdx) => {
-                  const ui = resolveActivityUi(it?.action);
-                  const title = normalizeActionLabel(it?.action);
+                {(group?.items || []).map((item, itIdx) => {
+                  const ui = resolveActivityUi(item?.action);
+                  const title = normalizeActionLabel(item?.action);
                   const key =
-                    it?.id ??
-                    it?.uuid ??
-                    `${it?.action ?? "a"}-${it?.created_at ?? "na"}-${it?.user_name ?? "u"}-${itIdx}`;
+                    item?.id ??
+                    `${item?.action ?? "a"}-${item?.created_at ?? "na"}-${item?.user_name ?? "u"}-${itIdx}`;
 
                   return (
                     <li key={key} className="timeline-section">
@@ -360,12 +341,12 @@ export default function TaskActivityConversation({
                         <div className="d-flex justify-content-between align-items-center timeline-flex">
                           <h6 className={`mt-2 ${ui.titleClass}`}>{title}</h6>
                           <span className="text-dark">
-                            {formatCommentTimestamp(it?.created_at ?? it?.createdAt)}
+                            {formatCommentTimestamp(item?.created_at ?? item?.createdAt)}
                           </span>
                         </div>
                         <p className="mt-2 text-dark mb-0">
                           <span className="fw-semibold">
-                            {pickString(it?.user_name, it?.user?.name, "User")}
+                            {pickString(item?.user_name, item?.user?.name, "User")}
                           </span>{" "}
                           <span className="text-muted">did this action.</span>
                         </p>

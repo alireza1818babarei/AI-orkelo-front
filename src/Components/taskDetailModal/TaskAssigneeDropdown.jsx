@@ -9,35 +9,49 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { getTaskPeopleThunk, setTaskAssigneeThunk } from "../../store/tasks/taskPeopleSlice";
 import { getProjectMembersThunk } from "../../store/projects/projectMembersSlice";
+import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
 import { toastError } from "../../utils/sweetAlert";
+import { resolveUserAvatarWithFallback } from "../../utils/mediaUrl";
 
-const getUserKey = (u) => String(u?.id ?? u?.user_id ?? u?.uuid ?? "");
+const getUserKey = (u) => String(u?.id ?? "");
 const getUserLabel = (u) =>
-  u?.name ?? u?.full_name ?? u?.username ?? u?.email ?? `User ${getUserKey(u)}`;
-const getUserAvatar = (u) => u?.avatar ?? u?.image ?? u?.photo ?? u?.avatar_url ?? null;
+  u?.name ?? u?.email ?? `User ${getUserKey(u)}`;
+const DEFAULT_UNASSIGNED_AVATAR = "/assets/images/avtar/3.png";
+
+const normalizeAvatarUrl = (value, seed = "") => {
+  return resolveUserAvatarWithFallback(value, seed);
+};
+
+const getUserAvatar = (u) =>
+  normalizeAvatarUrl(
+    u?.avatar ?? "",
+    getUserKey(u) || u?.email || getUserLabel(u),
+  );
+
+const getUserInitials = (u) => {
+  const name = String(
+    u?.name ?? u?.email ?? "",
+  ).trim();
+  if (!name) return "NA";
+  const parts = name.split(/\s+/).slice(0, 2);
+  return parts.map((item) => item[0]?.toUpperCase() || "").join("") || "NA";
+};
+
 const mapProjectMembersToPeople = (members) => {
   const list = Array.isArray(members) ? members : [];
   const byId = new Map();
 
   list.forEach((member) => {
-    const nestedUser = member?.user && typeof member.user === "object" ? member.user : null;
+    const src = member ?? {};
     const person = {
-      ...(member && typeof member === "object" ? member : {}),
-      ...(nestedUser && typeof nestedUser === "object" ? nestedUser : {}),
-      id: nestedUser?.id ?? member?.user_id ?? member?.id ?? null,
-      name:
-        nestedUser?.name ??
-        nestedUser?.full_name ??
-        member?.name ??
-        member?.full_name ??
-        "",
-      email: nestedUser?.email ?? member?.email ?? "",
-      avatar:
-        nestedUser?.avatar ??
-        nestedUser?.avatar_url ??
-        member?.avatar ??
-        member?.avatar_url ??
-        null,
+      ...(src && typeof src === "object" ? src : {}),
+      id: src?.id ?? null,
+      name: src?.name ?? "",
+      email: src?.email ?? "",
+      avatar: normalizeAvatarUrl(
+        src?.avatar ?? null,
+        src?.id ?? src?.email ?? src?.name ?? "",
+      ),
     };
 
     const key = getUserKey(person);
@@ -50,6 +64,7 @@ const mapProjectMembersToPeople = (members) => {
 
 export default function TaskAssigneeDropdown({
   projectId,
+  columnId = null,
   taskId,
   selectedAssignees = [],
   disabled = false,
@@ -89,7 +104,7 @@ export default function TaskAssigneeDropdown({
     Array.isArray(selectedAssignees) && selectedAssignees.length
       ? selectedAssignees[0]
       : null;
-  const assignee = assigneeFromPeople || assigneeFromDetail || null;
+  const assignee = matches ? assigneeFromPeople : assigneeFromDetail || null;
   const assigneeId = assignee ? getUserKey(assignee) : "";
   const loading = open && peopleState?.status === "loading";
   const saving = !!peopleState?.settingAssignee;
@@ -99,8 +114,8 @@ export default function TaskAssigneeDropdown({
   useEffect(() => {
     if (!open) return;
     if (!projectId || !taskId) return;
-    dispatch(getTaskPeopleThunk({ projectId, taskId }));
-  }, [open, dispatch, projectId, taskId]);
+    dispatch(getTaskPeopleThunk({ projectId, taskId, columnId }));
+  }, [open, dispatch, projectId, taskId, columnId]);
 
   useEffect(() => {
     if (!open) return;
@@ -115,8 +130,39 @@ export default function TaskAssigneeDropdown({
 
   const setAssignee = async (userId) => {
     if (!projectId || !taskId) return;
+    const selected = userId
+      ? items.find((u, idx) => String(getUserKey(u) || `${idx}`) === String(userId)) || {
+          id: userId,
+        }
+      : null;
+    const selectedAvatar = selected ? getUserAvatar(selected) : "";
+
     try {
-      await dispatch(setTaskAssigneeThunk({ projectId, taskId, userId })).unwrap();
+      await dispatch(setTaskAssigneeThunk({ projectId, taskId, columnId, userId })).unwrap();
+
+      dispatch(
+        updateTaskInColumn({
+          columnId,
+          taskId,
+          patch: {
+            assignees: selected
+              ? [
+                  {
+                    ...selected,
+                    avatar: selectedAvatar || selected?.avatar || null,
+                  },
+                ]
+              : [],
+            assignee: selected
+              ? {
+                  ...selected,
+                  avatar: selectedAvatar || selected?.avatar || null,
+                }
+              : null,
+          },
+        }),
+      );
+
       setOpen(false);
     } catch (err) {
       const msg = err?.message || err?.data?.message || "Assign failed";
@@ -159,6 +205,10 @@ export default function TaskAssigneeDropdown({
                 src={getUserAvatar(assignee)}
                 alt=""
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = DEFAULT_UNASSIGNED_AVATAR;
+                }}
               />
             </span>
           ) : null}
@@ -223,6 +273,7 @@ export default function TaskAssigneeDropdown({
               items.map((u, idx) => {
                 const key = getUserKey(u) || `${idx}`;
                 const selected = assigneeId && String(assigneeId) === String(key);
+                const avatar = getUserAvatar(u);
                 return (
                   <DropdownItem
                     key={key}
@@ -235,7 +286,24 @@ export default function TaskAssigneeDropdown({
                     className={selected ? "bg-light" : ""}
                   >
                     <div className="d-flex align-items-center justify-content-between gap-2">
-                      <span className="text-truncate">{getUserLabel(u)}</span>
+                      <span className="d-flex align-items-center gap-2 text-truncate">
+                        <span className="h-25 w-25 d-flex-center b-r-50 overflow-hidden bg-light border">
+                          {avatar ? (
+                            <img
+                              src={avatar}
+                              alt={getUserLabel(u)}
+                              className="img-fluid"
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = DEFAULT_UNASSIGNED_AVATAR;
+                              }}
+                            />
+                          ) : (
+                            <span className="small fw-semibold">{getUserInitials(u)}</span>
+                          )}
+                        </span>
+                        <span className="text-truncate">{getUserLabel(u)}</span>
+                      </span>
                       {selected ? (
                         <i className="ti ti-check text-success fs-5"></i>
                       ) : (

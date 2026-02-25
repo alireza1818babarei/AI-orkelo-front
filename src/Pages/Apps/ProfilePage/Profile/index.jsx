@@ -1,5 +1,6 @@
 
 import React, {useEffect, useState} from 'react';
+import { useDispatch, useSelector } from "react-redux";
 import GLightbox from "glightbox";
 import 'glightbox/dist/css/glightbox.min.css';
 import ProfileAppTabs from "@/Components/Profileapp/profileAppTabs";
@@ -9,14 +10,22 @@ import FeaturedStories from "@/Components/Profileapp/FeaturedStories";
 import ProfileCard from "@/Components/Profileapp/ProfileCard";
 import AboutMe from "@/Components/Profileapp/AboutMe";
 import {Col, Container, Row} from "reactstrap";
+import { getMyProfileThunk } from "@/store/auth/authSlice";
 
 const Profile = () => {
+    const dispatch = useDispatch();
+    const profileStatus = useSelector((s) => s.auth?.profileStatus ?? "idle");
 
     useEffect(() => {
         GLightbox({
             selector: ".glightbox",
         });
     }, []);
+
+    useEffect(() => {
+        if (profileStatus === "loading" || profileStatus === "success") return;
+        dispatch(getMyProfileThunk());
+    }, [dispatch, profileStatus]);
 
     const [data,setData] = useState("tab1");
     return (

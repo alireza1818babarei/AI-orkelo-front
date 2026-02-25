@@ -3,22 +3,14 @@ import api from "../../api/axios";
 import { getErrorMessage } from "../../utils/getError";
 
 const normalizeMembersPayload = (payload) => {
-  const root = payload?.data ?? payload ?? null;
-  if (Array.isArray(root)) return root;
-  if (Array.isArray(root?.data)) return root.data;
-  if (Array.isArray(root?.items)) return root.items;
-  if (Array.isArray(root?.members)) return root.members;
-  if (Array.isArray(root?.users)) return root.users;
-  if (Array.isArray(payload?.members)) return payload.members;
-  if (Array.isArray(payload?.users)) return payload.users;
+  const root = payload?.data ?? payload ?? {};
+  const data = root?.data ?? root;
+  if (Array.isArray(data)) return data;
   return [];
 };
 
 const getMemberKey = (member) =>
   String(
-    member?.user?.id ??
-      member?.user?.email ??
-      member?.user_id ??
       member?.id ??
       member?.email ??
       "",
@@ -26,11 +18,7 @@ const getMemberKey = (member) =>
 
 const getMemberRouteId = (member) =>
   String(
-    member?.member_id ??
-      member?.membership_id ??
-      member?.id ??
-      member?.user_id ??
-      member?.user?.id ??
+    member?.id ??
       "",
   );
 
@@ -57,23 +45,11 @@ export const addProjectMemberThunk = createAsyncThunk(
         email,
       };
 
-      const res = await api.post(`/projects/${projectId}/members`, payload);
-      const data = res?.data?.data ?? res?.data ?? null;
-
-      const added =
-        data?.member ??
-        data?.user ??
-        data?.data?.member ??
-        data?.data?.user ??
-        (data && typeof data === "object" && !Array.isArray(data) ? data : null);
-
-      const members = normalizeMembersPayload(res?.data);
+      await api.post(`/projects/${projectId}/members`, payload);
 
       return {
         projectId,
         email: String(email || "").trim().toLowerCase(),
-        added,
-        members: members.length ? members : null,
       };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -146,22 +122,6 @@ const projectMembersSlice = createSlice({
       if (email) delete state.addingByEmail[email];
       state.addError = null;
       state.projectId = action.payload?.projectId ?? state.projectId;
-
-      const nextMembers = action.payload?.members;
-      if (Array.isArray(nextMembers)) {
-        state.items = nextMembers;
-        return;
-      }
-
-      const added = action.payload?.added;
-      if (!added || typeof added !== "object") return;
-      const addedKey = getMemberKey(added);
-      if (!addedKey) return;
-
-      const exists = (state.items || []).some((item) => getMemberKey(item) === addedKey);
-      if (!exists) {
-        state.items = [added, ...(state.items || [])];
-      }
     });
     builder.addCase(addProjectMemberThunk.rejected, (state, action) => {
       const email = String(action.meta?.arg?.email ?? "").trim().toLowerCase();

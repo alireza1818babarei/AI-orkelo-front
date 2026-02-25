@@ -11,7 +11,7 @@ import {
   updateTaskTagThunk,
 } from "../projects/projectDetailsSlice";
 
-const getTagKey = (t) => String(t?.id ?? t?.tag_id ?? t?.uuid ?? "");
+const getTagKey = (t) => String(t?.id ?? "");
 
 const upsertById = (items, item) => {
   if (!item) return items;
@@ -160,13 +160,27 @@ const tagsSlice = createSlice({
       state.taskError = null;
     });
     builder.addCase(toggleTaskTagThunk.fulfilled, (state, action) => {
-      const { projectId, taskId, tagId, tags } = action.payload || {};
+      const { projectId, taskId, tagId, tags, tagIds } = action.payload || {};
       state.taskProjectId = projectId ?? state.taskProjectId;
       state.taskId = taskId ?? state.taskId;
       if (tagId != null) delete state.togglingByTagId[String(tagId)];
 
       if (Array.isArray(tags)) {
         state.taskItems = tags;
+        return;
+      }
+
+      if (Array.isArray(tagIds)) {
+        const byId = new Map(
+          [...(state.items || []), ...(state.taskItems || [])].map((tag) => [
+            getTagKey(tag),
+            tag,
+          ]),
+        );
+        state.taskItems = tagIds.map((id) => {
+          const key = String(id);
+          return byId.get(key) || { id };
+        });
         return;
       }
 
@@ -193,13 +207,26 @@ const tagsSlice = createSlice({
     });
     builder.addCase(createTaskTagThunk.fulfilled, (state, action) => {
       state.saving = false;
-      const { projectId, taskId, tag, tags } = action.payload || {};
+      const { projectId, taskId, tag, tags, tagIds } = action.payload || {};
       state.taskProjectId = projectId ?? state.taskProjectId;
       state.taskId = taskId ?? state.taskId;
 
       if (tag) state.items = upsertById(state.items, tag);
       if (Array.isArray(tags)) {
         state.taskItems = tags;
+        return;
+      }
+      if (Array.isArray(tagIds)) {
+        const byId = new Map(
+          [...(state.items || []), ...(state.taskItems || []), tag].map((current) => [
+            getTagKey(current),
+            current,
+          ]),
+        );
+        state.taskItems = tagIds.map((id) => {
+          const key = String(id);
+          return byId.get(key) || { id };
+        });
         return;
       }
       if (tag) state.taskItems = upsertById(state.taskItems, tag);

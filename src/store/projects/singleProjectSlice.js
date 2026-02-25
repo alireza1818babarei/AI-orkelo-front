@@ -30,7 +30,7 @@ export const createProjectThunk = createAsyncThunk(
   "project/createProject",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await api.post("/project", payload);
+      const res = await api.post("/projects", payload);
       return res.data?.data;
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -42,14 +42,7 @@ export const updateProjectThunk = createAsyncThunk(
   "project/updateProject",
   async ({ id, payload }, { rejectWithValue }) => {
     try {
-      const isFormData =
-        typeof FormData !== "undefined" && payload instanceof FormData;
-      if (isFormData) {
-        if (!payload.has("_method")) payload.append("_method", "PUT");
-        const res = await api.post(`/projects/${id}`, payload);
-        return res.data?.data;
-      }
-      const res = await api.put(`/projects/${id}`, payload);
+      const res = await api.patch(`/projects/${id}`, payload);
       return res.data?.data;
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));

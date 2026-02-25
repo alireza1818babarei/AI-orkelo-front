@@ -6,7 +6,7 @@ import {
   setTaskAssigneeThunk,
 } from "../projects/projectDetailsSlice";
 
-const getUserKey = (u) => String(u?.id ?? u?.user_id ?? u?.uuid ?? u ?? "");
+const getUserKey = (u) => String(u?.id ?? u ?? "");
 
 const normalizeWatcherIds = (watchers) => {
   const arr = Array.isArray(watchers) ? watchers : [];

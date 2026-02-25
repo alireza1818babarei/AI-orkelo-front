@@ -19,7 +19,7 @@ import ActionDropdown from "../../Components/ActionDropdown/index.jsx";
 import CompanyMembersModal from "./CompanyMembersModal.jsx";
 import AddCompanyMemberModal from "./AddCompanyMemberModal.jsx";
 import { alertConfirm, toastError, toastSuccess } from "../../utils/sweetAlert.js";
-import { resolveUserAvatarUrl } from "../../utils/mediaUrl.js";
+import { resolveUserAvatarWithFallback } from "../../utils/mediaUrl.js";
 
 const HeaderMenu = () => {
   const dispatch = useDispatch();
@@ -29,14 +29,9 @@ const HeaderMenu = () => {
     (s) => s.companyContext?.activeCompanyId ?? null,
   );
   const userAvatar = useMemo(() => {
-    const raw =
-      user?.avatar ??
-      user?.avatar_url ??
-      user?.image ??
-      user?.image_url ??
-      user?.profile_photo_url ??
-      "";
-    return resolveUserAvatarUrl(raw);
+    const raw = user?.avatar ?? "";
+    const seed = user?.id ?? user?.email ?? user?.name ?? "header-user";
+    return resolveUserAvatarWithFallback(raw, seed);
   }, [user]);
   const {
     items: companyMembers,

@@ -1,49 +1,103 @@
-import React from 'react';
-import { Card, CardBody, CardHeader } from 'reactstrap';
+import React, { useMemo } from "react";
+import { useSelector } from "react-redux";
+import { Card, CardBody, CardHeader } from "reactstrap";
+
+const formatDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+};
+
+const toDisplayValue = (value) => {
+  if (value == null || value === "") return "-";
+  return String(value);
+};
 
 const AboutMe = () => {
-    return (
-        <Card>
-            <CardHeader>
-                <h5>About Me</h5>
-            </CardHeader>
-            <CardBody>
-                <p className="text-muted f-s-13">
-                    Hello! I am Ninfa Monaldo, a devoted web designer with over five years of experience and a strong understanding of Adobe Creative Suite, HTML5, CSS3, and Java. Excited to bring my exceptional front-end development abilities to the retail industry.
-                </p>
-                <div className="about-list">
-                    <div>
-                        <span className="fw-medium"><i className="ti ti-briefcase"></i> Work passion</span>
-                        <span className="float-end f-s-13 text-secondary">IT Section</span>
-                    </div>
-                    <div>
-                        <span className="fw-medium"><i className="ti ti-mail"></i> Email</span>
-                        <span className="float-end f-s-13 text-secondary">Ninfa@gmail.com</span>
-                    </div>
-                    <div>
-                        <span className="fw-medium"><i className="ti ti-phone"></i> Contact</span>
-                        <span className="float-end f-s-13 text-secondary">0364 4559103</span>
-                    </div>
-                    <div>
-                        <span className="fw-medium"><i className="ti ti-cake"></i> Birth of Date</span>
-                        <span className="float-end f-s-13 text-secondary">24 Oct</span>
-                    </div>
-                    <div>
-                        <span className="fw-semibold"><i className="ti ti-map-pin"></i> Location</span>
-                        <span className="float-end f-s-13 text-secondary">Via Partenope, 117</span>
-                    </div>
-                    <div>
-                        <span className="fw-semibold"><i className="ti ti-device-laptop"></i> Website</span>
-                        <span className="float-end f-s-13 text-secondary">Ninfa_devWWW.com</span>
-                    </div>
-                    <div>
-                        <span className="fw-semibold"><i className="ti ti-brand-github"></i> Github</span>
-                        <span className="float-end f-s-13 text-secondary">Ninfa_dev</span>
-                    </div>
-                </div>
-            </CardBody>
-        </Card>
-    );
+  const profile = useSelector((s) => s.auth?.profile ?? null);
+
+  const summaryText = useMemo(() => {
+    const raw = profile?.about_me ?? "";
+    if (String(raw).trim()) return String(raw).trim();
+    return "No bio has been added yet.";
+  }, [profile]);
+
+  const profileItems = useMemo(
+    () => [
+      {
+        key: "work_passion",
+        label: "Work Passion",
+        icon: "ti ti-briefcase",
+        value: profile?.work_passion,
+      },
+      {
+        key: "email",
+        label: "Email",
+        icon: "ti ti-mail",
+        value: profile?.email,
+      },
+      {
+        key: "contact",
+        label: "Contact",
+        icon: "ti ti-phone",
+        value: profile?.contact,
+      },
+      {
+        key: "birth_date",
+        label: "Birth Date",
+        icon: "ti ti-calendar-event",
+        value: formatDate(profile?.birth_date),
+      },
+      {
+        key: "location",
+        label: "Location",
+        icon: "ti ti-map-pin",
+        value: profile?.location,
+      },
+      {
+        key: "website",
+        label: "Website",
+        icon: "ti ti-device-laptop",
+        value: profile?.website,
+      },
+      {
+        key: "github",
+        label: "Github",
+        icon: "ti ti-brand-github",
+        value: profile?.github,
+      },
+    ],
+    [profile],
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <h5>About Me</h5>
+      </CardHeader>
+      <CardBody>
+        <p className="text-muted f-s-13">{summaryText}</p>
+
+        <div className="about-list">
+          {profileItems.map((item) => (
+            <div key={item.key}>
+              <span className="fw-medium">
+                <i className={item.icon}></i> {item.label}
+              </span>
+              <span className="float-end f-s-13 text-secondary">
+                {toDisplayValue(item.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
+  );
 };
 
 export default AboutMe;

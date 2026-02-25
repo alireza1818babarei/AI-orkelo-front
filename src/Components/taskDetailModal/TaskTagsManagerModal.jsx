@@ -9,10 +9,9 @@ import {
 } from "../../store/tags/tagsSlice";
 import { alertSuccess, toastError } from "../../utils/sweetAlert";
 
-const getTagLabel = (tag) =>
-  tag?.name ?? tag?.title ?? tag?.label ?? tag?.text ?? `Tag ${tag?.id ?? ""}`;
+const getTagLabel = (tag) => tag?.name ?? `Tag ${tag?.id ?? ""}`;
 
-const getTagKey = (tag) => String(tag?.id ?? tag?.tag_id ?? tag?.uuid ?? "");
+const getTagKey = (tag) => String(tag?.id ?? "");
 
 const PRESET_COLORS = [
   "#3B82F6", // blue

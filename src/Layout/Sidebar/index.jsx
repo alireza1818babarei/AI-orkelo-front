@@ -121,13 +121,7 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
   };
 
   const resolveProjectImageSrc = (project) => {
-    const raw =
-      project?.image_url ??
-      project?.image ??
-      project?.logo ??
-      project?.avatar ??
-      project?.icon ??
-      null;
+    const raw = project?.image ?? null;
 
     const str = String(raw || "").trim();
     if (!str) return "";
@@ -139,7 +133,7 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
     // which are typically served from "/storage/project_images/...".
     const cleaned = str.replace(/^\/+/, "");
     const storagePath =
-      cleaned.startsWith("project_images/") || cleaned.startsWith("task_attachments/")
+      cleaned.startsWith("project_images/")
         ? `storage/${cleaned}`
         : cleaned;
 

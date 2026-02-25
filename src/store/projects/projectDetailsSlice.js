@@ -33,6 +33,13 @@ const normalizeObject = (payload) => {
   return d;
 };
 
+const normalizeTaskObject = (payload) => {
+  const obj = normalizeObject(payload);
+  if (!obj) return null;
+  const task = obj?.task ?? obj?.data?.task ?? obj?.data ?? obj;
+  return task && typeof task === "object" && !Array.isArray(task) ? task : null;
+};
+
 /* =========================
    Project Details (existing)
 ========================= */
@@ -65,7 +72,7 @@ export const createProjectThunk = createAsyncThunk(
   "project/createProject",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await api.post("/project", payload);
+      const res = await api.post("/projects", payload);
       return res.data?.data;
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -77,14 +84,7 @@ export const updateProjectThunk = createAsyncThunk(
   "project/updateProject",
   async ({ id, payload }, { rejectWithValue }) => {
     try {
-      const isFormData =
-        typeof FormData !== "undefined" && payload instanceof FormData;
-      if (isFormData) {
-        if (!payload.has("_method")) payload.append("_method", "PUT");
-        const res = await api.post(`/projects/${id}`, payload);
-        return res.data?.data;
-      }
-      const res = await api.put(`/projects/${id}`, payload);
+      const res = await api.patch(`/projects/${id}`, payload);
       return res.data?.data;
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -174,23 +174,11 @@ export const getTaskTagsThunk = createAsyncThunk(
   async ({ projectId, taskId }, { rejectWithValue }) => {
     try {
       const res = await api.get(`/projects/${projectId}/tasks/${taskId}`);
-      const raw = normalizeObject(res?.data) ?? null;
-      const task =
-        raw?.task ??
-        raw?.data?.task ??
-        raw?.data ??
-        raw ??
-        null;
-      const tags =
-        task?.tags ??
-        task?.tag_list ??
-        task?.task_tags ??
-        task?.labels ??
-        [];
+      const task = normalizeTaskObject(res?.data?.data ?? res?.data ?? null);
       return {
         projectId,
         taskId,
-        items: Array.isArray(tags) ? tags : [],
+        items: Array.isArray(task?.tags) ? task.tags : [],
       };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -205,24 +193,21 @@ export const createTaskTagThunk = createAsyncThunk(
       const res = await api.post(`/projects/${projectId}/tags`, payload);
       const raw = normalizeObject(res?.data) ?? null;
       const tag = raw?.tag ?? raw?.data?.tag ?? raw ?? null;
-      const tagId = tag?.id ?? tag?.tag_id ?? null;
+      const tagId = tag?.id ?? null;
 
-      if (!tagId || !taskId) return { projectId, taskId, tag, tags: null };
+      if (!tagId || !taskId) {
+        return { projectId, taskId, tag, tagIds: null };
+      }
 
-      // Attach the newly created tag to this task (current backend route)
       const attachRes = await api.post(
         `/projects/${projectId}/tags/${tagId}/tasks/${taskId}`,
       );
-      const attachRaw = attachRes?.data?.data ?? attachRes?.data ?? null;
-      const tags = Array.isArray(attachRaw)
-        ? attachRaw
-        : Array.isArray(attachRaw?.tags)
-          ? attachRaw.tags
-          : Array.isArray(attachRaw?.data?.tags)
-            ? attachRaw.data.tags
-            : null;
+      const attachRaw = attachRes?.data?.data ?? null;
+      const tagIds = Array.isArray(attachRaw?.tag_ids)
+        ? attachRaw.tag_ids
+        : null;
 
-      return { projectId, taskId, tag, tags };
+      return { projectId, taskId, tag, tagIds };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
@@ -233,37 +218,11 @@ export const toggleTaskTagThunk = createAsyncThunk(
   "tags/toggleTaskTag",
   async ({ projectId, taskId, tagId }, { rejectWithValue }) => {
     try {
-      // Attach tag to task (current backend):
-      // Route::prefix('projects/{project}')->group(...)
-      // Route::post('tags/{tag}/tasks/{task}', ...)
-      let res;
-      try {
-        res = await api.post(`/projects/${projectId}/tags/${tagId}/tasks/${taskId}`);
-      } catch {
-        // Backward-compatible fallback (if backend mounts it globally)
-        res = await api.post(`/tags/${tagId}/tasks/${taskId}`);
-      }
+      const res = await api.post(`/projects/${projectId}/tags/${tagId}/tasks/${taskId}`);
+      const raw = res?.data?.data ?? null;
+      const tagIds = Array.isArray(raw?.tag_ids) ? raw.tag_ids : null;
 
-      const raw = res?.data?.data ?? res?.data ?? null;
-      const tags = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.tags)
-          ? raw.tags
-          : Array.isArray(raw?.data?.tags)
-            ? raw.data.tags
-            : null;
-      const tagIds =
-        Array.isArray(raw?.tag_ids)
-          ? raw.tag_ids
-          : Array.isArray(raw?.data?.tag_ids)
-            ? raw.data.tag_ids
-            : Array.isArray(raw?.tagIds)
-              ? raw.tagIds
-              : Array.isArray(raw?.data?.tagIds)
-                ? raw.data.tagIds
-                : null;
-
-      return { projectId, taskId, tagId, tags, tagIds };
+      return { projectId, taskId, tagId, tagIds };
     } catch (err) {
       const status = err?.response?.status ?? err?.status ?? null;
       if (status === 404) {
@@ -278,31 +237,18 @@ export const toggleTaskTagThunk = createAsyncThunk(
 
 export const updateTaskTagThunk = createAsyncThunk(
   "tags/updateTaskTag",
-  async ({ projectId, taskId, tagId, payload }, { rejectWithValue }) => {
-    try {
-      const res = await api.patch(
-        `/projects/${projectId}/tasks/${taskId}/tags/${tagId}`,
-        payload,
-      );
-      const raw = normalizeObject(res?.data) ?? null;
-      const tag = raw?.tag ?? raw?.data?.tag ?? raw ?? null;
-      return { projectId, taskId, tagId, tag };
-    } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
-    }
-  },
+  async (_, { rejectWithValue }) =>
+    rejectWithValue({
+      message: "Backend route for updating task tag is not available.",
+    }),
 );
 
 export const deleteTaskTagThunk = createAsyncThunk(
   "tags/deleteTaskTag",
-  async ({ projectId, taskId, tagId }, { rejectWithValue }) => {
-    try {
-      await api.delete(`/projects/${projectId}/tasks/${taskId}/tags/${tagId}`);
-      return { projectId, taskId, tagId };
-    } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
-    }
-  },
+  async (_, { rejectWithValue }) =>
+    rejectWithValue({
+      message: "Backend route for removing task tag is not available.",
+    }),
 );
 
 /* =========================
@@ -310,53 +256,18 @@ export const deleteTaskTagThunk = createAsyncThunk(
 ========================= */
 
 const normalizePeoplePayload = (payload) => {
-  if (payload == null) return { people: [], watchers: [], assignee: null };
+  const root = payload?.data ?? payload ?? {};
+  const data = root?.data ?? root;
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const meta = data?.meta && typeof data.meta === "object" ? data.meta : {};
+  const watcherIds = Array.isArray(meta?.watcher_ids) ? meta.watcher_ids : [];
+  const assigneeIds = Array.isArray(meta?.assignee_ids) ? meta.assignee_ids : [];
 
-  const root = payload?.data ?? payload ?? null;
-  if (Array.isArray(root)) return { people: root, watchers: [], assignee: null };
-
-  const obj = normalizeObject(root) ?? {};
-
-  // New backend payload:
-  // { success, message, data: { items: [...], meta: { assignee_ids: [], watcher_ids: [] } } }
-  const people = normalizeArray(
-    obj?.items ?? obj?.people ?? obj?.users ?? obj?.members ?? obj?.data ?? [],
-  );
-
-  const watchers =
-    normalizeArray(obj?.watchers ?? obj?.data?.watchers ?? []) ||
-    [];
-
-  const watcherIds = normalizeArray(
-    obj?.meta?.watcher_ids ??
-      obj?.data?.meta?.watcher_ids ??
-      obj?.meta?.watcherIds ??
-      obj?.data?.meta?.watcherIds ??
-      [],
-  );
-
-  const assigneeIds = normalizeArray(
-    obj?.meta?.assignee_ids ??
-      obj?.data?.meta?.assignee_ids ??
-      obj?.meta?.assigneeIds ??
-      obj?.data?.meta?.assigneeIds ??
-      [],
-  );
-
-  // Prefer explicit meta ids if present, otherwise keep legacy fields.
-  const mergedWatchers = watcherIds.length ? watcherIds : watchers;
-
-  const assignee =
-    (assigneeIds.length ? assigneeIds[0] : null) ??
-    obj?.assignee ??
-    obj?.data?.assignee ??
-    obj?.assignee_user ??
-    obj?.data?.assignee_user ??
-    obj?.assigneeUser ??
-    obj?.data?.assigneeUser ??
-    null;
-
-  return { people, watchers: mergedWatchers, assignee };
+  return {
+    people: items,
+    watchers: watcherIds,
+    assignee: assigneeIds.length ? assigneeIds[0] : null,
+  };
 };
 
 export const getTaskPeopleThunk = createAsyncThunk(
@@ -377,34 +288,15 @@ export const setTaskAssigneeThunk = createAsyncThunk(
   "taskPeople/setAssignee",
   async ({ projectId, taskId, userId }, { rejectWithValue }) => {
     try {
-      const res = await api.patch(`/projects/${projectId}/tasks/${taskId}/assignee`, {
+      const payload = {
         user_id: userId ?? null,
-      });
+      };
+
+      const res = await api.patch(`/projects/${projectId}/tasks/${taskId}/assignee`, payload);
       const raw = res?.data?.data ?? res?.data ?? null;
       const obj = normalizeObject(raw);
-
-      const assigneeIdsCandidate =
-        obj?.assignee_ids ??
-        obj?.data?.assignee_ids ??
-        obj?.meta?.assignee_ids ??
-        obj?.data?.meta?.assignee_ids ??
-        null;
-
-      const hasAssigneeIdsField = Array.isArray(assigneeIdsCandidate);
-      const assigneeFromIds =
-        hasAssigneeIdsField && assigneeIdsCandidate.length
-          ? assigneeIdsCandidate[0]
-          : null;
-
-      const assignee =
-        hasAssigneeIdsField
-          ? assigneeFromIds
-          : obj?.assignee ??
-            obj?.data?.assignee ??
-            obj?.user ??
-            obj?.data?.user ??
-            obj ??
-            null;
+      const assigneeIds = Array.isArray(obj?.assignee_ids) ? obj.assignee_ids : [];
+      const assignee = assigneeIds.length ? assigneeIds[0] : null;
       return { projectId, taskId, userId, assignee };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -416,18 +308,14 @@ export const addTaskWatcherThunk = createAsyncThunk(
   "taskPeople/addWatcher",
   async ({ projectId, taskId, userId }, { rejectWithValue }) => {
     try {
-      const res = await api.post(`/projects/${projectId}/tasks/${taskId}/watchers`, {
+      const payload = {
         user_id: userId,
-        userId,
-      });
+      };
+
+      const res = await api.post(`/projects/${projectId}/tasks/${taskId}/watchers`, payload);
       const raw = res?.data?.data ?? res?.data ?? null;
-      const watchers = normalizeArray(
-        raw?.watchers ??
-          raw?.data?.watchers ??
-          raw?.meta?.watcher_ids ??
-          raw?.data?.meta?.watcher_ids ??
-          raw,
-      );
+      const obj = normalizeObject(raw);
+      const watchers = Array.isArray(obj?.watcher_ids) ? obj.watcher_ids : [];
       return { projectId, taskId, userId, watchers };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));

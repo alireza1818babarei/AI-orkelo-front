@@ -5,6 +5,7 @@ import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import BoardColumn from "./BoardColumn";
 import BoardItem from "../../../../Components/BoardItem";
 import { formatMonthDay } from "../../../../utils/date";
+import { resolveUserAvatarWithFallback } from "../../../../utils/mediaUrl";
 
 /* =========================
    Helpers
@@ -18,16 +19,7 @@ const arrayMove = (arr, from, to) => {
 };
 
 const getTaskAttachmentCount = (task) => {
-  const raw =
-    task?.total_attachment ??
-    task?.totalAttachment ??
-    task?.files_count ??
-    task?.filesCount ??
-    task?.attachments_count ??
-    task?.attachmentsCount ??
-    task?.files ??
-    task?.attachments ??
-    null;
+  const raw = task?.total_attachment ?? null;
 
   if (Array.isArray(raw)) return raw.length;
   if (raw && typeof raw === "object") {
@@ -49,10 +41,10 @@ const getTaskAttachmentCount = (task) => {
 const normalizeBoard = (columns = []) => {
   const tasksById = {};
   const nextColumns = (columns || []).map((col) => {
-    const rawTasks = col.tasks ?? col.items ?? col.cards ?? col.task_list;
+    const rawTasks = col.tasks;
     const tasksUndefined = rawTasks == null;
     const taskIds = (rawTasks || []).map((t, index) => {
-      const id = String(t.id ?? t.task_id ?? t.uuid ?? `${col.id || "col"}-${index}`);
+      const id = String(t.id ?? `${col.id || "col"}-${index}`);
       tasksById[id] = { ...t, id };
       return id;
     });
@@ -72,7 +64,7 @@ const isTaskCompleted = (task) =>
   String(task?.status || "").toLowerCase() === "completed";
 
 const getTaskDueValue = (task) =>
-  task?.due_at ?? task?.dueAt ?? task?.due_date ?? task?.dueDate ?? task?.date ?? null;
+  task?.due_at ?? null;
 
 const formatTimeHHmm = (raw) => {
   if (!raw) return "";
@@ -95,6 +87,49 @@ const formatTaskDate = (task) => {
     return time ? `${base} ${time}` : base;
   }
   return String(raw);
+};
+
+const DEFAULT_UNASSIGNED_AVATAR = "/assets/images/avtar/3.png";
+
+const pickFirstNonEmpty = (values = []) => {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text) return text;
+  }
+  return "";
+};
+
+const getTaskAssigneeObject = (task) => {
+  const fromAssignees =
+    Array.isArray(task?.assignees) &&
+    task.assignees.find((item) => item && typeof item === "object");
+  if (fromAssignees) return fromAssignees;
+
+  const candidates = [task?.assignee];
+
+  return (
+    candidates.find((item) => item && typeof item === "object") || null
+  );
+};
+
+const resolveTaskAssigneeAvatar = (task) => {
+  const assignee = getTaskAssigneeObject(task);
+
+  const assigneeAvatarRaw = pickFirstNonEmpty([
+    assignee?.avatar,
+  ]);
+
+  if (!assignee) {
+    return DEFAULT_UNASSIGNED_AVATAR;
+  }
+
+  const seed = pickFirstNonEmpty([
+    assignee?.id,
+    task?.assignee_id,
+    task?.id,
+  ]);
+
+  return resolveUserAvatarWithFallback(assigneeAvatarRaw, seed);
 };
 
 const TaskCard = memo(function TaskCard({
@@ -184,12 +219,12 @@ const TaskCard = memo(function TaskCard({
           }
           onDragHandleKeyDown?.(e);
         }}
-        taskTitle={task.title || task.name || task.text || "Task"}
-        taskBody={task.body || task.description || "-"}
+        taskTitle={task.text || "Task"}
+        taskBody={task.description || "-"}
         taskDate={formatTaskDate(task)}
         taskFileAttachCount={getTaskAttachmentCount(task) || "0"}
-        taskTags={task.tags ?? task.tag_list ?? task.task_tags ?? task.labels ?? []}
-        taskUserImg={task.user_image || task.avatar || ""}
+        taskTags={task.tags ?? []}
+        taskUserImg={resolveTaskAssigneeAvatar(task)}
         isCompleted={completed}
       />
     </div>

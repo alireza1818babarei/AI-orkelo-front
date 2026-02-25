@@ -3,16 +3,14 @@ import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Spinner } from "r
 import { useDispatch, useSelector } from "react-redux";
 import {
   getProjectTagsThunk,
-  deleteTaskTagThunk,
   toggleTaskTagThunk,
 } from "../../store/tags/tagsSlice";
 import { toastError } from "../../utils/sweetAlert";
 import TaskTagsManagerModal from "./TaskTagsManagerModal";
 
-const getTagLabel = (tag) =>
-  tag?.name ?? tag?.title ?? tag?.label ?? tag?.text ?? `Tag ${tag?.id ?? ""}`;
+const getTagLabel = (tag) => tag?.name ?? `Tag ${tag?.id ?? ""}`;
 
-const getTagKey = (tag) => String(tag?.id ?? tag?.tag_id ?? tag?.uuid ?? "");
+const getTagKey = (tag) => String(tag?.id ?? "");
 
 const getContrastText = (hex) => {
   const raw = String(hex || "").trim();
@@ -75,7 +73,7 @@ export default function TaskTagsDropdown({
       return;
     }
 
-    const tagId = tag?.id ?? tag?.tag_id ?? null;
+    const tagId = tag?.id ?? null;
     if (tagId == null) return;
     const tagProjectId = tag?.project_id ?? tag?.projectId ?? null;
     if (tagProjectId != null && String(tagProjectId) !== String(projectId)) {
@@ -85,17 +83,29 @@ export default function TaskTagsDropdown({
     const key = String(tagId);
     const wasAssigned = tagIds.has(key);
 
+    if (wasAssigned) {
+      toastError("Removing a tag from task is not available in backend routes.");
+      return;
+    }
+
     try {
-      const res = wasAssigned
-        ? await dispatch(deleteTaskTagThunk({ projectId, taskId, tagId })).unwrap()
-        : await dispatch(toggleTaskTagThunk({ projectId, taskId, tagId })).unwrap();
+      const res = await dispatch(
+        toggleTaskTagThunk({ projectId, taskId, tagId }),
+      ).unwrap();
 
       const next =
-        Array.isArray(res?.tags)
-          ? res.tags
-          : wasAssigned
-            ? (selectedTags || []).filter((t) => getTagKey(t) !== key)
-            : [...(selectedTags || []), tag];
+        Array.isArray(res?.tagIds)
+          ? res.tagIds.map((id) => {
+              const normalizedId = String(id);
+              return (
+                (items || []).find((candidate) => getTagKey(candidate) === normalizedId) ||
+                (selectedTags || []).find(
+                  (candidate) => getTagKey(candidate) === normalizedId,
+                ) ||
+                { id }
+              );
+            })
+          : [...(selectedTags || []), tag];
 
       onChanged?.(next);
       setOpen(false);

@@ -54,7 +54,7 @@ const TaskDetailModal = ({
     taskDetailState?.projectId != null &&
     taskDetailState?.taskId != null &&
     String(taskDetailState.projectId) === String(projectId) &&
-    String(taskDetailState.taskId) === String(propTask?.id ?? propTask?.task_id ?? propTask?.uuid ?? "");
+    String(taskDetailState.taskId) === String(propTask?.id ?? "");
 
   const detailLoading =
     isOpen &&
@@ -67,7 +67,6 @@ const TaskDetailModal = ({
     detailTask?.project?.id ??
     t?.project?.id ??
     t?.project_id ??
-    t?.projectId ??
     projectId ??
     null;
   const deriveCompleted = (obj) =>
@@ -75,20 +74,9 @@ const TaskDetailModal = ({
     String(obj?.status || "").toLowerCase() === "done" ||
     String(obj?.status || "").toLowerCase() === "completed";
   const deriveDueAt = (obj) =>
-    obj?.due_at ??
-    obj?.dueAt ??
-    obj?.due_date ??
-    obj?.dueDate ??
-    obj?.date ??
-    null;
+    obj?.due_at ?? null;
   const deriveCompletedAt = (obj) =>
-    obj?.completed_at ??
-    obj?.completedAt ??
-    obj?.done_at ??
-    obj?.doneAt ??
-    obj?.finished_at ??
-    obj?.finishedAt ??
-    null;
+    obj?.completed_at ?? null;
   const formatDateTime = (value) => {
     if (!value) return "";
     const date = new Date(value);
@@ -103,8 +91,8 @@ const TaskDetailModal = ({
   };
   const [description, setDescription] = useState(t.description || "");
   const [savedDescription, setSavedDescription] = useState(t.description || "");
-  const [taskText, setTaskText] = useState(t.text || t.title || "");
-  const [savedTaskText, setSavedTaskText] = useState(t.text || t.title || "");
+  const [taskText, setTaskText] = useState(t.text || "");
+  const [savedTaskText, setSavedTaskText] = useState(t.text || "");
   const taskTextInputRef = useRef(null);
   const skipNextTaskTextBlurSaveRef = useRef(false);
   const [taskCompleting, setTaskCompleting] = useState(false);
@@ -136,10 +124,7 @@ const TaskDetailModal = ({
     dispatch(getTaskDetailThunk({ projectId: effectiveProjectId, taskId }));
   };
 
-  const taskId = useMemo(
-    () => t?.id ?? t?.task_id ?? t?.uuid ?? null,
-    [t?.id, t?.task_id, t?.uuid],
-  );
+  const taskId = useMemo(() => t?.id ?? null, [t?.id]);
   const taskColumnId = t?.column_id ?? t?.columnId ?? t?.column?.id ?? null;
   const projectColumns = useSelector((s) => s.projectColumns?.items || []);
 
@@ -148,14 +133,15 @@ const TaskDetailModal = ({
     if (!taskId) return null;
 
     const matchesTask = (x) =>
-      String(x?.id ?? x?.task_id ?? x?.uuid ?? "") === String(taskId);
+      String(x?.id ?? "") === String(taskId);
 
     for (const col of projectColumns || []) {
       const tasks = Array.isArray(col?.tasks) ? col.tasks : [];
-      if (tasks.some(matchesTask)) return col?.id ?? col?.column_id ?? null;
+      if (tasks.some(matchesTask)) return col?.id ?? null;
     }
     return null;
   }, [taskColumnId, taskId, projectColumns]);
+  const effectiveColumnId = resolvedColumnId ?? taskColumnId ?? null;
 
   const getTaskUpdateUrl = () => {
     if (!effectiveProjectId || !taskId || !resolvedColumnId) return null;
@@ -275,7 +261,7 @@ const TaskDetailModal = ({
     const next = t.description || "";
     setDescription(next);
     setSavedDescription(next);
-    const nextText = t.text || t.title || "";
+    const nextText = t.text || "";
     setTaskText(nextText);
     setSavedTaskText(nextText);
     setTaskCompleted(deriveCompleted(t));
@@ -291,17 +277,13 @@ const TaskDetailModal = ({
   }, [
     t.description,
     t.text,
-    t.title,
     t.status,
     t.is_completed,
     t.completed_at,
     t.created_at,
     t.updated_at,
     t.due_at,
-    t.due_date,
-    t.date,
     t.id,
-    t.task_id,
   ]);
 
   useEffect(() => {
@@ -443,7 +425,7 @@ const TaskDetailModal = ({
         updateTaskInColumn({
           columnId: resolvedColumnId,
           taskId,
-          patch: { text: trimmed, title: trimmed },
+          patch: { text: trimmed },
         }),
       );
       refreshDetail();
@@ -496,12 +478,10 @@ const TaskDetailModal = ({
       try {
         await api.patch(`/projects/${projectId}/tasks/${taskId}/due-time`, {
           due_at: dueAtForApi,
-          dueAt: dueAtForApi,
         });
       } catch {
         await api.post(`/projects/${projectId}/tasks/${taskId}/due-time`, {
           due_at: dueAtForApi,
-          dueAt: dueAtForApi,
         });
       }
       dispatch(
@@ -736,6 +716,7 @@ const TaskDetailModal = ({
           {!taskCompleted ? (
             <TaskAssigneeDropdown
               projectId={effectiveProjectId}
+              columnId={effectiveColumnId}
               taskId={taskId}
               selectedAssignees={detailTask?.assignees ?? t?.assignees ?? []}
               disabled={!effectiveProjectId || !taskId}
@@ -1024,6 +1005,7 @@ const TaskDetailModal = ({
                   />
                   <TaskWatchersDropdown
                     projectId={effectiveProjectId}
+                    columnId={effectiveColumnId}
                     taskId={taskId}
                     disabled={!effectiveProjectId || !taskId}
                   />

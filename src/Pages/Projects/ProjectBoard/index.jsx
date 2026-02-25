@@ -69,19 +69,8 @@ const normalizeVisibilityValue = (value) => {
 
 const resolveProjectVisibility = (project) => {
   if (!project || typeof project !== "object") return PROJECT_VISIBILITY[0];
-
-  const candidates = [
-    project.visibility,
-    project.is_private,
-    project.isPrivate,
-    project.private,
-  ];
-
-  for (const candidate of candidates) {
-    const normalized = normalizeVisibilityValue(candidate);
-    if (normalized) return normalized;
-  }
-
+  const normalized = normalizeVisibilityValue(project.visibility);
+  if (normalized) return normalized;
   return PROJECT_VISIBILITY[0];
 };
 
@@ -205,20 +194,20 @@ const ProjectBoard = () => {
         const baseTasks = Array.isArray(base?.tasks) ? base.tasks : null;
         const sliceTasks = Array.isArray(c?.tasks) ? c.tasks : null;
         const getTaskKey = (t) =>
-          String(t?.id ?? t?.task_id ?? t?.uuid ?? t?.text ?? "");
+          String(t?.id ?? "");
 
         if (sliceTasks) {
           const baseByKey = new Map((baseTasks || []).map((t) => [getTaskKey(t), t]));
-          next.tasks = sliceTasks
-            .map((t) => {
-              const key = getTaskKey(t);
-              const baseTask = baseByKey.get(key);
-              return baseTask ? { ...baseTask, ...t } : t;
-            })
-            .filter((t) => !removedSet.has(String(t.id ?? t.task_id ?? t.uuid)));
+            next.tasks = sliceTasks
+              .map((t) => {
+                const key = getTaskKey(t);
+                const baseTask = baseByKey.get(key);
+                return baseTask ? { ...baseTask, ...t } : t;
+              })
+            .filter((t) => !removedSet.has(String(t.id)));
         } else if (baseTasks) {
           next.tasks = baseTasks.filter(
-            (t) => !removedSet.has(String(t.id ?? t.task_id ?? t.uuid)),
+            (t) => !removedSet.has(String(t.id)),
           );
         }
         return next;
@@ -399,13 +388,7 @@ const ProjectBoard = () => {
   };
 
   const resolveProjectImageSrc = (p) => {
-    const raw =
-      p?.image_url ??
-      p?.image ??
-      p?.logo ??
-      p?.avatar ??
-      p?.icon ??
-      null;
+    const raw = p?.image ?? null;
 
     const str = String(raw || "").trim();
     if (!str) return "";
@@ -855,7 +838,6 @@ const ProjectBoard = () => {
         task={activeTask}
         projectId={
           activeTask?.project_id ??
-          activeTask?.projectId ??
           activeTask?.project?.id ??
           project?.id ??
           id
