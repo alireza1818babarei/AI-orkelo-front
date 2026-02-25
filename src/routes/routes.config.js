@@ -24,6 +24,7 @@ export const routesConfig = [
         children: [
           { path: "/", element: <Home /> },
           { path: "/projects/:id", element: <ProjectBoard/> },
+          { path: "/projects/:id/task/:taskId", element: <ProjectBoard/> },
           { path: "/profile", element: <Profile/> }
         ],
       },

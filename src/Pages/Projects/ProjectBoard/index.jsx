@@ -94,7 +94,7 @@ const sortColumnsByPosition = (columns) => {
 };
 
 const ProjectBoard = () => {
-  const { id } = useParams();
+  const { id, taskId } = useParams();
   const dispatch = useDispatch();
   const navigat = useNavigate();
   const tasksForcedProjectRef = useRef(null);
@@ -109,7 +109,6 @@ const ProjectBoard = () => {
   const [editModal, setEditModal] = useState(false);
   const [columnModalOpen, setColumnModalOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState(null);
-  const [taskInfoOpen, setTaskInfoOpen] = useState(false);
   const [activeTask, setActiveTask] = useState(null);
   const [removedTaskIds, setRemovedTaskIds] = useState([]);
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
@@ -227,12 +226,45 @@ const ProjectBoard = () => {
     setEditModal(false);
     setColumnModalOpen(false);
     setEditingColumn(null);
-    setTaskInfoOpen(false);
     setActiveTask(null);
     setRemovedTaskIds([]);
     setAddMemberModalOpen(false);
     setMembersPanelCollapsed(false);
   }, [id]);
+
+  useEffect(() => {
+    if (!taskId) {
+      setActiveTask(null);
+      return;
+    }
+
+    const targetTaskId = String(taskId);
+    let matchedTask = null;
+
+    for (const column of columns || []) {
+      const tasks = Array.isArray(column?.tasks) ? column.tasks : [];
+      const found = tasks.find(
+        (taskItem) => String(taskItem?.id ?? "") === targetTaskId,
+      );
+      if (!found) continue;
+      matchedTask = {
+        ...found,
+        column_id: found?.column_id ?? column?.id ?? null,
+        columnId: found?.columnId ?? column?.id ?? null,
+      };
+      break;
+    }
+
+    if (matchedTask) {
+      setActiveTask(matchedTask);
+      return;
+    }
+
+    setActiveTask((prev) => {
+      if (String(prev?.id ?? "") === targetTaskId) return prev;
+      return { id: taskId };
+    });
+  }, [columns, taskId]);
 
   const columnIdsKey = useMemo(() => {
     if (!columnsProjectId || String(columnsProjectId) !== String(id)) return "";
@@ -525,9 +557,15 @@ const ProjectBoard = () => {
   };
 
   const handleTaskClick = (task) => {
-    if (!task) return;
+    const nextTaskId = task?.id;
+    if (!id || nextTaskId == null) return;
     setActiveTask(task);
-    setTaskInfoOpen(true);
+    navigat(`/projects/${id}/task/${nextTaskId}`);
+  };
+
+  const closeTaskModal = () => {
+    if (!id) return;
+    navigat(`/projects/${id}`);
   };
 
   const handleProjectDelete = async () => {
@@ -833,9 +871,15 @@ const ProjectBoard = () => {
       />
 
       <TaskDetailModal
-        isOpen={taskInfoOpen}
-        onClose={() => setTaskInfoOpen(false)}
-        task={activeTask}
+        isOpen={Boolean(taskId)}
+        onClose={closeTaskModal}
+        task={
+          taskId
+            ? String(activeTask?.id ?? "") === String(taskId)
+              ? activeTask
+              : { id: taskId }
+            : null
+        }
         projectId={
           activeTask?.project_id ??
           activeTask?.project?.id ??

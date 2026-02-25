@@ -17,7 +17,22 @@ function MenuItem(props) {
   const { pathname } = useLocation();
 
   const isActive = useMemo(() => {
-    return (linkPath) => linkPath === pathname;
+    const normalizePath = (value = "") => {
+      if (!value) return "/";
+      const clean = String(value).split(/[?#]/)[0] || "/";
+      if (clean === "/") return "/";
+      return clean.endsWith("/") ? clean.slice(0, -1) : clean;
+    };
+
+    const currentPath = normalizePath(pathname);
+
+    return (linkPath) => {
+      if (!linkPath || linkPath === "#") return false;
+      const targetPath = normalizePath(linkPath);
+
+      if (targetPath === "/") return currentPath === "/";
+      return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+    };
   }, [pathname]);
 
   const hasActiveInTree = useMemo(() => {

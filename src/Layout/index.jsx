@@ -1,17 +1,12 @@
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import ScrollArrow from "./Footer/ScrollArrow";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Customizer from "./Customizer";
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    navigate('/');
-  }, []);
   return (
     <div className="app-wrapper default">
       <div
