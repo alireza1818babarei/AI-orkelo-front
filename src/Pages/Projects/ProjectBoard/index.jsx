@@ -50,6 +50,7 @@ import {
   PROJECT_VISIBILITY,
   updateProjectSchema,
 } from "../../../validation/project/updateProject.schema";
+import ProjectTaskManager from "./partials/ProjectTaskManager";
 
 const PROJECT_STATUS = ["active", "deactive"];
 
@@ -182,9 +183,7 @@ const ProjectBoard = () => {
     }
 
     const removedSet = new Set(removedTaskIds.map(String));
-    const baseMap = new Map(
-      (baseColumns || []).map((c) => [String(c.id), c]),
-    );
+    const baseMap = new Map((baseColumns || []).map((c) => [String(c.id), c]));
 
     return sortColumnsByPosition(
       columnsFromSlice.map((c) => {
@@ -192,22 +191,21 @@ const ProjectBoard = () => {
         const next = { ...base, ...c };
         const baseTasks = Array.isArray(base?.tasks) ? base.tasks : null;
         const sliceTasks = Array.isArray(c?.tasks) ? c.tasks : null;
-        const getTaskKey = (t) =>
-          String(t?.id ?? "");
+        const getTaskKey = (t) => String(t?.id ?? "");
 
         if (sliceTasks) {
-          const baseByKey = new Map((baseTasks || []).map((t) => [getTaskKey(t), t]));
-            next.tasks = sliceTasks
-              .map((t) => {
-                const key = getTaskKey(t);
-                const baseTask = baseByKey.get(key);
-                return baseTask ? { ...baseTask, ...t } : t;
-              })
+          const baseByKey = new Map(
+            (baseTasks || []).map((t) => [getTaskKey(t), t]),
+          );
+          next.tasks = sliceTasks
+            .map((t) => {
+              const key = getTaskKey(t);
+              const baseTask = baseByKey.get(key);
+              return baseTask ? { ...baseTask, ...t } : t;
+            })
             .filter((t) => !removedSet.has(String(t.id)));
         } else if (baseTasks) {
-          next.tasks = baseTasks.filter(
-            (t) => !removedSet.has(String(t.id)),
-          );
+          next.tasks = baseTasks.filter((t) => !removedSet.has(String(t.id)));
         }
         return next;
       }),
@@ -319,8 +317,7 @@ const ProjectBoard = () => {
 
   const { ref: nameRef, ...nameField } = register("name");
   const { ref: statusRef, ...statusField } = register("status");
-  const { ref: descriptionRef, ...descriptionField } =
-    register("description");
+  const { ref: descriptionRef, ...descriptionField } = register("description");
 
   useEffect(() => {
     register("visibility");
@@ -347,7 +344,6 @@ const ProjectBoard = () => {
   const { ref: colorRef, ...colorField } = registerColumn("color");
   const { ref: iconRef, ...iconField } = registerColumn("icon");
   const currentColumnIcon = watchColumn("icon");
-
 
   const buildFormValues = (p) => ({
     name: p?.name || "",
@@ -390,7 +386,6 @@ const ProjectBoard = () => {
     resetColumn({
       title: "",
       color: "#3B82F6",
-      icon: "list",
     });
     setColumnModalOpen(true);
   };
@@ -400,7 +395,7 @@ const ProjectBoard = () => {
     resetColumn({
       title: column.title || column.name || "",
       color: column.color || "#3B82F6",
-      icon: column.icon || "list",
+      icon: column.icon || "",
     });
     setColumnModalOpen(true);
   };
@@ -464,9 +459,7 @@ const ProjectBoard = () => {
         };
       }
 
-      await dispatch(
-        updateProjectThunk({ id: project.id, payload }),
-      ).unwrap();
+      await dispatch(updateProjectThunk({ id: project.id, payload })).unwrap();
 
       alertSuccess();
       closeEditModal();
@@ -499,10 +492,7 @@ const ProjectBoard = () => {
       alertSuccess();
       closeColumnModal();
     } catch (err) {
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Column save failed";
+      const msg = err?.message || err?.data?.message || "Column save failed";
       toastError(msg);
     }
   };
@@ -526,10 +516,7 @@ const ProjectBoard = () => {
       ).unwrap();
       alertSuccess();
     } catch (err) {
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Delete failed";
+      const msg = err?.message || err?.data?.message || "Delete failed";
       toastError(msg);
     }
   };
@@ -548,10 +535,7 @@ const ProjectBoard = () => {
         }),
       ).unwrap();
     } catch (err) {
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Task create failed";
+      const msg = err?.message || err?.data?.message || "Task create failed";
       toastError(msg);
     }
   };
@@ -587,10 +571,7 @@ const ProjectBoard = () => {
       alertSuccess();
       navigat("/");
     } catch (err) {
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Delete failed";
+      const msg = err?.message || err?.data?.message || "Delete failed";
       toastError(msg);
     }
   };
@@ -621,10 +602,7 @@ const ProjectBoard = () => {
       toastSuccess("Member added");
       dispatch(getProjectMembersThunk(id));
     } catch (err) {
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Add member failed";
+      const msg = err?.message || err?.data?.message || "Add member failed";
       toastError(msg);
     }
   };
@@ -666,10 +644,7 @@ const ProjectBoard = () => {
         );
       }
 
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Column reorder failed";
+      const msg = err?.message || err?.data?.message || "Column reorder failed";
       toastError(msg);
       throw err;
     }
@@ -711,10 +686,7 @@ const ProjectBoard = () => {
         }),
       );
 
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Task reorder failed";
+      const msg = err?.message || err?.data?.message || "Task reorder failed";
       toastError(msg);
       throw err;
     }
@@ -745,10 +717,7 @@ const ProjectBoard = () => {
       toastSuccess("Member removed");
       dispatch(getProjectMembersThunk(id));
     } catch (err) {
-      const msg =
-        err?.message ||
-        err?.data?.message ||
-        "Remove member failed";
+      const msg = err?.message || err?.data?.message || "Remove member failed";
       toastError(msg);
     }
   };
@@ -768,9 +737,7 @@ const ProjectBoard = () => {
       </div>
     );
   if (pageError && !project)
-    return (
-      <div className="p-3">Error: {pageError?.message || pageError}</div>
-    );
+    return <div className="p-3">Error: {pageError?.message || pageError}</div>;
   if (!project) return <div className="p-3">Project not found!</div>;
 
   return (
@@ -808,13 +775,16 @@ const ProjectBoard = () => {
           </div>
         </Container>
       </div>
-
       <button
         type="button"
         className="project-members-fab"
         onClick={() => setMembersPanelCollapsed((prev) => !prev)}
         aria-expanded={!membersPanelCollapsed}
-        aria-label={membersPanelCollapsed ? "Show project members" : "Hide project members"}
+        aria-label={
+          membersPanelCollapsed
+            ? "Show project members"
+            : "Hide project members"
+        }
       >
         <i
           className={`ph ${
@@ -881,10 +851,7 @@ const ProjectBoard = () => {
             : null
         }
         projectId={
-          activeTask?.project_id ??
-          activeTask?.project?.id ??
-          project?.id ??
-          id
+          activeTask?.project_id ?? activeTask?.project?.id ?? project?.id ?? id
         }
         onDeleted={({ taskId, columnId }) => {
           if (taskId && columnId) {
@@ -931,6 +898,28 @@ const ProjectBoard = () => {
         onAddMember={handleAddProjectMember}
         projectMembers={members}
         addingByEmail={projectMemberAddingByEmail}
+      />
+      <ProjectTaskManager
+        projectId={project.id}
+        title={"deleted"}
+        type={"deleted"}
+        onRestored={({ taskId }) => {
+          if (!taskId) return;
+          setRemovedTaskIds((prev) =>
+            prev.filter((idValue) => String(idValue) !== String(taskId)),
+          );
+        }}
+      />
+      <ProjectTaskManager
+        projectId={project.id}
+        title={"archived"}
+        type={"archived"}
+        onRestored={({ taskId }) => {
+          if (!taskId) return;
+          setRemovedTaskIds((prev) =>
+            prev.filter((idValue) => String(idValue) !== String(taskId)),
+          );
+        }}
       />
     </section>
   );

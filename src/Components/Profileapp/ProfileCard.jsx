@@ -96,7 +96,7 @@ const ProfileCard = () => {
   const quickItems = useMemo(
     () => [
       { key: "work_passion", label: "Work Passion", value: profile?.work_passion },
-      { key: "email", label: "Email", value: profile?.email ?? user?.email },
+      { key: "email", label: "Contact Email", value: profile?.email },
       { key: "contact", label: "Contact", value: profile?.contact },
       { key: "birth_date", label: "Birth Date", value: formatDate(profile?.birth_date) },
       { key: "location", label: "Location", value: profile?.location },

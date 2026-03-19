@@ -1,10 +1,31 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Dropdown, DropdownMenu, DropdownToggle, Modal, ModalBody, Spinner } from "reactstrap";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Dropdown,
+  DropdownMenu,
+  DropdownToggle,
+  Modal,
+  ModalBody,
+  Spinner,
+} from "reactstrap";
 import api from "../../api/axios";
-import { alertConfirm, alertSuccess, toastError } from "../../utils/sweetAlert";
+import {
+  alertConfirm,
+  alertSuccess,
+  toastError,
+  toastSuccess,
+} from "../../utils/sweetAlert";
 import ActionDropdown from "../ActionDropdown";
 import { useDispatch, useSelector } from "react-redux";
-import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
+import {
+  getColumnTasksThunk,
+  updateTaskInColumn,
+} from "../../store/projects/projectColumnsSlice";
 import { getTaskDetailThunk } from "../../store/tasks/taskDetailSlice";
 import { reorderTaskChecklistItemsThunk } from "../../store/tasks/checklistSlice";
 import TaskModalPlaceHolder from "../TaskModalPlaceHolder";
@@ -14,7 +35,12 @@ import TaskAttachments from "./TaskAttachments";
 import TaskTagsDropdown from "./TaskTagsDropdown";
 import TaskAssigneeDropdown from "./TaskAssigneeDropdown";
 import TaskWatchersDropdown from "./TaskWatchersDropdown";
+import TaskExcludedUsersDropdown from "./TaskExcludedUsersDropdown";
+import TaskVisibleForDropdown from "./TaskVisibleForDropdown";
 import ChecklistTree from "./ChecklistTree";
+import TaskTimer from "./TaskTimer";
+import { restoreArchivedTasks } from "../../store/projects/projectArchivedTasksSlice";
+import {resolveUserAvatarWithFallback} from "../../utils/mediaUrl.js";
 
 const sortChecklistByPosition = (items = []) =>
   [...(items || [])].sort((a, b) => {
@@ -40,13 +66,51 @@ const arrayMove = (list, from, to) => {
   return next;
 };
 
-const TaskDetailModal = ({
-  isOpen,
-  onClose,
-  task,
-  projectId,
-  onDeleted,
-}) => {
+const clampNonNegativeInt = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.floor(parsed));
+};
+
+const parseDateMs = (value) => {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : null;
+};
+
+const trackerTotalSeconds = (tracker, nowMs = Date.now()) => {
+  const savedTotal = Number(tracker?.total_time);
+  const baseTotal =
+    Number.isFinite(savedTotal) && savedTotal >= 0 ? Math.floor(savedTotal) : 0;
+
+  if (tracker?.stop_track != null) {
+    if (baseTotal > 0) return baseTotal;
+    const startMs = parseDateMs(tracker?.start_track);
+    const stopMs = parseDateMs(tracker?.stop_track);
+    if (!startMs || !stopMs || stopMs < startMs) return 0;
+    return Math.floor((stopMs - startMs) / 1000);
+  }
+
+  const startMs = parseDateMs(tracker?.start_track);
+  if (!startMs) return baseTotal;
+  const liveSeconds = Math.floor((nowMs - startMs) / 1000);
+  return baseTotal + Math.max(0, liveSeconds);
+};
+
+const taskTrackedTotalSeconds = (trackers, nowMs = Date.now()) =>
+  (Array.isArray(trackers) ? trackers : []).reduce(
+    (sum, item) => sum + trackerTotalSeconds(item, nowMs),
+    0,
+  );
+
+const formatHoursMinutes = (totalSeconds) => {
+  const safeSeconds = clampNonNegativeInt(totalSeconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+};
+
+const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted }) => {
   const propTask = task || {};
 
   const taskDetailState = useSelector((s) => s.taskDetail);
@@ -61,7 +125,7 @@ const TaskDetailModal = ({
     taskDetailMatches &&
     taskDetailState?.status === "loading" &&
     !taskDetailState?.task;
-  const detailTask = taskDetailMatches ? taskDetailState?.task ?? null : null;
+  const detailTask = taskDetailMatches ? (taskDetailState?.task ?? null) : null;
   const t = detailTask || propTask;
   const effectiveProjectId =
     detailTask?.project?.id ??
@@ -73,10 +137,8 @@ const TaskDetailModal = ({
     !!obj?.is_completed ||
     String(obj?.status || "").toLowerCase() === "done" ||
     String(obj?.status || "").toLowerCase() === "completed";
-  const deriveDueAt = (obj) =>
-    obj?.due_at ?? null;
-  const deriveCompletedAt = (obj) =>
-    obj?.completed_at ?? null;
+  const deriveDueAt = (obj) => obj?.due_at ?? null;
+  const deriveCompletedAt = (obj) => obj?.completed_at ?? null;
   const formatDateTime = (value) => {
     if (!value) return "";
     const date = new Date(value);
@@ -89,6 +151,13 @@ const TaskDetailModal = ({
       minute: "2-digit",
     }).format(date);
   };
+
+  const creatorId = useSelector(
+    (state) => state.taskDetail.creator?.id
+  );
+
+  const currentUserId = useSelector((state) => state.auth.user?.id);
+
   const [description, setDescription] = useState(t.description || "");
   const [savedDescription, setSavedDescription] = useState(t.description || "");
   const [taskText, setTaskText] = useState(t.text || "");
@@ -125,6 +194,34 @@ const TaskDetailModal = ({
   };
 
   const taskId = useMemo(() => t?.id ?? null, [t?.id]);
+  const taskTrackers = useMemo(() => {
+    const list = detailTask?.time_trackers ?? t?.time_trackers;
+    return Array.isArray(list) ? list : [];
+  }, [detailTask?.time_trackers, t?.time_trackers]);
+  const [trackedNowMs, setTrackedNowMs] = useState(Date.now());
+  const [trackedTotalOverrideSeconds, setTrackedTotalOverrideSeconds] =
+    useState(null);
+  const hasActiveTracker = useMemo(
+    () => taskTrackers.some((item) => item && item.stop_track == null),
+    [taskTrackers],
+  );
+  const backendTrackedTotalSeconds = useMemo(
+    () => taskTrackedTotalSeconds(taskTrackers, trackedNowMs),
+    [taskTrackers, trackedNowMs],
+  );
+  const trackedTotalSeconds = useMemo(
+    () =>
+      Math.max(
+        backendTrackedTotalSeconds,
+        clampNonNegativeInt(trackedTotalOverrideSeconds),
+      ),
+    [backendTrackedTotalSeconds, trackedTotalOverrideSeconds],
+  );
+  const trackedTotalLabel = useMemo(
+    () => formatHoursMinutes(trackedTotalSeconds),
+    [trackedTotalSeconds],
+  );
+
   const taskColumnId = t?.column_id ?? t?.columnId ?? t?.column?.id ?? null;
   const projectColumns = useSelector((s) => s.projectColumns?.items || []);
 
@@ -132,8 +229,7 @@ const TaskDetailModal = ({
     if (taskColumnId != null) return taskColumnId;
     if (!taskId) return null;
 
-    const matchesTask = (x) =>
-      String(x?.id ?? "") === String(taskId);
+    const matchesTask = (x) => String(x?.id ?? "") === String(taskId);
 
     for (const col of projectColumns || []) {
       const tasks = Array.isArray(col?.tasks) ? col.tasks : [];
@@ -169,7 +265,10 @@ const TaskDetailModal = ({
     items.map((item) => {
       if (item.id === id) return updater(item);
       if (item.children?.length) {
-        return { ...item, children: updateItemInTree(item.children, id, updater) };
+        return {
+          ...item,
+          children: updateItemInTree(item.children, id, updater),
+        };
       }
       return item;
     });
@@ -184,7 +283,10 @@ const TaskDetailModal = ({
         return { ...item, children: nextChildren };
       }
       if (item.children?.length) {
-        return { ...item, children: addChildToTree(item.children, parentId, child) };
+        return {
+          ...item,
+          children: addChildToTree(item.children, parentId, child),
+        };
       }
       return item;
     });
@@ -287,9 +389,59 @@ const TaskDetailModal = ({
   ]);
 
   useEffect(() => {
+    setTrackedTotalOverrideSeconds(null);
+  }, [taskId, isOpen]);
+
+  useEffect(() => {
+    if (trackedTotalOverrideSeconds == null) return;
+    if (
+      backendTrackedTotalSeconds >=
+      clampNonNegativeInt(trackedTotalOverrideSeconds)
+    ) {
+      setTrackedTotalOverrideSeconds(null);
+    }
+  }, [backendTrackedTotalSeconds, trackedTotalOverrideSeconds]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTrackedNowMs(Date.now());
+  }, [isOpen, taskId, taskTrackers]);
+
+  useEffect(() => {
+    if (!isOpen || !hasActiveTracker) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setTrackedNowMs(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isOpen, hasActiveTracker]);
+
+  const handleTimerStateChanged = useCallback(
+    (payload = {}) => {
+      const nextTotalSeconds = clampNonNegativeInt(payload?.taskTotalSeconds);
+      setTrackedTotalOverrideSeconds(nextTotalSeconds);
+
+      const columnIdForStore = resolvedColumnId ?? taskColumnId;
+      if (!effectiveProjectId || !columnIdForStore) return;
+
+      dispatch(
+        getColumnTasksThunk({
+          projectId: effectiveProjectId,
+          columnId: columnIdForStore,
+          force: true,
+        }),
+      );
+    },
+    [dispatch, effectiveProjectId, resolvedColumnId, taskColumnId],
+  );
+
+  useEffect(() => {
     if (!isOpen) return;
     const resize = () => {
-      const nodes = document.querySelectorAll(".checklist-textarea, .autogrow-textarea");
+      const nodes = document.querySelectorAll(
+        ".checklist-textarea, .autogrow-textarea",
+      );
       nodes.forEach((el) => {
         el.style.height = "auto";
         el.style.height = `${el.scrollHeight}px`;
@@ -310,7 +462,8 @@ const TaskDetailModal = ({
     };
 
     document.addEventListener("pointerdown", handlePointerDown, true);
-    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", handlePointerDown, true);
   }, [isOpen]);
 
   const createChecklistItem = async ({ text, parentId = null }) => {
@@ -319,7 +472,9 @@ const TaskDetailModal = ({
     if (!trimmed) return;
     try {
       setChecklistBusyId(parentId || "root");
-      const payload = parentId ? { text: trimmed, parent_item_id: parentId } : { text: trimmed };
+      const payload = parentId
+        ? { text: trimmed, parent_item_id: parentId }
+        : { text: trimmed };
       const res = await api.post(
         `/projects/${projectId}/tasks/${taskId}/checklist-items`,
         payload,
@@ -332,7 +487,9 @@ const TaskDetailModal = ({
         children: item.children || [],
       };
       setChecklistItems((prev) =>
-        parentId ? addChildToTree(prev, parentId, nextItem) : [...prev, nextItem],
+        parentId
+          ? addChildToTree(prev, parentId, nextItem)
+          : [...prev, nextItem],
       );
       refreshDetail();
     } catch (err) {
@@ -405,7 +562,6 @@ const TaskDetailModal = ({
     }
   };
 
-
   const updateTaskText = async (text) => {
     const url = getTaskUpdateUrl();
     if (!url) {
@@ -466,7 +622,9 @@ const TaskDetailModal = ({
   const syncDueDraftFromCurrent = () => {
     const base = dueAt ?? savedDueAt ?? null;
     const nextDraft = base ? new Date(base) : null;
-    setDueDraftDate(nextDraft && !Number.isNaN(nextDraft.getTime()) ? nextDraft : null);
+    setDueDraftDate(
+      nextDraft && !Number.isNaN(nextDraft.getTime()) ? nextDraft : null,
+    );
   };
 
   const updateTaskDueAt = async (isoValue) => {
@@ -521,8 +679,25 @@ const TaskDetailModal = ({
     onClose?.();
   };
 
+  const archiveTask = async () => {
+    const columnId = resolvedColumnId ?? t.column_id;
+    if (!projectId || !taskId || !columnId) {
+      toastError("Project/column/id is missing");
+      return;
+    }
+    try {
+      dispatch(restoreArchivedTasks({ projectId, columnId, taskId }));
+      onDeleted?.({ taskId, columnId });
+      onClose?.();
+      toastSuccess("Task archived");
+    } catch (err) {
+      toastError("Somthing went wrong");
+    }
+  };
+
   const deleteTask = async () => {
-    const columnId = resolvedColumnId ?? t.column_id ?? t.columnId ?? t.column?.id ?? null;
+    const columnId =
+      resolvedColumnId ?? t.column_id ?? t.columnId ?? t.column?.id ?? null;
     if (!projectId || !taskId || !columnId) {
       toastError("Project/column/task id missing");
       return;
@@ -615,7 +790,9 @@ const TaskDetailModal = ({
         try {
           res = resolvedColumnId ? await updateTask({ is_completed: 1 }) : null;
         } catch (err2) {
-          res = await api.patch(`/projects/${projectId}/tasks/${taskId}/complete`);
+          res = await api.patch(
+            `/projects/${projectId}/tasks/${taskId}/complete`,
+          );
         }
       }
       const updated = res?.data?.data ?? res?.data ?? { status: "done" };
@@ -627,7 +804,8 @@ const TaskDetailModal = ({
         }),
       );
       setTaskCompleted(deriveCompleted(updated) || true);
-      const completedAt = deriveCompletedAt(updated) ?? new Date().toISOString();
+      const completedAt =
+        deriveCompletedAt(updated) ?? new Date().toISOString();
       setTaskCompletedAt(completedAt);
       alertSuccess("Task completed");
       refreshDetail();
@@ -638,7 +816,11 @@ const TaskDetailModal = ({
     }
   };
 
-  const handleChecklistReorder = async (parentId, sourceIndex, destinationIndex) => {
+  const handleChecklistReorder = async (
+    parentId,
+    sourceIndex,
+    destinationIndex,
+  ) => {
     const normalizedProjectId = Number(effectiveProjectId ?? projectId);
     const normalizedTaskId = Number(taskId);
     const isValidContext =
@@ -685,381 +867,491 @@ const TaskDetailModal = ({
     );
   };
 
+  function copyTaskLink() {
+    const taskLink = window.location.href;
+    navigator.clipboard.writeText(taskLink);
+    alertSuccess("Link Copied");
+  }
+
   return (
     <>
-    <Modal
-      isOpen={isOpen}
-      toggle={handleClose}
-      size="lg"
-      className="task-detail-modal-dialog"
-    >
-      <div className="d-flex justify-content-between p-4 border border-bottom-1 rounded-top">
-        <div className="d-flex align-items-end gap-2">
-          {taskCompleted ? (
-            <div className="d-flex align-items-center gap-2">
-              <span className="badge bg-success px-3 py-2">Completed</span>
-              {taskCompletedAt ? (
-                <span className="text-muted small">{formatDateTime(taskCompletedAt)}</span>
-              ) : null}
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-outline-primary"
-              onClick={handleCompleteTask}
-              disabled={taskCompleting}
-            >
-              <i className="ti ti-check me-1"></i>
-              Complete Task
-            </button>
-          )}
-          {!taskCompleted ? (
-            <TaskAssigneeDropdown
-              projectId={effectiveProjectId}
-              columnId={effectiveColumnId}
-              taskId={taskId}
-              selectedAssignees={detailTask?.assignees ?? t?.assignees ?? []}
-              disabled={!effectiveProjectId || !taskId}
-              variant="header"
-            />
-          ) : null}
-        </div>
-        <div className="ms-auto d-flex gap-2">
-          {checklistLoading ? (
-            <div className="d-flex align-items-center px-2">
-              <Spinner size="sm" color="primary" />
-            </div>
-          ) : null}
-          <button type="button" className="btn text-muted icon-btn b-r-100">
-            <i className="ti ti-pin fs-4"></i>
-          </button>
-          <div ref={actionRef} className="position-relative">
-            <button
-              type="button"
-              className="btn text-muted icon-btn b-r-100"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setActionOpen((v) => !v);
-              }}
-            >
-              <i className="ti ti-dots fs-4"></i>
-            </button>
-            <ActionDropdown
-              open={actionOpen}
-              onToggle={setActionOpen}
-              rootRef={actionRef}
-              actions={[
-                { key: "delete", label: "Delete", icon: "ti-trash", destructive: true, onClick: deleteTask },
-              ]}
-            />
-          </div>
-          <button
-            onClick={handleClose}
-            type="button"
-            className="btn text-muted icon-btn b-r-100"
-          >
-            <i className="fa-solid fa-times fa-fw fs-5"></i>
-          </button>
-        </div>
-      </div>
-
-      <ModalBody style={{ paddingRight: 0, paddingTop: 0, paddingBottom: 0, paddingLeft: 20 }}>
-        {checklistLoading ? (
-          <TaskModalPlaceHolder/>
-        ) : (
-          <div className="row g-4">
-            <div className="col-12 col-lg-8 pt-2 pb-5" style={{paddingRight: 0}}>
-              <div className="pb-3">
-                <input
-                  ref={taskTextInputRef}
-                  type="text"
-                  className="form-control f-s-16 border-0 mb-3"
-                  placeholder="Task title"
-                  value={taskText}
-                  onChange={(e) => setTaskText(e.target.value)}
-                  onBlur={(e) => {
-                    if (skipNextTaskTextBlurSaveRef.current) {
-                      skipNextTaskTextBlurSaveRef.current = false;
-                      return;
-                    }
-                    updateTaskText(e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.code === "NumpadEnter" || e.keyCode === 13) {
-                      e.preventDefault();
-                      updateTaskText(e.currentTarget.value);
-                      skipNextTaskTextBlurSaveRef.current = true;
-                      e.currentTarget.blur();
-                    }
-                  }}
-                />
-                <textarea
-                  className="form-control f-s-14 border-0 autogrow-textarea"
-                  rows="1"
-                  placeholder="Click to add a description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onBlur={(e) => updateTaskDescription(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (isSaveCombo(e)) {
-                      e.preventDefault();
-                      updateTaskDescription(e.currentTarget.value);
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  onInput={(e) => {
-                    e.currentTarget.style.height = "auto";
-                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                  }}
-                  style={{ resize: "none", overflow: "hidden", height: "auto" }}
-                />
-              </div>
-
-              <div className="py-3">
-                <div className="mt-2">
-                  <ChecklistTree
-                    items={checklistItems}
-                    checklistBusyId={checklistBusyId}
-                    subInputById={subInputById}
-                    setSubInputById={setSubInputById}
-                    skipSubBlurByIdRef={skipSubBlurByIdRef}
-                    hoveredChecklistId={hoveredChecklistId}
-                    setHoveredChecklistId={setHoveredChecklistId}
-                    onToggleChecklistItem={toggleChecklistItem}
-                    onUpdateChecklistText={updateChecklistText}
-                    onDeleteChecklistItem={deleteChecklistItem}
-                    onCreateChecklistItem={createChecklistItem}
-                    onChangeItemText={handleChecklistTextChange}
-                    onReorderChecklist={handleChecklistReorder}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-primary"
-                  onClick={() => {
-                    setShowRootInput(true);
-                    setRootInput("");
-                  }}
-                >
-                  <i className="fa-solid fa-plus fa-fw"></i>
-                  <span>Add checklist item</span>
-                </button>
-                {showRootInput ? (
-                  <div>
-                    <textarea
-                      className="form-control autogrow-textarea"
-                      rows="1"
-                      placeholder="Write an item..."
-	                      value={rootInput}
-	                      onChange={(e) => setRootInput(e.target.value)}
-	                      onBlur={async () => {
-	                        if (skipRootBlurRef.current) {
-	                          skipRootBlurRef.current = false;
-	                          return;
-	                        }
-	                        const text = rootInput.trim();
-	                        if (text) await createChecklistItem({ text });
-	                        setRootInput("");
-	                        setShowRootInput(false);
-	                      }}
-	                      onKeyDown={async (e) => {
-	                        if (e.key === "Enter" && !e.shiftKey) {
-	                          e.preventDefault();
-	                          skipRootBlurRef.current = true;
-	                          const text = rootInput.trim();
-	                          if (text) await createChecklistItem({ text });
-	                          setRootInput("");
-	                          setShowRootInput(false);
-	                        } else if (e.key === "Escape") {
-	                          e.preventDefault();
-	                          skipRootBlurRef.current = true;
-	                          setRootInput("");
-	                          setShowRootInput(false);
-	                        }
-	                      }}
-                      onInput={(e) => {
-                        e.currentTarget.style.height = "auto";
-                        e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                      }}
-                      style={{ resize: "none", overflow: "hidden", height: "auto" }}
-                      autoFocus
-                      disabled={checklistBusyId === "root"}
-                    />
-                  </div>
+      <Modal
+        isOpen={isOpen}
+        toggle={handleClose}
+        size="lg"
+        className="task-detail-modal-dialog"
+      >
+        <div className="d-flex justify-content-between p-4 border border-bottom-1 rounded-top task-detail-modal__header">
+          <div className="d-flex align-items-end gap-2">
+            {taskCompleted ? (
+              <div className="d-flex align-items-center gap-2">
+                <span className="badge bg-success px-3 py-2">Completed</span>
+                {taskCompletedAt ? (
+                  <span className="text-muted small">
+                    {formatDateTime(taskCompletedAt)}
+                  </span>
                 ) : null}
               </div>
-
-              <TaskAttachments
+            ) : (
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={handleCompleteTask}
+                disabled={taskCompleting}
+              >
+                <i className="ti ti-check me-1"></i>
+                Complete Task
+              </button>
+            )}
+            {!taskCompleted ? (
+              <TaskAssigneeDropdown
                 projectId={effectiveProjectId}
+                columnId={effectiveColumnId}
                 taskId={taskId}
-                columnId={taskColumnId}
-                prefetched={!!detailTask}
-                initialAttachments={detailTask?.attachments}
-                onChanged={refreshDetail}
-                formatDateTime={formatDateTime}
+                selectedAssignees={detailTask?.assignees ?? t?.assignees ?? []}
+                disabled={!effectiveProjectId || !taskId}
+                variant="header"
               />
-
-              <TaskActivityConversation
-                projectId={effectiveProjectId}
-                taskId={taskId}
-                activities={detailTask?.activities ?? t?.activities ?? []}
-                comments={detailTask?.comments ?? t?.comments ?? []}
-                onRefresh={refreshDetail}
-              />
+            ) : null}
+          </div>
+          <div className="ms-auto d-flex gap-2 align-items-start task-detail-modal__header-right">
+            <div className="d-flex gap-2 task-detail-modal__quick-actions">
+              {checklistLoading ? (
+                <div className="d-flex align-items-center px-2">
+                  <Spinner size="sm" color="primary" />
+                </div>
+              ) : null}
+              <button type="button" className="btn text-muted icon-btn b-r-100">
+                <i className="ti ti-pin fs-4"></i>
+              </button>
+              <div ref={actionRef} className="position-relative">
+                <button
+                  type="button"
+                  className="btn text-muted icon-btn b-r-100"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActionOpen((v) => !v);
+                  }}
+                >
+                  <i className="ti ti-dots fs-4"></i>
+                </button>
+                <ActionDropdown
+                  open={actionOpen}
+                  onToggle={setActionOpen}
+                  rootRef={actionRef}
+                  actions={[
+                    {
+                      key: "copyLink",
+                      label: "Copy link",
+                      icon: "ti-link",
+                      destructive: false,
+                      onClick: copyTaskLink,
+                    },
+                    {
+                      key: "archive",
+                      label: "Archive",
+                      icon: "ti-archive",
+                      destructive: false,
+                      onClick: archiveTask,
+                    },
+                    {
+                      key: "delete",
+                      label: "Delete",
+                      destructive: true,
+                      onClick: deleteTask,
+                    },
+                  ]}
+                />
+              </div>
+              <button
+                onClick={handleClose}
+                type="button"
+                className="btn text-muted icon-btn b-r-100"
+              >
+                <i className="fa-solid fa-times fa-fw fs-5"></i>
+              </button>
             </div>
+          </div>
+        </div>
 
-            <div className="col-12 col-lg-4">
-              <div className="bg-light-dark text-black p-3 h-100">
-                <div className="d-flex flex-column gap-3 mt-3">
-                  <Dropdown isOpen={dueDropdownOpen} toggle={toggleDueDropdown}>
-                    <DropdownToggle
-                      tag="button"
-                      type="button"
-                      disabled={dueSaving}
-                      className="btn d-flex align-items-center justify-content-between px-0 border-bottom w-100"
-                      style={{ boxShadow: "none" }}
-                    >
-                      <span className="d-flex flex-column align-items-start">
-                        <span className="d-flex align-items-center gap-2">
-                          <i className="ti ti-calendar fs-5"></i>
-                          Due time
-                        </span>
-                        <span className="small">
-                          {dueAt ? formatDateTime(dueAt) : "Set time"}
-                        </span>
-                      </span>
-                      <i className="ti ti-chevron-down"></i>
-                    </DropdownToggle>
-
-                    <DropdownMenu
-                      end
-                      className="p-2"
-                      style={{ minWidth: 320 }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Flatpickr
-                          value={dueDraftDate}
-                          options={{
-                            inline: true,
-                            enableTime: true,
-                            dateFormat: "Y-m-d H:i",
-                            time_24hr: true,
-                            allowInput: false,
-                          }}
-                          onChange={(selectedDates) => {
-                            const next = selectedDates?.[0] ?? null;
-                            setDueDraftDate(next);
-                          }}
-                        />
-
-                        <div className="d-flex justify-content-end gap-2 mt-2">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-light"
-                            disabled={dueSaving}
-                            onClick={cancelDuePicker}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-primary"
-                            disabled={dueSaving || !dueDraftDate}
-                            onClick={() => {
-                              if (!dueDraftDate) return;
-                              updateTaskDueAt(dueDraftDate.toISOString());
-                            }}
-                          >
-                            {dueSaving ? (
-                              <span className="d-inline-flex align-items-center gap-2">
-                                <Spinner size="sm" />
-                                <span>Saving...</span>
-                              </span>
-                            ) : (
-                              "Done"
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </DropdownMenu>
-                  </Dropdown>
-                  <TaskTagsDropdown
-                    projectId={effectiveProjectId}
-                    taskId={taskId}
-                    selectedTags={detailTask?.tags ?? t?.tags ?? []}
-                    disabled={!effectiveProjectId || !taskId || detailLoading || !detailTask}
-                    onChanged={(tags) => {
-                      if (!taskId) return;
-                      dispatch(
-                        updateTaskInColumn({
-                          columnId: taskColumnId,
-                          taskId,
-                          patch: { tags: Array.isArray(tags) ? tags : [] },
-                        }),
-                      );
-                      refreshDetail();
+        <ModalBody
+          style={{
+            paddingRight: 0,
+            paddingTop: 0,
+            paddingBottom: 0,
+            paddingLeft: 20,
+          }}
+        >
+          {checklistLoading ? (
+            <TaskModalPlaceHolder />
+          ) : (
+            <div className="row g-4">
+              <div
+                className="col-12 col-lg-8 pt-2 pb-5"
+                style={{ paddingRight: 0 }}
+              >
+                <div className="pb-3">
+                  <input
+                    ref={taskTextInputRef}
+                    type="text"
+                    className="form-control f-s-16 border-0 mb-3"
+                    placeholder="Task title"
+                    value={taskText}
+                    onChange={(e) => setTaskText(e.target.value)}
+                    onBlur={(e) => {
+                      if (skipNextTaskTextBlurSaveRef.current) {
+                        skipNextTaskTextBlurSaveRef.current = false;
+                        return;
+                      }
+                      updateTaskText(e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" ||
+                        e.code === "NumpadEnter" ||
+                        e.keyCode === 13
+                      ) {
+                        e.preventDefault();
+                        updateTaskText(e.currentTarget.value);
+                        skipNextTaskTextBlurSaveRef.current = true;
+                        e.currentTarget.blur();
+                      }
                     }}
                   />
-                  <TaskWatchersDropdown
-                    projectId={effectiveProjectId}
-                    columnId={effectiveColumnId}
-                    taskId={taskId}
-                    disabled={!effectiveProjectId || !taskId}
+                  <textarea
+                    className="form-control f-s-14 border-0 autogrow-textarea"
+                    rows="1"
+                    placeholder="Click to add a description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    onBlur={(e) => updateTaskDescription(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (isSaveCombo(e)) {
+                        e.preventDefault();
+                        updateTaskDescription(e.currentTarget.value);
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    onInput={(e) => {
+                      e.currentTarget.style.height = "auto";
+                      e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                    }}
+                    style={{
+                      resize: "none",
+                      overflow: "hidden",
+                      height: "auto",
+                    }}
                   />
+                </div>
 
-                  <div className=" pt-2 border-top">
-                    <div className="d-flex flex-column gap-3">
-                      {createdAt ? (
-                        <div className="d-flex gap-2">
-                          <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
-                            <i className="ti ti-plus fs-5"></i>
+                <div className="py-3">
+                  <div className="mt-2">
+                    <ChecklistTree
+                      items={checklistItems}
+                      checklistBusyId={checklistBusyId}
+                      subInputById={subInputById}
+                      setSubInputById={setSubInputById}
+                      skipSubBlurByIdRef={skipSubBlurByIdRef}
+                      hoveredChecklistId={hoveredChecklistId}
+                      setHoveredChecklistId={setHoveredChecklistId}
+                      onToggleChecklistItem={toggleChecklistItem}
+                      onUpdateChecklistText={updateChecklistText}
+                      onDeleteChecklistItem={deleteChecklistItem}
+                      onCreateChecklistItem={createChecklistItem}
+                      onChangeItemText={handleChecklistTextChange}
+                      onReorderChecklist={handleChecklistReorder}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-primary"
+                    onClick={() => {
+                      setShowRootInput(true);
+                      setRootInput("");
+                    }}
+                  >
+                    <i className="fa-solid fa-plus fa-fw"></i>
+                    <span>Add checklist item</span>
+                  </button>
+                  {showRootInput ? (
+                    <div>
+                      <textarea
+                        className="form-control autogrow-textarea"
+                        rows="1"
+                        placeholder="Write an item..."
+                        value={rootInput}
+                        onChange={(e) => setRootInput(e.target.value)}
+                        onBlur={async () => {
+                          if (skipRootBlurRef.current) {
+                            skipRootBlurRef.current = false;
+                            return;
+                          }
+                          const text = rootInput.trim();
+                          if (text) await createChecklistItem({ text });
+                          setRootInput("");
+                          setShowRootInput(false);
+                        }}
+                        onKeyDown={async (e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            skipRootBlurRef.current = true;
+                            const text = rootInput.trim();
+                            if (text) await createChecklistItem({ text });
+                            setRootInput("");
+                            setShowRootInput(false);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            skipRootBlurRef.current = true;
+                            setRootInput("");
+                            setShowRootInput(false);
+                          }
+                        }}
+                        onInput={(e) => {
+                          e.currentTarget.style.height = "auto";
+                          e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                        }}
+                        style={{
+                          resize: "none",
+                          overflow: "hidden",
+                          height: "auto",
+                        }}
+                        autoFocus
+                        disabled={checklistBusyId === "root"}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                <TaskAttachments
+                  projectId={effectiveProjectId}
+                  taskId={taskId}
+                  columnId={taskColumnId}
+                  prefetched={!!detailTask}
+                  initialAttachments={detailTask?.attachments}
+                  onChanged={refreshDetail}
+                  formatDateTime={formatDateTime}
+                />
+
+                <TaskActivityConversation
+                  projectId={effectiveProjectId}
+                  taskId={taskId}
+                  activities={detailTask?.activities ?? t?.activities ?? []}
+                  comments={detailTask?.comments ?? t?.comments ?? []}
+                  onRefresh={refreshDetail}
+                />
+              </div>
+
+              <div className="col-12 col-lg-4">
+                <div className="bg-light-dark text-black p-3 h-100">
+                  <div className="d-flex flex-column gap-3">
+                    <TaskTimer
+                      taskId={taskId}
+                      projectId={effectiveProjectId}
+                      isOpen={isOpen}
+                      timeTrackers={taskTrackers}
+                      onStateChanged={handleTimerStateChanged}
+                      onChanged={refreshDetail}
+                    />
+                    <Dropdown
+                      isOpen={dueDropdownOpen}
+                      toggle={toggleDueDropdown}
+                    >
+                      <DropdownToggle
+                        tag="button"
+                        type="button"
+                        disabled={dueSaving}
+                        className="btn d-flex align-items-center justify-content-between px-0 border-bottom w-100"
+                        style={{ boxShadow: "none" }}
+                      >
+                        <span className="d-flex flex-column align-items-start">
+                          <span className="d-flex align-items-center gap-2">
+                            <i className="ti ti-calendar fs-5"></i>
+                            Due time
                           </span>
-                          <div style={{ minWidth: 0 }}>
-                            <div className="small fw-semibold text-muted">Created</div>
-                            <div className="small text-muted">
-                              {formatDateTime(createdAt)}
+                          <span className="small">
+                            {dueAt ? formatDateTime(dueAt) : "Set time"}
+                          </span>
+                        </span>
+                        <i className="ti ti-chevron-down"></i>
+                      </DropdownToggle>
+
+                      <DropdownMenu
+                        end
+                        className="p-2"
+                        style={{ minWidth: 320 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Flatpickr
+                            value={dueDraftDate}
+                            options={{
+                              inline: true,
+                              enableTime: true,
+                              dateFormat: "Y-m-d H:i",
+                              time_24hr: true,
+                              allowInput: false,
+                            }}
+                            onChange={(selectedDates) => {
+                              const next = selectedDates?.[0] ?? null;
+                              setDueDraftDate(next);
+                            }}
+                          />
+
+                          <div className="d-flex justify-content-end gap-2 mt-2">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-light"
+                              disabled={dueSaving}
+                              onClick={cancelDuePicker}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-primary"
+                              disabled={dueSaving || !dueDraftDate}
+                              onClick={() => {
+                                if (!dueDraftDate) return;
+                                updateTaskDueAt(dueDraftDate.toISOString());
+                              }}
+                            >
+                              {dueSaving ? (
+                                <span className="d-inline-flex align-items-center gap-2">
+                                  <Spinner size="sm" />
+                                  <span>Saving...</span>
+                                </span>
+                              ) : (
+                                "Done"
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </DropdownMenu>
+                    </Dropdown>
+                    <TaskTagsDropdown
+                      projectId={effectiveProjectId}
+                      taskId={taskId}
+                      selectedTags={detailTask?.tags ?? t?.tags ?? []}
+                      disabled={
+                        !effectiveProjectId ||
+                        !taskId ||
+                        detailLoading ||
+                        !detailTask
+                      }
+                      onChanged={(tags) => {
+                        if (!taskId) return;
+                        dispatch(
+                          updateTaskInColumn({
+                            columnId: taskColumnId,
+                            taskId,
+                            patch: { tags: Array.isArray(tags) ? tags : [] },
+                          }),
+                        );
+                        refreshDetail();
+                      }}
+                    />
+
+                    <TaskWatchersDropdown
+                      projectId={effectiveProjectId}
+                      columnId={effectiveColumnId}
+                      taskId={taskId}
+                      disabled={!effectiveProjectId || !taskId}
+                    />
+
+                    {currentUserId === creatorId && (
+                      <TaskExcludedUsersDropdown
+                        projectId={effectiveProjectId}
+                        columnId={effectiveColumnId}
+                        taskId={taskId}
+                        disabled={!effectiveProjectId || !taskId}
+                      />
+                    )}
+
+                    {currentUserId === creatorId && (
+                      <TaskVisibleForDropdown
+                        projectId={effectiveProjectId}
+                        columnId={effectiveColumnId}
+                        taskId={taskId}
+                        disabled={!effectiveProjectId || !taskId}
+                      />
+                    )}
+
+                    <div className=" pt-2 border-top">
+                      <div className="d-flex flex-column gap-3">
+                        {createdAt ? (
+                          <div className="d-flex gap-2">
+                            <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
+                              <i className="ti ti-plus fs-5"></i>
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <div className="small fw-semibold text-muted">
+                                Created
+                              </div>
+                              <div className="small text-muted">
+                                {formatDateTime(createdAt)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : null}
+                        ) : null}
 
-                      {updatedAt ? (
-                        <div className="d-flex gap-2">
-                          <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
-                            <i className="ti ti-pencil fs-5"></i>
-                          </span>
-                          <div style={{ minWidth: 0 }}>
-                            <div className="small fw-semibold text-muted">Updated</div>
-                            <div className="small text-muted">
-                              {formatDateTime(updatedAt)}
+                        {updatedAt ? (
+                          <div className="d-flex gap-2">
+                            <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
+                              <i className="ti ti-pencil fs-5"></i>
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <div className="small fw-semibold text-muted">
+                                Updated
+                              </div>
+                              <div className="small text-muted">
+                                {formatDateTime(updatedAt)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : null}
+                        ) : null}
 
-                      {taskId ? (
-                        <div className="d-flex gap-2">
-                          <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
-                            <i className="ti ti-id fs-5"></i>
-                          </span>
-                          <div style={{ minWidth: 0 }}>
-                            <div className="small fw-semibold text-muted">Task ID</div>
-                            <div className="small text-muted text-truncate">{taskId}</div>
+                        {taskId ? (
+                          <div className="d-flex gap-2">
+                            <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
+                              <i className="ti ti-id fs-5"></i>
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <div className="small fw-semibold text-muted">
+                                Task ID
+                              </div>
+                              <div className="small text-muted text-truncate">
+                                {taskId}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ) : null}
+                        ) : null}
+
+                        {taskId ? (
+                          <div className="d-flex gap-2">
+                            <span className="text-primary h-35 w-35 d-flex-center b-r-50 bg-light-primary">
+                              <i className="ti ti-clock-hour-4 fs-5"></i>
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <div className="small fw-semibold text-muted">
+                                Tracked Time
+                              </div>
+                              <div className="small text-muted">
+                                {trackedTotalLabel}
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </ModalBody>
-    </Modal>
+          )}
+        </ModalBody>
+      </Modal>
     </>
   );
 };

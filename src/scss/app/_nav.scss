@@ -383,8 +383,8 @@ nav.vertical-sidebar {
     }
 
     &__avatar {
-        width: 44px;
-        height: 44px;
+        width: 52px;
+        height: 52px;
         border-radius: 50%;
         overflow: hidden;
         display: inline-flex;
@@ -394,6 +394,7 @@ nav.vertical-sidebar {
         border: 1px solid rgba(var(--secondary), 0.3);
         color: rgba(var(--dark), 0.85);
         font-weight: 700;
+        font-size: 1rem;
 
         img {
             width: 100%;
@@ -598,8 +599,8 @@ nav.vertical-sidebar {
                 }
 
                 &__avatar {
-                    width: 44px;
-                    height: 44px;
+                    width: 52px;
+                    height: 52px;
                 }
 
                 &__name,
@@ -687,8 +688,8 @@ nav.vertical-sidebar {
             }
 
             &__avatar {
-                width: 36px;
-                height: 36px;
+                width: 42px;
+                height: 42px;
             }
 
             &__name,

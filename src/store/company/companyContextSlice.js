@@ -107,6 +107,14 @@ const upsertCompany = (items, nextCompany) => {
   return nextItems;
 };
 
+const normalizeCompanyFromMutationPayload = (payload) => {
+  const root = payload?.data ?? payload ?? null;
+  const data = root?.data ?? root ?? null;
+  return normalizeCompany(
+    data?.company ?? root?.company ?? data,
+  );
+};
+
 export const getCompanyContextThunk = createAsyncThunk(
   "companyContext/get",
   async (_, { rejectWithValue }) => {
@@ -142,6 +150,50 @@ export const setActiveCompanyThunk = createAsyncThunk(
   },
 );
 
+export const updateMyCompanyThunk = createAsyncThunk(
+  "companyContext/updateMyCompany",
+  async ({ name, image } = {}, { rejectWithValue }) => {
+    try {
+      const hasImage = typeof File !== "undefined" && image instanceof File;
+      const payload = hasImage ? new FormData() : {};
+
+      if (name !== undefined) {
+        const trimmedName = String(name ?? "").trim();
+        if (hasImage) {
+          payload.append("name", trimmedName);
+        } else {
+          payload.name = trimmedName;
+        }
+      }
+
+      if (hasImage) {
+        payload.append("image", image);
+      }
+
+      const res = await api.patch("/companies/my", payload);
+      return {
+        company: normalizeCompanyFromMutationPayload(res?.data),
+      };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+export const removeMyCompanyImageThunk = createAsyncThunk(
+  "companyContext/removeMyCompanyImage",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await api.delete("/companies/my/image");
+      return {
+        company: normalizeCompanyFromMutationPayload(res?.data),
+      };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
 const initialState = {
   ownerUserId: null,
   items: [],
@@ -151,6 +203,10 @@ const initialState = {
   error: null,
   switchingCompanyId: null,
   switchError: null,
+  updateStatus: "idle",
+  updateError: null,
+  removeImageStatus: "idle",
+  removeImageError: null,
 };
 
 const companyContextSlice = createSlice({
@@ -224,6 +280,94 @@ const companyContextSlice = createSlice({
     builder.addCase(setActiveCompanyThunk.rejected, (state, action) => {
       state.switchingCompanyId = null;
       state.switchError = action.payload || { message: "Company switch failed" };
+    });
+
+    builder.addCase(updateMyCompanyThunk.pending, (state) => {
+      state.updateStatus = "loading";
+      state.updateError = null;
+    });
+    builder.addCase(updateMyCompanyThunk.fulfilled, (state, action) => {
+      state.updateStatus = "succeeded";
+      state.updateError = null;
+
+      const updatedCompany = action.payload?.company ?? null;
+      if (!updatedCompany) return;
+
+      const nextItems = upsertCompany(state.items, updatedCompany);
+      const nextActiveId = state.activeCompanyId ?? updatedCompany.id ?? null;
+      state.activeCompanyId = nextActiveId;
+      state.items = nextItems.map((company) => ({
+        ...company,
+        is_active:
+          nextActiveId != null
+            ? String(company.id) === String(nextActiveId)
+            : Boolean(company.is_active),
+      }));
+
+      if (
+        nextActiveId == null ||
+        String(updatedCompany.id) === String(nextActiveId)
+      ) {
+        state.activeCompany = {
+          ...(state.activeCompany || {}),
+          ...updatedCompany,
+        };
+      }
+    });
+    builder.addCase(updateMyCompanyThunk.rejected, (state, action) => {
+      state.updateStatus = "failed";
+      state.updateError = action.payload || { message: "Company update failed" };
+    });
+
+    builder.addCase(removeMyCompanyImageThunk.pending, (state) => {
+      state.removeImageStatus = "loading";
+      state.removeImageError = null;
+    });
+    builder.addCase(removeMyCompanyImageThunk.fulfilled, (state, action) => {
+      state.removeImageStatus = "succeeded";
+      state.removeImageError = null;
+
+      const updatedCompany = action.payload?.company ?? null;
+      if (updatedCompany) {
+        const nextItems = upsertCompany(state.items, updatedCompany);
+        const nextActiveId = state.activeCompanyId ?? updatedCompany.id ?? null;
+        state.activeCompanyId = nextActiveId;
+        state.items = nextItems.map((company) => ({
+          ...company,
+          is_active:
+            nextActiveId != null
+              ? String(company.id) === String(nextActiveId)
+              : Boolean(company.is_active),
+        }));
+
+        if (
+          nextActiveId == null ||
+          String(updatedCompany.id) === String(nextActiveId)
+        ) {
+          state.activeCompany = {
+            ...(state.activeCompany || {}),
+            ...updatedCompany,
+          };
+        }
+        return;
+      }
+
+      const targetId = state.activeCompanyId ?? state.activeCompany?.id ?? null;
+      if (targetId == null) return;
+
+      state.items = (state.items || []).map((company) =>
+        String(company.id) === String(targetId)
+          ? { ...company, image: null }
+          : company,
+      );
+      state.activeCompany = state.activeCompany
+        ? { ...state.activeCompany, image: null }
+        : state.activeCompany;
+    });
+    builder.addCase(removeMyCompanyImageThunk.rejected, (state, action) => {
+      state.removeImageStatus = "failed";
+      state.removeImageError =
+        action.payload || { message: "Company image remove failed" };
     });
   },
 });

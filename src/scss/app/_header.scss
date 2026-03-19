@@ -359,16 +359,10 @@ header {
         }
 
         .header-notification {
-          .head-icon {
-            span {
-              top: 3px;
-              right: -6px;
-            }
-          }
           .header-notification__count-badge {
-            top: -2px !important;
-            right: -8px !important;
-            left: auto !important;
+            position: absolute;
+            top: -5px !important;
+            right: -5px !important;
             min-width: 16px;
             height: 16px;
             padding: 0 4px;
@@ -663,6 +657,54 @@ nav.dark-sidebar {
     font-size: 16px;
     line-height: 1;
   }
+}
+
+.company-edit-modal {
+  .modal-body {
+    padding-top: 0.75rem;
+  }
+}
+
+.company-edit-modal__preview {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border: 1px dashed rgba(var(--secondary), 0.34);
+  border-radius: 14px;
+  padding: 0.8rem;
+  background: rgba(var(--light), 0.1);
+}
+
+.company-edit-modal__avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  overflow: hidden;
+  flex: 0 0 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(var(--secondary), 0.28);
+  background: rgba(var(--secondary), 0.16);
+  color: rgba(var(--dark), 0.88);
+  font-weight: 700;
+  font-size: 1.35rem;
+
+  &.has-image {
+    border-color: rgba(var(--primary), 0.32);
+    background: rgba(var(--primary), 0.08);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.company-edit-modal__avatar-actions {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 // Responsive scss

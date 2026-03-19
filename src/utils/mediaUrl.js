@@ -63,6 +63,7 @@ export const resolveUserAvatarUrl = (value) => {
   if (!backendOrigin) {
     if (cleaned.startsWith("storage/")) return `/${cleaned}`;
     if (cleaned.startsWith("user_avatars/")) return `/storage/${cleaned}`;
+    if (cleaned.startsWith("company_images/")) return `/storage/${cleaned}`;
     return raw;
   }
 
@@ -71,6 +72,10 @@ export const resolveUserAvatarUrl = (value) => {
   }
 
   if (cleaned.startsWith("user_avatars/")) {
+    return `${backendOrigin}/storage/${cleaned}`;
+  }
+
+  if (cleaned.startsWith("company_images/")) {
     return `${backendOrigin}/storage/${cleaned}`;
   }
 

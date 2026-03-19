@@ -12,6 +12,11 @@ import taskPeopleReducer from "./tasks/taskPeopleSlice";
 import taskDetailReducer from "./tasks/taskDetailSlice";
 import taskChecklistReducer from "./tasks/checklistSlice";
 import notificationsReducer from "./notifications/notificationsSlice";
+import taskTrackingReducer from "./tasks/trackingTasksSlice";
+import archivedTasksReducer from './projects/projectArchivedTasksSlice';
+import deletedTaskReducer from "./projects/projectDeletedTasksSlice";
+import taskExcludedPeopleReducer from "./tasks/taskExcludedPeopleSlice.js";
+import taskVisibleForReducer from "./tasks/taskVisibleForSlice";
 
 export const store = configureStore({
   reducer: {
@@ -28,5 +33,10 @@ export const store = configureStore({
     taskDetail: taskDetailReducer,
     taskChecklist: taskChecklistReducer,
     notifications: notificationsReducer,
+    taskTracking: taskTrackingReducer,
+    archivedTasksSlice: archivedTasksReducer,
+    deletedTaskSlice: deletedTaskReducer,
+    taskExcludedPeople: taskExcludedPeopleReducer,
+    taskVisibleFor: taskVisibleForReducer,
   }
 })

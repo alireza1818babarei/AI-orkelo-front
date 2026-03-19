@@ -36,7 +36,7 @@ const ActionDropdown = ({
 
   return (
     <div
-      className={`dropdown-menu position-absolute  ${open ? "show" : ""} p-1`}
+      className={`dropdown-menu position-absolute ${open ? "show" : ""} p-1`}
       style={{
         top: "calc(100% + 2px)",
         ...placementStyle,
@@ -58,7 +58,7 @@ const ActionDropdown = ({
                 key={a.key ?? index}
                 type="button"
                 className={`dropdown-item d-flex align-items-center py-1 px-2 text-start ${
-                  a.destructive ? "text-danger" : ""
+                  a.destructive ? "text-danger text-center border-t" : ""
                 }`}
                 disabled={!!a.disabled}
                 onClick={(e) => {

@@ -139,6 +139,26 @@ nav.dark-sidebar ~ .app-content .home-list__item {
   border-color: rgba(255, 255, 255, 0.13);
 }
 
+.tracker__homePage{
+  transition: background-color .3s ease, border-color .3s ease;
+  border: 2px solid rgba(var(--secondary), .1);
+}
+
+.tracker__homePage:hover{
+  background-color: rgba(var(--primary), 0.2);
+  border-color: rgba(var(--primary));
+}
+
+.trackerDetail__homePage{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trackerLabel__homePage{
+  font-weight: bold;
+}
+
 @media (max-width: 1200px) {
   .home-dashboard__grid {
     grid-template-columns: 1fr;

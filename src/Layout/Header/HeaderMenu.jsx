@@ -1,8 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  initialCartItems,
-  searchData,
-} from "../../Data/HeaderMenuData.js";
+import { initialCartItems, searchData } from "../../Data/HeaderMenuData.js";
 import { Link } from "react-router-dom";
 import { Button, Card, CardBody } from "reactstrap";
 import HeaderMode from "../../Layout/Header/HeaderMode.jsx";
@@ -13,10 +10,19 @@ import {
   deleteCompanyMemberThunk,
   getCompanyMembersThunk,
 } from "../../store/company/companyMembersSlice.js";
+import {
+  removeMyCompanyImageThunk,
+  updateMyCompanyThunk,
+} from "../../store/company/companyContextSlice.js";
 import ActionDropdown from "../../Components/ActionDropdown/index.jsx";
 import CompanyMembersModal from "./CompanyMembersModal.jsx";
 import AddCompanyMemberModal from "./AddCompanyMemberModal.jsx";
-import { alertConfirm, toastError, toastSuccess } from "../../utils/sweetAlert.js";
+import EditCompanyModal from "./EditCompanyModal.jsx";
+import {
+  alertConfirm,
+  toastError,
+  toastSuccess,
+} from "../../utils/sweetAlert.js";
 import {
   resolveUserAvatarUrl,
   resolveUserAvatarWithFallback,
@@ -31,10 +37,14 @@ import {
 const HeaderMenu = () => {
   const dispatch = useDispatch();
   const [cartItems, setCartItems] = useState(initialCartItems);
-  const user = useSelector(s=> s.auth.user);
-  const activeCompanyIdFromContext = useSelector(
-    (s) => s.companyContext?.activeCompanyId ?? null,
-  );
+  const user = useSelector((s) => s.auth.user);
+  const {
+    items: companyItems = [],
+    activeCompany: companyContextActiveCompany = null,
+    activeCompanyId: activeCompanyIdFromContext = null,
+    updateStatus: companyUpdateStatus = "idle",
+    removeImageStatus: companyRemoveImageStatus = "idle",
+  } = useSelector((s) => s.companyContext || {});
   const userAvatar = useMemo(() => {
     const raw = user?.avatar ?? "";
     const seed = user?.id ?? user?.email ?? user?.name ?? "header-user";
@@ -62,26 +72,42 @@ const HeaderMenu = () => {
   const [companyMembersModalOpen, setCompanyMembersModalOpen] = useState(false);
   const [companyAddMemberModalOpen, setCompanyAddMemberModalOpen] =
     useState(false);
+  const [companyEditModalOpen, setCompanyEditModalOpen] = useState(false);
 
   const userCompanyId = user?.company_id ?? null;
-  const activeCompanyId = activeCompanyIdFromContext ?? user?.active_company_id ?? null;
+  const activeCompanyId =
+    activeCompanyIdFromContext ?? user?.active_company_id ?? null;
+  const activeCompany = useMemo(() => {
+    if (companyContextActiveCompany?.id != null)
+      return companyContextActiveCompany;
+    if (activeCompanyId == null) return null;
+
+    return (
+      (companyItems || []).find(
+        (company) => String(company?.id) === String(activeCompanyId),
+      ) || null
+    );
+  }, [companyContextActiveCompany, companyItems, activeCompanyId]);
+
   const canManageCurrentCompany =
     userCompanyId != null &&
     activeCompanyId != null &&
     String(userCompanyId) === String(activeCompanyId);
+  const companyUpdating = companyUpdateStatus === "loading";
+  const companyRemovingImage = companyRemoveImageStatus === "loading";
 
   useEffect(() => {
     if (canManageCurrentCompany) return;
     setCompanyActionOpen(false);
     setCompanyMembersModalOpen(false);
     setCompanyAddMemberModalOpen(false);
+    setCompanyEditModalOpen(false);
   }, [canManageCurrentCompany]);
 
   useEffect(() => {
     if (notificationsStatus !== "idle") return;
     dispatch(fetchNotificationsThunk());
   }, [dispatch, notificationsStatus]);
-
 
   const handleRemoveItem = (id) => {
     const updatedCartItems = cartItems.filter((item) => item.id !== id);
@@ -119,6 +145,44 @@ const HeaderMenu = () => {
 
   const openCompanyAddMemberModal = () => {
     setCompanyAddMemberModalOpen(true);
+  };
+
+  const openCompanyEditModal = () => {
+    setCompanyEditModalOpen(true);
+  };
+
+  const handleSubmitCompanyEdit = async ({ name, image }) => {
+    const currentName = String(activeCompany?.name ?? "").trim();
+    const nextName = String(name ?? "").trim();
+    const hasNameChanged = nextName !== currentName;
+    const hasImage = typeof File !== "undefined" && image instanceof File;
+
+    if (!hasNameChanged && !hasImage) {
+      setCompanyEditModalOpen(false);
+      return;
+    }
+
+    try {
+      await dispatch(
+        updateMyCompanyThunk({
+          name: hasNameChanged ? nextName : undefined,
+          image: hasImage ? image : undefined,
+        }),
+      ).unwrap();
+      toastSuccess("Company updated");
+      setCompanyEditModalOpen(false);
+    } catch (err) {
+      toastError(err?.message || "Failed to update company");
+    }
+  };
+
+  const handleRemoveCompanyImage = async () => {
+    try {
+      await dispatch(removeMyCompanyImageThunk()).unwrap();
+      toastSuccess("Company image removed");
+    } catch (err) {
+      toastError(err?.message || "Failed to remove company image");
+    }
   };
 
   const handleSubmitAddCompanyMember = async (email) => {
@@ -182,6 +246,14 @@ const HeaderMenu = () => {
 
   const companyMenuActions = [
     {
+      key: "edit-company",
+      label: "Edit Company",
+      icon: "ti-edit",
+      onClick: openCompanyEditModal,
+      disabled: !activeCompany,
+    },
+    { type: "divider" },
+    {
       key: "company-members",
       label: "Company Members",
       icon: "ti-users",
@@ -213,11 +285,11 @@ const HeaderMenu = () => {
           >
             <i className="ph ph-bell"></i>
             {notificationsUnreadCount > 0 ? (
-              <>
-                <span className="header-notification__count-badge position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                  {notificationsUnreadCount > 99 ? "99+" : notificationsUnreadCount}
-                </span>
-              </>
+              <span className="header-notification__count-badge badge rounded-pill bg-danger">
+                {notificationsUnreadCount > 99
+                  ? "99+"
+                  : notificationsUnreadCount}
+              </span>
             ) : null}
           </a>
           <div
@@ -244,7 +316,9 @@ const HeaderMenu = () => {
                 size="sm"
                 className="btn btn-sm border"
                 onClick={handleRefreshNotifications}
-                disabled={notificationsStatus === "loading" || notificationsRefreshing}
+                disabled={
+                  notificationsStatus === "loading" || notificationsRefreshing
+                }
               >
                 <i className="ph ph-arrow-clockwise me-1"></i>
                 Refresh
@@ -255,16 +329,21 @@ const HeaderMenu = () => {
                 size="sm"
                 className="btn btn-sm"
                 onClick={handleMarkAllAsSeen}
-                disabled={notificationsMarkingAll || notificationsUnreadCount === 0}
+                disabled={
+                  notificationsMarkingAll || notificationsUnreadCount === 0
+                }
               >
                 {notificationsMarkingAll ? "..." : "Mark all as seen"}
               </Button>
             </div>
             <div className="offcanvas-body app-scroll p-0">
               <div className="head-container">
-                {notificationsStatus === "loading" && notificationsItems.length === 0 ? (
+                {notificationsStatus === "loading" &&
+                notificationsItems.length === 0 ? (
                   <div className="hidden-massage py-4 px-3">
-                    <p className="text-secondary mb-0">Loading notifications...</p>
+                    <p className="text-secondary mb-0">
+                      Loading notifications...
+                    </p>
                   </div>
                 ) : notificationsItems.length > 0 ? (
                   notificationsItems.map((notification) => {
@@ -328,7 +407,9 @@ const HeaderMenu = () => {
                                 type="button"
                                 className="notification-mark-read-btn btn btn-outline-primary mt-1"
                                 onClick={() => handleMarkAsSeen(notificationId)}
-                                disabled={Boolean(notificationsMarkingById[notificationId])}
+                                disabled={Boolean(
+                                  notificationsMarkingById[notificationId],
+                                )}
                               >
                                 {notificationsMarkingById[notificationId]
                                   ? "..."
@@ -350,7 +431,9 @@ const HeaderMenu = () => {
                     <div>
                       <h6 className="mb-0">Notification Not Found</h6>
                       {notificationsError?.message ? (
-                        <p className="text-danger mb-2">{notificationsError.message}</p>
+                        <p className="text-danger mb-2">
+                          {notificationsError.message}
+                        </p>
                       ) : (
                         <p className="text-secondary">
                           When you have any notifications added here, they will
@@ -418,7 +501,7 @@ const HeaderMenu = () => {
             <img
               src={userAvatar || "/assets/images/avtar/woman.jpg"}
               alt="avtar"
-              className="b-r-10 h-35 w-35"
+              className="b-r-100 h-35 w-35"
             />
           </a>
 
@@ -436,7 +519,7 @@ const HeaderMenu = () => {
                       <img
                         src={userAvatar || "/assets/images/avtar/woman.jpg"}
                         alt="woman"
-                        className="img-fluid b-r-10"
+                        className=" w-50 h-50 b-r-100"
                       />
                     </span>
                   </div>
@@ -450,7 +533,7 @@ const HeaderMenu = () => {
 
                 <li className="app-divider-v dotted my-1"></li>
                 <li>
-                  <Link className="f-w-500" to={'/profile'}>
+                  <Link className="f-w-500" to={"/profile"}>
                     <i className="ph-duotone  ph-user-circle pe-1 f-s-20"></i>
                     Profile Details
                   </Link>
@@ -487,7 +570,7 @@ const HeaderMenu = () => {
                 <li>
                   <button
                     className="mb-0 text-danger btn w-100 d-flex justify-content-center"
-                    onClick={()=> dispatch(logoutThunk())}
+                    onClick={() => dispatch(logoutThunk())}
                   >
                     <i className="ph-duotone  ph-sign-out pe-1 f-s-20"></i> Log
                     Out
@@ -498,6 +581,18 @@ const HeaderMenu = () => {
           </div>
         </li>
       </ul>
+
+      {canManageCurrentCompany ? (
+        <EditCompanyModal
+          isOpen={companyEditModalOpen}
+          onClose={() => setCompanyEditModalOpen(false)}
+          company={activeCompany}
+          onSubmit={handleSubmitCompanyEdit}
+          onRemoveImage={handleRemoveCompanyImage}
+          isSubmitting={companyUpdating}
+          isRemovingImage={companyRemovingImage}
+        />
+      ) : null}
 
       {canManageCurrentCompany ? (
         <CompanyMembersModal

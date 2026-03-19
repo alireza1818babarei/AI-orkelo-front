@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import Loader from "../../Components/Loader";
 import { logoutThunk, meThunk } from "../../store/auth/authSlice";
 import { getCompanyContextThunk } from "../../store/company/companyContextSlice";
 import { getProjectsThunk } from "../../store/projects/projectsSlice";
@@ -74,11 +75,7 @@ export default function RequireAuth() {
   const meLoading = !user && (meStatus === "idle" || meStatus === "loading");
 
   if (meLoading || (user && (projectsLoading || shouldSyncProjects))) {
-    return (
-      <div className="loader_box">
-        <div className="loader_32"></div>
-      </div>
-    );
+    return <Loader />;
   }
 
   if (!user && meStatus === "failed") {

@@ -144,6 +144,10 @@ const TaskCard = memo(function TaskCard({
 }) {
   if (!task) return null;
   const completed = isTaskCompleted(task);
+  const trackingActive =
+    String(task?.type ?? "")
+      .toLowerCase()
+      .trim() === "start";
   const pressRef = useRef({
     startedAt: 0,
     startX: 0,
@@ -199,7 +203,10 @@ const TaskCard = memo(function TaskCard({
         {...taskDragHandleProps}
         className={`${isDragging ? "is-dragging" : ""} ${
           completed ? "task-completed" : ""
-        } ${flashCompleted ? "task-completed-flash" : ""} ${enter ? "task-enter" : ""}`}
+        } ${flashCompleted ? "task-completed-flash" : ""} ${
+          enter ? "task-enter" : ""
+        } ${trackingActive ? "task-tracking task-tracking-bounce" : ""}`}
+        data-ani={trackingActive ? "bounce" : undefined}
         role="button"
         tabIndex={0}
         onClick={handleCardClick}

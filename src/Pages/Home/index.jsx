@@ -9,6 +9,7 @@ import {
   HOME_TASK_ITEMS,
 } from "./data/home.data";
 import "./home.css";
+import TrackingTasks from "./components/TrackingTasks";
 
 const Home = () => {
   const location = useLocation();
@@ -54,7 +55,7 @@ const Home = () => {
         <p className="home-dashboard__date">{todayLabel}</p>
         <h1 className="home-dashboard__welcome">Welcome, {userName}</h1>
       </header>
-
+      <TrackingTasks/>
       <div className="home-dashboard__grid">
         <section className="home-dashboard__primary" aria-label="Tasks and projects">
           <HomePanel title="Tasks">

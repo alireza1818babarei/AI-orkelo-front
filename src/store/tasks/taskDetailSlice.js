@@ -29,6 +29,7 @@ const initialState = {
   projectId: null,
   taskId: null,
   task: null,
+  creator: null,
   status: "idle",
   error: null,
 };
@@ -62,6 +63,8 @@ const taskDetailSlice = createSlice({
       state.projectId = action.payload?.projectId ?? null;
       state.taskId = action.payload?.taskId ?? null;
       state.task = action.payload?.task ?? null;
+
+      state.creator = action.payload?.task?.creator ?? null;
     });
     builder.addCase(getTaskDetailThunk.rejected, (state, action) => {
       state.status = "failed";
