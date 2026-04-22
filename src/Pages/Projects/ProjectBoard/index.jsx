@@ -20,7 +20,9 @@ import {
   reorderProjectTaskThunk,
   removeTaskFromColumn,
   updateProjectColumnThunk,
+  archiveCompletedColumnTasksThunk,
 } from "../../../store/projects/projectColumnsSlice";
+import { getArchivedTasks } from "../../../store/projects/projectArchivedTasksSlice";
 import {
   addProjectMemberThunk,
   deleteProjectMemberThunk,
@@ -125,6 +127,7 @@ const ProjectBoard = () => {
     status: columnsStatus,
     projectId: columnsProjectId,
     tasksLoadingByColumnId,
+    archivingCompletedByColumnId,
   } = useSelector((s) => s.projectColumns);
   const {
     items: projectMembers,
@@ -506,6 +509,56 @@ const ProjectBoard = () => {
     }
   };
 
+
+  const handleArchiveCompletedColumnTasks = async (column) => {
+    const projectId = Number(project?.id ?? id);
+    const columnId = Number(column?.id);
+
+    if (!Number.isInteger(projectId) || !Number.isInteger(columnId)) {
+      toastError("Project/column id not found");
+      return;
+    }
+
+    const columnTitle = column?.title || column?.name || "this column";
+
+    const { isConfirmed } = await alertConfirm({
+      title: "Archive completed tasks",
+      text: `All completed tasks in "${columnTitle}" will be moved to archive.`,
+      confirmText: "Archive",
+      cancelText: "Cancel",
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      // Archive completed tasks first; refresh board/archive data after the main action succeeds.
+      const result = await dispatch(
+        archiveCompletedColumnTasksThunk({ projectId, columnId }),
+      ).unwrap();
+
+      dispatch(getColumnTasksThunk({ projectId, columnId, force: true }));
+      dispatch(getArchivedTasks({ projectId }));
+
+      const count = Number(result?.archivedCount ?? 0);
+
+      if (count > 0) {
+        toastSuccess(`${count} completed task(s) archived`);
+      } else {
+        toastInfo("No completed tasks to archive");
+      }
+    } catch (err) {
+      const msg =
+        err?.message ||
+        err?.data?.message ||
+        "Archive completed tasks failed";
+
+      toastError(msg);
+    }
+  };
+
+
+
+
   const handleAddTask = async (column, text) => {
     if (!project?.id || !column?.id || !text?.trim()) return;
     try {
@@ -794,6 +847,8 @@ const ProjectBoard = () => {
                 tasksLoading={tasksLoading}
                 onEditColumn={openEditColumnModal}
                 onDeleteColumn={handleColumnDelete}
+                onArchiveCompletedTasks={handleArchiveCompletedColumnTasks}
+                archivingCompletedByColumnId={archivingCompletedByColumnId}
                 onAddTask={handleAddTask}
                 onTaskClick={handleTaskClick}
                 onReorderColumns={handleReorderColumns}

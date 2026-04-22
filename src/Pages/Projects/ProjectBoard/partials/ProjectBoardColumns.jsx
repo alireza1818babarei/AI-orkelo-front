@@ -443,6 +443,8 @@ const ProjectBoardColumns = ({
   tasksLoading = false,
   onEditColumn,
   onDeleteColumn,
+  onArchiveCompletedTasks,
+  archivingCompletedByColumnId = {},
   onAddTask,
   onTaskClick,
   onReorderColumns,
@@ -810,6 +812,13 @@ const ProjectBoardColumns = ({
                             label: "Edit",
                             icon: "ti-pencil",
                             onClick: () => onEditColumn?.(col),
+                          },
+                          {
+                            key: "archive-completed-tasks",
+                            label: "Archive completed Tasksg",
+                            icon: "ti-archive",
+                            disabled: !!archivingCompletedByColumnId?.[String(col.id)],
+                            onClick: () => onArchiveCompletedTasks?.(col),
                           },
                           { type: "divider" },
                           {

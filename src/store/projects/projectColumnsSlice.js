@@ -1,6 +1,6 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
 import api from "../../api/axios";
-import { getErrorMessage } from "../../utils/getError";
+import {getErrorMessage} from "../../utils/getError";
 
 const normalizeOrderedIds = (orderedIds) =>
   (Array.isArray(orderedIds) ? orderedIds : [])
@@ -52,12 +52,12 @@ const buildTaskByIdMap = (columns) => {
 };
 
 const applyTaskOrderToColumn = ({
-  tasks,
-  orderedTaskIds,
-  columnId,
-  taskById,
-  keepRest = true,
-}) => {
+                                  tasks,
+                                  orderedTaskIds,
+                                  columnId,
+                                  taskById,
+                                  keepRest = true,
+                                }) => {
   const nextTasks = Array.isArray(tasks) ? tasks : [];
   const normalizedIds = normalizeTaskIds(orderedTaskIds);
   if (!normalizedIds.length) {
@@ -182,13 +182,13 @@ const applyColumnOrder = (columns, orderedIds) => {
 
 export const getProjectColumnsThunk = createAsyncThunk(
   "projectColumns/getByProject",
-  async (projectId, { getState, rejectWithValue }) => {
+  async (projectId, {getState, rejectWithValue}) => {
     try {
       const state = getState();
       const list = state?.projects?.items || [];
       const fromList = list.find((p) => String(p.id) === String(projectId));
       if (fromList && Array.isArray(fromList.columns)) {
-        return { projectId, columns: sortColumnsByPosition(fromList.columns) };
+        return {projectId, columns: sortColumnsByPosition(fromList.columns)};
       }
 
       const res = await api.get(`/projects/${projectId}`);
@@ -212,10 +212,10 @@ export const getProjectColumnsThunk = createAsyncThunk(
 
 export const createProjectColumnThunk = createAsyncThunk(
   "projectColumns/create",
-  async ({ projectId, payload }, { rejectWithValue }) => {
+  async ({projectId, payload}, {rejectWithValue}) => {
     try {
       const res = await api.post(`/projects/${projectId}/columns`, payload);
-      return { projectId, column: res.data?.data ?? res.data };
+      return {projectId, column: res.data?.data ?? res.data};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
@@ -224,13 +224,13 @@ export const createProjectColumnThunk = createAsyncThunk(
 
 export const updateProjectColumnThunk = createAsyncThunk(
   "projectColumns/update",
-  async ({ projectId, columnId, payload }, { rejectWithValue }) => {
+  async ({projectId, columnId, payload}, {rejectWithValue}) => {
     try {
       const res = await api.put(
         `/projects/${projectId}/columns/${columnId}`,
         payload,
       );
-      return { projectId, column: res.data?.data ?? res.data };
+      return {projectId, column: res.data?.data ?? res.data};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
@@ -239,12 +239,12 @@ export const updateProjectColumnThunk = createAsyncThunk(
 
 export const deleteProjectColumnThunk = createAsyncThunk(
   "projectColumns/delete",
-  async ({ projectId, columnId }, { rejectWithValue }) => {
+  async ({projectId, columnId}, {rejectWithValue}) => {
     try {
       const res = await api.delete(
         `/projects/${projectId}/columns/${columnId}`,
       );
-      return { projectId, columnId, data: res.data };
+      return {projectId, columnId, data: res.data};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
@@ -253,7 +253,7 @@ export const deleteProjectColumnThunk = createAsyncThunk(
 
 export const createProjectTaskThunk = createAsyncThunk(
   "projectColumns/createTask",
-  async ({ projectId, columnId, payload }, { rejectWithValue }) => {
+  async ({projectId, columnId, payload}, {rejectWithValue}) => {
     try {
       const res = await api.post(
         `/projects/${projectId}/columns/${columnId}/tasks`,
@@ -281,7 +281,7 @@ export const createProjectTaskThunk = createAsyncThunk(
       return {
         projectId,
         columnId,
-        task: { ...(payload || {}), ...(data || {}), ...(enriched || {}) },
+        task: {...(payload || {}), ...(data || {}), ...(enriched || {})},
       };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -291,18 +291,18 @@ export const createProjectTaskThunk = createAsyncThunk(
 
 export const reorderProjectColumnsThunk = createAsyncThunk(
   "projectColumns/reorder",
-  async ({ projectId, orderedIds }, { rejectWithValue }) => {
+  async ({projectId, orderedIds}, {rejectWithValue}) => {
     try {
       const normalizedIds = normalizeOrderedIds(orderedIds);
       if (!normalizedIds.length) {
-        return { projectId, orderedIds: [] };
+        return {projectId, orderedIds: []};
       }
 
       await api.patch(`/projects/${projectId}/columns/reorder`, {
         ordered_ids: normalizedIds,
       });
 
-      return { projectId, orderedIds: normalizedIds };
+      return {projectId, orderedIds: normalizedIds};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
@@ -320,7 +320,7 @@ export const reorderProjectTaskThunk = createAsyncThunk(
       sourceTaskIds,
       destinationTaskIds,
     },
-    { rejectWithValue },
+    {rejectWithValue},
   ) => {
     try {
       const normalizedProjectId = Number(projectId);
@@ -344,7 +344,7 @@ export const reorderProjectTaskThunk = createAsyncThunk(
         !Number.isInteger(normalizedDestinationColumnId) ||
         normalizedDestinationColumnId <= 0
       ) {
-        return rejectWithValue({ message: "Invalid task reorder payload." });
+        return rejectWithValue({message: "Invalid task reorder payload."});
       }
 
       const sameColumn = normalizedSourceColumnId === normalizedDestinationColumnId;
@@ -354,7 +354,7 @@ export const reorderProjectTaskThunk = createAsyncThunk(
 
         await api.patch(
           `/projects/${normalizedProjectId}/columns/${columnId}/tasks/reorder`,
-          { ordered_ids: orderedIds },
+          {ordered_ids: orderedIds},
         );
       };
 
@@ -399,7 +399,7 @@ export const reorderProjectTaskThunk = createAsyncThunk(
 
 export const getColumnTasksThunk = createAsyncThunk(
   "projectColumns/getColumnTasks",
-  async ({ projectId, columnId }, { rejectWithValue }) => {
+  async ({projectId, columnId}, {rejectWithValue}) => {
     try {
       const res = await api.get(
         `/projects/${projectId}/columns/${columnId}/tasks`,
@@ -415,7 +415,7 @@ export const getColumnTasksThunk = createAsyncThunk(
     }
   },
   {
-    condition: ({ projectId, columnId, force }, { getState }) => {
+    condition: ({projectId, columnId, force}, {getState}) => {
       if (force) return true;
 
       const state = getState();
@@ -439,6 +439,29 @@ export const getColumnTasksThunk = createAsyncThunk(
   },
 );
 
+export const archiveCompletedColumnTasksThunk = createAsyncThunk(
+  "projectColumns/archiveCompletedColumnTasks",
+  async ({ projectId, columnId }, { rejectWithValue }) => {
+    try {
+      // Archive all completed tasks in the selected column through the backend bulk endpoint.
+      const res = await api.patch(
+        `/projects/${projectId}/columns/${columnId}/tasks/archive-completed`,
+      );
+
+      const data = res.data.data;
+
+      return {
+        projectId,
+        columnId,
+        archivedCount: Number(data.archived_count),
+        taskIds: normalizeTaskIds(data.task_ids),
+      };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
 const initialState = {
   items: [],
   projectId: null,
@@ -446,6 +469,7 @@ const initialState = {
   error: null,
   tasksLoadingByColumnId: {},
   tasksErrorByColumnId: {},
+  archivingCompletedByColumnId: {},
 };
 
 const projectColumnsSlice = createSlice({
@@ -458,9 +482,10 @@ const projectColumnsSlice = createSlice({
       state.items = sortColumnsByPosition(action.payload?.columns || []);
       state.tasksLoadingByColumnId = {};
       state.tasksErrorByColumnId = {};
+      state.archivingCompletedByColumnId = {};
     },
     reorderProjectColumnsLocal: (state, action) => {
-      const { projectId, orderedIds } = action.payload || {};
+      const {projectId, orderedIds} = action.payload || {};
       if (
         projectId != null &&
         state.projectId != null &&
@@ -473,7 +498,7 @@ const projectColumnsSlice = createSlice({
       state.items = applyColumnOrder(state.items, orderedIds);
     },
     reorderProjectTasksLocal: (state, action) => {
-      const { projectId } = action.payload || {};
+      const {projectId} = action.payload || {};
       if (
         projectId != null &&
         state.projectId != null &&
@@ -486,7 +511,7 @@ const projectColumnsSlice = createSlice({
       state.items = applyTaskReorder(state.items, action.payload || {});
     },
     updateTaskInColumn: (state, action) => {
-      const { columnId, taskId, patch } = action.payload || {};
+      const {columnId, taskId, patch} = action.payload || {};
       if (!taskId || !patch) return;
 
       const matchesTask = (t) =>
@@ -501,7 +526,7 @@ const projectColumnsSlice = createSlice({
         const nextTasks = tasks.map((t) => {
           if (!matchesTask(t)) return t;
           found = true;
-          return { ...t, ...(patch || {}) };
+          return {...t, ...(patch || {})};
         });
 
         if (!found && columnId && String(c.id) === String(columnId)) {
@@ -512,11 +537,11 @@ const projectColumnsSlice = createSlice({
         }
 
         if (!found && !columnId) return c;
-        return { ...c, tasks: nextTasks };
+        return {...c, tasks: nextTasks};
       });
     },
     removeTaskFromColumn: (state, action) => {
-      const { columnId, taskId } = action.payload || {};
+      const {columnId, taskId} = action.payload || {};
       if (!columnId || !taskId) return;
       state.items = (state.items || []).map((c) => {
         if (String(c.id) !== String(columnId)) return c;
@@ -554,7 +579,7 @@ const projectColumnsSlice = createSlice({
           if (existingTasks != null) return c;
 
           const prevTasks = prevTasksByColumnId.get(key);
-          if (Array.isArray(prevTasks)) return { ...c, tasks: prevTasks };
+          if (Array.isArray(prevTasks)) return {...c, tasks: prevTasks};
 
           return c;
         }),
@@ -562,30 +587,30 @@ const projectColumnsSlice = createSlice({
     });
     builder.addCase(getProjectColumnsThunk.rejected, (state, action) => {
       state.status = "failed";
-      state.error = action.payload || { message: "Somthing went wrong" };
+      state.error = action.payload || {message: "Somthing went wrong"};
       state.items = [];
       state.tasksLoadingByColumnId = {};
       state.tasksErrorByColumnId = {};
     });
 
     builder.addCase(createProjectColumnThunk.fulfilled, (state, action) => {
-      const { projectId, column } = action.payload || {};
+      const {projectId, column} = action.payload || {};
       if (!column) return;
       state.projectId = projectId ?? state.projectId;
       state.items = sortColumnsByPosition([...(state.items || []), column]);
     });
     builder.addCase(updateProjectColumnThunk.fulfilled, (state, action) => {
-      const { projectId, column } = action.payload || {};
+      const {projectId, column} = action.payload || {};
       if (!column) return;
       state.projectId = projectId ?? state.projectId;
       state.items = sortColumnsByPosition(
         (state.items || []).map((c) =>
-          String(c.id) === String(column.id) ? { ...c, ...column } : c,
+          String(c.id) === String(column.id) ? {...c, ...column} : c,
         ),
       );
     });
     builder.addCase(deleteProjectColumnThunk.fulfilled, (state, action) => {
-      const { projectId, columnId } = action.payload || {};
+      const {projectId, columnId} = action.payload || {};
       state.projectId = projectId ?? state.projectId;
       if (!columnId) return;
       const key = String(columnId);
@@ -596,31 +621,31 @@ const projectColumnsSlice = createSlice({
       );
     });
     builder.addCase(reorderProjectColumnsThunk.fulfilled, (state, action) => {
-      const { projectId, orderedIds } = action.payload || {};
+      const {projectId, orderedIds} = action.payload || {};
       state.projectId = projectId ?? state.projectId;
       if (!orderedIds?.length) return;
       state.items = applyColumnOrder(state.items, orderedIds);
     });
     builder.addCase(reorderProjectTaskThunk.fulfilled, (state, action) => {
-      const { projectId } = action.payload || {};
+      const {projectId} = action.payload || {};
       state.projectId = projectId ?? state.projectId;
       state.items = applyTaskReorder(state.items, action.payload || {});
     });
 
     builder.addCase(createProjectTaskThunk.fulfilled, (state, action) => {
-      const { projectId, columnId, task } = action.payload || {};
+      const {projectId, columnId, task} = action.payload || {};
       if (!task || !columnId) return;
       state.projectId = projectId ?? state.projectId;
       state.items = (state.items || []).map((c) => {
         if (String(c.id) !== String(columnId)) return c;
         const nextTasks = Array.isArray(c.tasks) ? [...c.tasks] : [];
         nextTasks.push(task);
-        return { ...c, tasks: nextTasks };
+        return {...c, tasks: nextTasks};
       });
     });
 
     builder.addCase(getColumnTasksThunk.pending, (state, action) => {
-      const { projectId, columnId } = action.meta?.arg ?? {};
+      const {projectId, columnId} = action.meta?.arg ?? {};
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
@@ -628,7 +653,7 @@ const projectColumnsSlice = createSlice({
       delete state.tasksErrorByColumnId[key];
     });
     builder.addCase(getColumnTasksThunk.fulfilled, (state, action) => {
-      const { projectId, columnId, tasks } = action.payload || {};
+      const {projectId, columnId, tasks} = action.payload || {};
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
@@ -641,22 +666,62 @@ const projectColumnsSlice = createSlice({
 
       state.items = (state.items || []).map((c) => {
         if (String(c?.id) !== key) return c;
-        return { ...c, tasks: sorted };
+        return {...c, tasks: sorted};
       });
     });
     builder.addCase(getColumnTasksThunk.rejected, (state, action) => {
-      const { projectId, columnId } = action.meta?.arg ?? {};
+      const {projectId, columnId} = action.meta?.arg ?? {};
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
       delete state.tasksLoadingByColumnId[key];
       state.tasksErrorByColumnId[key] =
-        action.payload || { message: "Somthing went wrong" };
+        action.payload || {message: "Somthing went wrong"};
 
       state.items = (state.items || []).map((c) => {
         if (String(c?.id) !== key) return c;
-        return { ...c, tasks: [] };
+        return {...c, tasks: []};
       });
+    });
+
+    builder.addCase(archiveCompletedColumnTasksThunk.pending, (state, action) => {
+      const {projectId, columnId} = action.meta?.arg ?? {};
+
+      // Keep per-column loading state so only the selected column action is disabled.
+      state.projectId = projectId ?? state.projectId;
+
+      if (columnId == null) return;
+      state.archivingCompletedByColumnId[String(columnId)] = true;
+    });
+
+    builder.addCase(archiveCompletedColumnTasksThunk.fulfilled, (state, action) => {
+      const { projectId, columnId, taskIds} = action.payload || {};
+      const key = String(columnId ?? "");
+
+      state.projectId = projectId ?? state.projectId;
+      delete state.archivingCompletedByColumnId[key];
+
+      const archivedTaskIds = new Set(normalizeTaskIds(taskIds));
+
+      // Remove archived tasks from the active board without waiting for a full reload.
+      state.items = (state.items || []).map((column) => {
+        if (String(column?.id) !== key) return column;
+        if (!Array.isArray(column.tasks) || archivedTaskIds.size === 0) return column;
+
+        return {
+          ...column,
+          tasks: column.tasks.filter(
+            (task) => !archivedTaskIds.has(String(task?.id)),
+          ),
+        };
+      });
+    });
+
+    builder.addCase(archiveCompletedColumnTasksThunk.rejected, (state, action) => {
+      const { columnId } = action.meta?.arg ?? {};
+      if (columnId == null) return;
+
+      delete state.archivingCompletedByColumnId[String(columnId)];
     });
   },
 });
