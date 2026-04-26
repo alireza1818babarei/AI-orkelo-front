@@ -25,7 +25,7 @@ export const getFinancialCounterparties = createAsyncThunk(
         params.search = normalizedSearch;
       }
 
-      const res = await api.get('/file-management/counterparties', { params });
+      const res = await api.get('/finance-center/counterparties', { params });
       return normalizeFinancialCounterpartiesResponse(res?.data);
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -38,7 +38,7 @@ export const createFinancialCounterparty = createAsyncThunk(
   async (payload, { rejectWithValue }) => {
     try {
       const res = await api.post(
-        '/file-management/counterparties',
+        '/finance-center/counterparties',
         buildCounterpartyBody(payload),
       );
 
@@ -57,7 +57,7 @@ export const updateFinancialCounterparty = createAsyncThunk(
   async ({ counterpartyId, payload }, { rejectWithValue }) => {
     try {
       const res = await api.patch(
-        `/file-management/counterparties/${counterpartyId}`,
+        `/finance-center/counterparties/${counterpartyId}`,
         buildCounterpartyBody(payload),
       );
 
@@ -76,7 +76,7 @@ export const deleteFinancialCounterparty = createAsyncThunk(
   async ({ counterpartyId }, { rejectWithValue }) => {
     try {
       const res = await api.delete(
-        `/file-management/counterparties/${counterpartyId}`,
+        `/finance-center/counterparties/${counterpartyId}`,
       );
 
       return {

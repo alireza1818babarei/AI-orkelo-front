@@ -18,7 +18,7 @@ export const getFinancialOperations = createAsyncThunk(
         params.title = normalizedTitle;
       }
 
-      const res = await api.get('/file-management/operations', { params });
+      const res = await api.get('/finance-center/operations', { params });
       return normalizeFinancialOperationsResponse(res?.data);
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -30,7 +30,7 @@ export const getFinancialOperationDetail = createAsyncThunk(
   'financialOperations/getDetail',
   async ({ operationId }, { rejectWithValue }) => {
     try {
-      const res = await api.get(`/file-management/operations/${operationId}`);
+      const res = await api.get(`/finance-center/operations/${operationId}`);
       return normalizeFinancialOperation(res?.data?.data);
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -66,7 +66,7 @@ export const createFinancialOperation = createAsyncThunk(
         }
       }
 
-      const res = await api.post('/file-management/operations', body);
+      const res = await api.post('/finance-center/operations', body);
 
       return {
         operation: normalizeFinancialOperation(res?.data?.data),
@@ -104,7 +104,7 @@ export const updateFinancialOperation = createAsyncThunk(
       }
 
       const res = await api.patch(
-        `/file-management/operations/${operationId}`,
+        `/finance-center/operations/${operationId}`,
         body,
       );
 
@@ -124,7 +124,7 @@ export const updateFinancialOperationStatus = createAsyncThunk(
     try {
       // Send only the status field because the endpoint is dedicated to review state.
       const res = await api.patch(
-        `/file-management/operations/${operationId}/status`,
+        `/finance-center/operations/${operationId}/status`,
         {
           status: String(status ?? '').trim().toLowerCase(),
         },
@@ -146,7 +146,7 @@ export const deleteFinancialOperation = createAsyncThunk(
   'financialOperations/delete',
   async ({ operationId }, { rejectWithValue }) => {
     try {
-      const res = await api.delete(`/file-management/operations/${operationId}`);
+      const res = await api.delete(`/finance-center/operations/${operationId}`);
 
       return {
         operationId,
@@ -170,7 +170,7 @@ export const uploadFinancialOperationFile = createAsyncThunk(
       formData.append('file', file);
 
       const res = await api.post(
-        `/file-management/operations/${operationId}/files`,
+        `/finance-center/operations/${operationId}/files`,
         formData,
       );
 
@@ -190,7 +190,7 @@ export const deleteFinancialOperationFile = createAsyncThunk(
   async ({ operationId, fileId }, { rejectWithValue }) => {
     try {
       const res = await api.delete(
-        `/file-management/operations/${operationId}/files/${fileId}`,
+        `/finance-center/operations/${operationId}/files/${fileId}`,
       );
 
       return {

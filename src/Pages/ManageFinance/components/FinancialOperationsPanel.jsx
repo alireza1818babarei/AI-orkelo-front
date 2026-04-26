@@ -876,7 +876,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
 
     try {
       const response = await api.get(
-        `/file-management/operations/${operationId}/files/${fileId}/download`,
+        `/finance-center/operations/${operationId}/files/${fileId}/download`,
         {
           responseType: 'blob',
         },

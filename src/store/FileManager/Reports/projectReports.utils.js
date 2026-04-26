@@ -10,7 +10,6 @@ export const normalizedProjectReport = (reports = []) => {
     reportSize: report.size,
     uploaderName: report.uploader?.name || '-',
     uploaderAvatar: report.uploader?.avatar || null,
-    uploaderEmail: report.uploader?.email || '-',
     canEdit: report.can_edit
   }));
 };

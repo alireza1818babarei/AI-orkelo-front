@@ -10,7 +10,7 @@ export const getFileManagementAccessUsers = createAsyncThunk(
   'fileManagementAccess/getUsers',
   async (_, { rejectWithValue }) => {
     try {
-      const res = await api.get('/file-management/access-users');
+      const res = await api.get('/finance-center/access-users');
       return normalizeFileManagementAccessPayload(res?.data);
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -22,7 +22,7 @@ export const updateFileManagementAccessUsers = createAsyncThunk(
   'fileManagementAccess/updateUsers',
   async ({ userIds }, { rejectWithValue }) => {
     try {
-      const res = await api.put('/file-management/access-users', {
+      const res = await api.put('/finance-center/access-users', {
         user_ids: Array.isArray(userIds) ? userIds : [],
       });
 
@@ -37,7 +37,7 @@ export const probeFileManagementSectionAccess = createAsyncThunk(
   'fileManagementAccess/probe',
   async (_, { rejectWithValue }) => {
     try {
-      await api.get('/file-management/operations', {
+      await api.get('/finance-center/operations', {
         params: { page: 1 },
       });
 

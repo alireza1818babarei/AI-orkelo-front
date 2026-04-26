@@ -248,19 +248,26 @@ function ProjectManager() {
                 </Alert>
               </div>
             ) : (
-              <div className='table-responsive'>
+              <div className='project-reports-table-wrapper'>
                 <Table
-                  id='recentdatatable'
-                  className='table table-bottom-border recent-table align-middle table-hover mb-0'
+                  className='table table-bottom-border project-reports-table align-middle table-hover mb-0'
                 >
+                  <colgroup>
+                    <col className='project-reports-table__name-col' />
+                    <col className='project-reports-table__file-col' />
+                    <col className='project-reports-table__project-col' />
+                    <col className='project-reports-table__size-col' />
+                    <col className='project-reports-table__date-col' />
+                    <col className='project-reports-table__actions-col' />
+                  </colgroup>
+
                   <thead>
                     <tr>
                       <th>Name</th>
                       <th>File name</th>
                       <th>Project Name</th>
-                      <th>Email</th>
                       <th>Size</th>
-                      <th>Uploaded at</th>
+                      <th>Uploaded At</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -277,82 +284,110 @@ function ProjectManager() {
                         return (
                           <tr key={item.id}>
                             <td>
-                              <div className='d-flex align-items-center'>
+                              <div className='project-reports-table__user'>
                                 {avatarSrc ? (
                                   <img
                                     src={avatarSrc}
-                                    className='w-40 h-40 rounded-circle object-fit-cover'
+                                    className='project-reports-table__avatar'
                                     alt={item.uploaderName || 'avatar'}
                                   />
                                 ) : (
-                                  <div className='w-40 h-40 rounded-circle d-flex align-items-center justify-content-center bg-light text-dark'>
+                                  <div className='project-reports-table__avatar project-reports-table__avatar--empty'>
                                     {(item.uploaderName || '?')
                                       .slice(0, 1)
                                       .toUpperCase()}
                                   </div>
                                 )}
 
-                                <span className='ms-2 table-text capitalized'>
+                                <span className='project-reports-table__text capitalized'>
                                   {item.uploaderName || '-'}
                                 </span>
                               </div>
                             </td>
 
-                            <td>{item.reportName || '-'}</td>
-                            <td>{item.projectName || '-'}</td>
-                            <td className='text-success f-w-500'>
-                              {item.uploaderEmail || '-'}
+                            <td>
+                              <span className='project-reports-table__text'>
+                                {item.reportName || '-'}
+                              </span>
                             </td>
-                            <td>{formatBytes(item.reportSize)}</td>
-                            <td className='text-danger f-w-500'>
+                            <td>
+                              <span className='project-reports-table__text'>
+                                {item.projectName || '-'}
+                              </span>
+                            </td>
+                            <td className='project-reports-table__size'>
+                              {formatBytes(item.reportSize)}
+                            </td>
+                            <td className='project-reports-table__date text-danger f-w-500'>
                               {item.createdAt
                                 ? formatFullDate(item.createdAt)
                                 : '-'}
                             </td>
 
                             <td>
-                              <div className='dropdown folder-dropdown'>
-                                <a
-                                  className='dropdown-toggle'
-                                  data-bs-toggle='dropdown'
-                                  aria-expanded='false'
-                                  href='#'
-                                  onClick={(e) => e.preventDefault()}
+                              <div className='project-reports-table__actions'>
+                                <Button
+                                  type='button'
+                                  size='sm'
+                                  color='primary'
+                                  outline
+                                  onClick={() => handleDownload(item)}
+                                  disabled={isDownloading || isDeleting}
+                                  className='project-reports-table__download'
                                 >
-                                  <i className='ti ti-dots-vertical'></i>
-                                </a>
+                                  {isDownloading
+                                    ? 'Downloading...'
+                                    : 'Download'}
+                                </Button>
 
-                                <ul className='dropdown-menu'>
-                                  <li>
-                                    <button
-                                      type='button'
-                                      onClick={() => handleDownload(item)}
-                                      disabled={isDownloading || isDeleting}
-                                      className='dropdown-item px-3 d-flex justify-content-between align-items-center'
+                                {/* Legacy dropdown actions are kept disabled for possible future multi-action support. */}
+                                {false && (
+                                  <div className='dropdown folder-dropdown'>
+                                    <a
+                                      className='dropdown-toggle'
+                                      data-bs-toggle='dropdown'
+                                      aria-expanded='false'
+                                      href='#'
+                                      onClick={(e) => e.preventDefault()}
                                     >
-                                      <span>
-                                        {isDownloading
-                                          ? 'Downloading...'
-                                          : 'Download'}
-                                      </span>
-                                      <i className='ph-bold ph-download'></i>
-                                    </button>
-                                  </li>
+                                      <i className='ti ti-dots-vertical'></i>
+                                    </a>
 
-                                  {/* <li>
-                                    <button
-                                      type='button'
-                                      onClick={() => handleDelete(item)}
-                                      disabled={isDeleting || isDownloading}
-                                      className='dropdown-item px-3 d-flex text-danger justify-content-between align-items-center'
-                                    >
-                                      <span>
-                                        {isDeleting ? 'Deleting...' : 'Delete'}
-                                      </span>
-                                      <i className='ph-bold ph-trash'></i>
-                                    </button>
-                                  </li> */}
-                                </ul>
+                                    <ul className='dropdown-menu'>
+                                      <li>
+                                        <button
+                                          type='button'
+                                          onClick={() => handleDownload(item)}
+                                          disabled={isDownloading || isDeleting}
+                                          className='dropdown-item px-3 d-flex justify-content-between align-items-center'
+                                        >
+                                          <span>
+                                            {isDownloading
+                                              ? 'Downloading...'
+                                              : 'Download'}
+                                          </span>
+                                          <i className='ph-bold ph-download'></i>
+                                        </button>
+                                      </li>
+
+                                      <li>
+                                        <button
+                                          type='button'
+                                          onClick={() => handleDelete(item)}
+                                          disabled={isDeleting || isDownloading}
+                                          className='dropdown-item px-3 d-flex text-danger justify-content-between align-items-center'
+                                        >
+                                          <span>
+                                            {isDeleting
+                                              ? 'Deleting...'
+                                              : 'Delete'}
+                                          </span>
+                                          <i className='ph-bold ph-trash'></i>
+                                        </button>
+                                      </li>
+                                    </ul>
+                                  </div>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -360,7 +395,7 @@ function ProjectManager() {
                       })
                     ) : (
                       <tr>
-                        <td colSpan='7' className='text-center py-4'>
+                        <td colSpan='6' className='text-center py-4'>
                           No reports found
                         </td>
                       </tr>

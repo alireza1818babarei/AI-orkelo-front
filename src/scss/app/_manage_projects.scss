@@ -1,0 +1,111 @@
+// Manage Projects page-specific table styles.
+.project-reports-table-wrapper {
+  width: 100%;
+  overflow-x: visible;
+}
+
+.project-reports-table {
+  table-layout: fixed;
+  width: 100%;
+
+  th,
+  td {
+    vertical-align: middle;
+  }
+
+  thead {
+    th {
+      color: rgba(var(--dark), 0.78);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    td {
+      color: rgba(var(--dark), 0.82);
+      font-size: 14px;
+    }
+  }
+}
+
+.project-reports-table__name-col {
+  width: 28%;
+}
+
+.project-reports-table__file-col {
+  width: 19%;
+}
+
+.project-reports-table__project-col {
+  width: 17%;
+}
+
+.project-reports-table__size-col {
+  width: 8%;
+}
+
+.project-reports-table__date-col {
+  width: 14%;
+}
+
+.project-reports-table__actions-col {
+  width: 14%;
+}
+
+.project-reports-table__user {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.65rem;
+}
+
+.project-reports-table__avatar {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.project-reports-table__avatar--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(var(--secondary), 0.14);
+  color: rgba(var(--dark), 0.82);
+  font-weight: 600;
+}
+
+.project-reports-table__text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-reports-table__size,
+.project-reports-table__date {
+  white-space: nowrap;
+}
+
+.project-reports-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.project-reports-table__download {
+  min-width: 118px;
+}
+
+@media (max-width: 1199.98px) {
+  .project-reports-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .project-reports-table {
+    min-width: 760px;
+  }
+}

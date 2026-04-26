@@ -12,7 +12,9 @@ export const normalizeAccessMember = (member) => ({
   avatar: member?.avatar ?? null,
   role: normalizeRole(member?.role),
   status: String(member?.status ?? '').trim().toLowerCase(),
-  hasFileManagementAccess: Boolean(member?.has_file_management_access),
+  hasFileManagementAccess: Boolean(
+    member?.has_finance_center_access ?? member?.has_file_management_access,
+  ),
 });
 
 export const normalizeFileManagementAccessPayload = (payload) => {
