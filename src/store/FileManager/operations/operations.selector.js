@@ -57,3 +57,15 @@ export const financialOperationStatusUpdateStatusSelector = (state) =>
 
 export const financialOperationStatusUpdateErrorSelector = (state) =>
   state.financialOperations.statusUpdateError;
+
+export const financialOperationSummarySelector = (state) =>
+  state.financialOperations.summary;
+
+export const financialOperationSummaryLoadingSelector = (state) =>
+  state.financialOperations.summaryLoading;
+
+export const financialOperationSummaryErrorSelector = (state) =>
+  state.financialOperations.summaryError;
+
+export const financialOperationSummaryRefreshKeySelector = (state) =>
+  state.financialOperations.summaryRefreshKey;

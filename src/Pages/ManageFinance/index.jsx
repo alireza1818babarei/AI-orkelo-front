@@ -19,6 +19,7 @@ import {
 import { toastError, toastSuccess } from '../../utils/sweetAlert';
 import FileManagementAccessPanel from './components/FileManagementAccessPanel';
 import FinancialCounterpartiesPanel from './components/FinancialCounterpartiesPanel';
+import FinancialOverviewPanel from './components/FinancialOverviewPanel';
 import FinancialOperationsPanel from './components/FinancialOperationsPanel';
 import './manageFinance.css';
 
@@ -200,6 +201,10 @@ export default function ManageFinance() {
                 </div>
               </Card.Body>
             </Card>
+          </Col>
+
+          <Col xs={12}>
+            <FinancialOverviewPanel enabled={canOpenSection} />
           </Col>
 
           <Col xs={12}>

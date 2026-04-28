@@ -6,9 +6,26 @@ import {
   deleteFinancialOperationFile,
   getFinancialOperationDetail,
   getFinancialOperations,
+  getFinancialOperationSummary,
   updateFinancialOperation,
   uploadFinancialOperationFile,
 } from './operations.thunk';
+
+const emptyFinancialOperationSummary = {
+  period: '12_months',
+  totals: {
+    income: '0.00',
+    outcome: '0.00',
+    net: '0.00',
+    pendingAmount: '0.00',
+    pendingCount: 0,
+    incomeValue: 0,
+    outcomeValue: 0,
+    netValue: 0,
+    pendingAmountValue: 0,
+  },
+  monthly: [],
+};
 
 const initialState = {
   items: [],
@@ -32,6 +49,11 @@ const initialState = {
   uploadError: null,
   deletingFileIds: {},
   deleteError: null,
+  summary: emptyFinancialOperationSummary,
+  summaryLoading: false,
+  summaryError: null,
+  // Refresh key changes after financial mutations so overview data stays current.
+  summaryRefreshKey: 0,
 };
 
 const financialOperationsSlice = createSlice({
@@ -92,6 +114,7 @@ const financialOperationsSlice = createSlice({
           }
 
           state.currentOperation = nextOperation;
+          state.summaryRefreshKey += 1;
         }
       })
       .addCase(createFinancialOperation.rejected, (state, action) => {
@@ -124,6 +147,7 @@ const financialOperationsSlice = createSlice({
         );
 
         state.currentOperation = nextOperation;
+        state.summaryRefreshKey += 1;
       })
       .addCase(updateFinancialOperation.rejected, (state, action) => {
         state.updateStatus = 'failed';
@@ -161,6 +185,8 @@ const financialOperationsSlice = createSlice({
             ...nextOperation,
           };
         }
+
+        state.summaryRefreshKey += 1;
       })
       .addCase(updateFinancialOperationStatus.rejected, (state, action) => {
         state.statusUpdateStatus = 'failed';
@@ -191,6 +217,8 @@ const financialOperationsSlice = createSlice({
         ) {
           state.currentOperation = null;
         }
+
+        state.summaryRefreshKey += 1;
       })
       .addCase(deleteFinancialOperation.rejected, (state, action) => {
         state.operationDeleteStatus = 'failed';
@@ -239,6 +267,23 @@ const financialOperationsSlice = createSlice({
         state.links = null;
         state.meta = null;
         state.total = 0;
+      });
+
+    builder
+      .addCase(getFinancialOperationSummary.pending, (state) => {
+        state.summaryLoading = true;
+        state.summaryError = null;
+      })
+      .addCase(getFinancialOperationSummary.fulfilled, (state, action) => {
+        state.summaryLoading = false;
+        state.summaryError = null;
+        state.summary = action.payload ?? emptyFinancialOperationSummary;
+      })
+      .addCase(getFinancialOperationSummary.rejected, (state, action) => {
+        state.summaryLoading = false;
+        state.summaryError = action.payload || {
+          message: 'Failed to load financial summary',
+        };
       });
 
     builder

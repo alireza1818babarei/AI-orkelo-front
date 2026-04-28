@@ -5,6 +5,7 @@ import {
   normalizeFinancialOperation,
   normalizeFinancialOperationFile,
   normalizeFinancialOperationsResponse,
+  normalizeFinancialOperationSummary,
 } from './operations.utils';
 
 export const getFinancialOperations = createAsyncThunk(
@@ -20,6 +21,21 @@ export const getFinancialOperations = createAsyncThunk(
 
       const res = await api.get('/finance-center/operations', { params });
       return normalizeFinancialOperationsResponse(res?.data);
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+export const getFinancialOperationSummary = createAsyncThunk(
+  'financialOperations/getSummary',
+  async ({ period = '12_months' } = {}, { rejectWithValue }) => {
+    try {
+      const res = await api.get('/finance-center/operations/summary', {
+        params: { period },
+      });
+
+      return normalizeFinancialOperationSummary(res?.data);
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }

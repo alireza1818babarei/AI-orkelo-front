@@ -10,6 +10,12 @@ const normalizeNullableText = (value) => {
   return text || null;
 };
 
+const normalizeAmountNumber = (value) => {
+  const numberValue = Number(value ?? 0);
+  // ApexCharts needs finite numeric values for mixed column and line series.
+  return Number.isFinite(numberValue) ? numberValue : 0;
+};
+
 const normalizeUser = (user) => {
   if (!user || typeof user !== 'object') return null;
 
@@ -87,5 +93,34 @@ export const normalizeFinancialOperationsResponse = (payload) => {
     links: root?.links ?? null,
     meta: root?.meta ?? null,
     total: Number(root?.total ?? root?.meta?.total ?? data.length ?? 0) || 0,
+  };
+};
+
+export const normalizeFinancialOperationSummary = (payload) => {
+  const root = payload && typeof payload === 'object' ? payload : {};
+  const data = root?.data && typeof root.data === 'object' ? root.data : {};
+  const totals = data?.totals && typeof data.totals === 'object' ? data.totals : {};
+  const monthly = Array.isArray(data?.monthly) ? data.monthly : [];
+
+  return {
+    period: normalizeText(data?.period) || '12_months',
+    totals: {
+      income: normalizeText(totals?.income ?? '0.00'),
+      outcome: normalizeText(totals?.outcome ?? '0.00'),
+      net: normalizeText(totals?.net ?? '0.00'),
+      pendingAmount: normalizeText(totals?.pending_amount ?? '0.00'),
+      pendingCount: Number(totals?.pending_count ?? 0) || 0,
+      incomeValue: normalizeAmountNumber(totals?.income),
+      outcomeValue: normalizeAmountNumber(totals?.outcome),
+      netValue: normalizeAmountNumber(totals?.net),
+      pendingAmountValue: normalizeAmountNumber(totals?.pending_amount),
+    },
+    monthly: monthly.map((item) => ({
+      key: normalizeText(item?.key),
+      label: normalizeText(item?.label),
+      income: normalizeAmountNumber(item?.income),
+      outcome: normalizeAmountNumber(item?.outcome),
+      net: normalizeAmountNumber(item?.net),
+    })),
   };
 };
