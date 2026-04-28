@@ -32,14 +32,57 @@ const PROJECT_ROLE_OPTIONS = [
   { value: 'project_manager', label: 'Project Manager' },
 ];
 
+const COMPANY_ROLE_LABELS = {
+  company_owner: 'Owner',
+  company_supervisor: 'Supervisor',
+};
+
 const formatProjectRole = (role) => {
   switch (normalizeRole(role)) {
     case 'project_manager':
       return 'Project Manager';
-    case 'member':
-      return 'Member';
     default:
-      return '-';
+      return '';
+  }
+};
+
+const resolveDisplayRole = (companyRole, projectRole) => {
+  // Company-level roles outrank project roles in the sidebar display.
+  const companyRoleLabel = COMPANY_ROLE_LABELS[normalizeRole(companyRole)];
+  if (companyRoleLabel) return companyRoleLabel;
+
+  return formatProjectRole(projectRole);
+};
+
+const resolveRemovalRole = (companyRole, projectRole) => {
+  const normalizedCompanyRole = normalizeRole(companyRole);
+
+  if (normalizedCompanyRole === 'company_owner') return 'company_owner';
+  if (normalizedCompanyRole === 'company_supervisor') {
+    return 'company_supervisor';
+  }
+
+  return normalizeRole(projectRole) === 'project_manager'
+    ? 'project_manager'
+    : 'member';
+};
+
+const canRemoveProjectMember = (actorCompanyRole, actorProjectRole, member) => {
+  // Keep the UI aligned with the backend ProjectAccess::canRemoveMember rules.
+  if (!member?.hasRemovalRoleData) return false;
+
+  const actorRole = resolveRemovalRole(actorCompanyRole, actorProjectRole);
+  const targetRole = resolveRemovalRole(member.companyRole, member.projectRole);
+
+  switch (actorRole) {
+    case 'company_owner':
+      return true;
+    case 'company_supervisor':
+      return targetRole !== 'company_owner';
+    case 'project_manager':
+      return ['member', 'project_manager'].includes(targetRole);
+    default:
+      return false;
   }
 };
 
@@ -55,13 +98,20 @@ const normalizeMembers = (members) =>
     const src = member ?? {};
     const name = src?.name ?? '';
     const avatarRaw = src?.avatar ?? '';
-    const projectRole = normalizeRole(src?.project_role ?? src?.role) || 'member';
+    const rawProjectRole = src?.project_role ?? src?.projectRole ?? src?.role;
+    const rawCompanyRole = src?.company_role ?? src?.companyRole ?? src?.user_type;
+    const projectRole =
+      normalizeRole(rawProjectRole) || 'member';
+    const companyRole = normalizeRole(rawCompanyRole);
 
     return {
       id: src?.id ?? `member-${index + 1}`,
       removeId: src?.id ?? null,
       name,
       projectRole,
+      companyRole,
+      displayRole: resolveDisplayRole(companyRole, projectRole),
+      hasRemovalRoleData: rawProjectRole != null && rawCompanyRole != null,
       avatar: resolveUserAvatarWithFallback(
         avatarRaw,
         src?.id ?? src?.email ?? name,
@@ -93,6 +143,12 @@ const ProjectMembers = ({
   const companyRole = normalizeRole(
     activeCompanyRole ?? user?.company_role ?? user?.user_type,
   );
+  const currentUserId = String(user?.id ?? '');
+  const currentProjectMember = useMemo(
+    () => data.find((member) => String(member.id) === currentUserId) ?? null,
+    [data, currentUserId],
+  );
+  const actorProjectRole = currentProjectMember?.projectRole ?? 'member';
   const hasProjectManagerRole = Array.isArray(user?.project_roles)
     ? user.project_roles.some(
         (item) => normalizeRole(item?.role) === 'project_manager',
@@ -156,58 +212,70 @@ const ProjectMembers = ({
               <iconify-icon icon='line-md:loading-loop' />
             </div>
           ) : (
-            data.map((member) => (
-              <div key={member.id} className='project-members-panel__item'>
-                {member.removeId ? (
-                  <UncontrolledDropdown className='project-members-panel__actions'>
-                    <DropdownToggle
-                      tag='button'
-                      type='button'
-                      className='project-members-panel__actions-toggle'
-                      aria-label={`Open actions for ${member.name || 'member'}`}
-                    >
-                      <i className='ph-bold ph-dots-three-vertical' />
-                    </DropdownToggle>
-                    <DropdownMenu className='project-members-panel__actions-menu'>
-                      {canManageProjectRoles ? (
+            data.map((member) => {
+              const canRemoveMember = canRemoveProjectMember(
+                companyRole,
+                actorProjectRole,
+                member,
+              );
+
+              return (
+                <div key={member.id} className='project-members-panel__item'>
+                  {member.removeId && canRemoveMember ? (
+                    <UncontrolledDropdown className='project-members-panel__actions'>
+                      <DropdownToggle
+                        tag='button'
+                        type='button'
+                        className='project-members-panel__actions-toggle'
+                        aria-label={`Open actions for ${member.name || 'member'}`}
+                      >
+                        <i className='ph-bold ph-dots-three-vertical' />
+                      </DropdownToggle>
+                      <DropdownMenu className='project-members-panel__actions-menu'>
+                        {canManageProjectRoles ? (
+                          <>
+                            <DropdownItem
+                              type='button'
+                              onClick={() => openRoleModal(member)}
+                            >
+                              <i className='ph ph-user-switch' />
+                              <span>Set role</span>
+                            </DropdownItem>
+                            <DropdownItem divider />
+                          </>
+                        ) : null}
                         <DropdownItem
                           type='button'
-                          onClick={() => openRoleModal(member)}
+                          className='text-danger'
+                          disabled={!!removingByMemberId[String(member.removeId)]}
+                          onClick={() => onDeleteMember?.(member)}
                         >
-                          <i className='ph ph-user-switch' />
-                          <span>Set role</span>
+                          {removingByMemberId[String(member.removeId)] ? (
+                            <iconify-icon icon='line-md:loading-loop' />
+                          ) : (
+                            <i className='ph ph-trash' />
+                          )}
+                          <span>Remove</span>
                         </DropdownItem>
-                      ) : null}
-                      {canManageProjectRoles ? <DropdownItem divider /> : null}
-                      <DropdownItem
-                        type='button'
-                        className='text-danger'
-                        disabled={!!removingByMemberId[String(member.removeId)]}
-                        onClick={() => onDeleteMember?.(member)}
-                      >
-                        {removingByMemberId[String(member.removeId)] ? (
-                          <iconify-icon icon='line-md:loading-loop' />
-                        ) : (
-                          <i className='ph ph-trash' />
-                        )}
-                        <span>Remove</span>
-                      </DropdownItem>
-                    </DropdownMenu>
-                  </UncontrolledDropdown>
-                ) : null}
-                <div className='project-members-panel__avatar'>
-                  {member.avatar ? (
-                    <img src={member.avatar} alt={member.name} />
-                  ) : (
-                    <span>{member.initials}</span>
-                  )}
+                      </DropdownMenu>
+                    </UncontrolledDropdown>
+                  ) : null}
+                  <div className='project-members-panel__avatar'>
+                    {member.avatar ? (
+                      <img src={member.avatar} alt={member.name} />
+                    ) : (
+                      <span>{member.initials}</span>
+                    )}
+                  </div>
+                  <h6 className='project-members-panel__name'>{member.name}</h6>
+                  {member.displayRole ? (
+                    <span className='project-members-panel__role-badge'>
+                      {member.displayRole}
+                    </span>
+                  ) : null}
                 </div>
-                <h6 className='project-members-panel__name'>{member.name}</h6>
-                <span className='project-members-panel__role-badge'>
-                  {formatProjectRole(member.projectRole)}
-                </span>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

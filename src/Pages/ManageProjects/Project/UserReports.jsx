@@ -1,4 +1,4 @@
-import { Button, Card, Spinner, Table } from 'react-bootstrap';
+import { Button, Card, Table } from 'react-bootstrap';
 import {
   projectReportsErrorSelector,
   projectReportsLoadingSelector,
@@ -18,6 +18,7 @@ import {
 import { getReportFileIcon } from '../../../utils/reportFileIcon';
 import { formatFullDate } from '../../../utils/date';
 import AppPagination from '../../../Components/Common/AppPagination';
+import { TableRowsSkeleton } from '../../../Components/Common/LoadingSkeleton';
 
 function UserReports() {
   const { projectId, userId } = useParams();
@@ -175,12 +176,7 @@ function UserReports() {
 
               <tbody>
                 {projectReportsLoading ? (
-                  <tr>
-                    <td colSpan="5" className="text-center py-4 text-muted">
-                      <Spinner animation="border" size="sm" className="me-2" />
-                      Loading reports...
-                    </td>
-                  </tr>
+                  <TableRowsSkeleton rows={5} columns={5} firstColumn='file' />
                 ) : projectReports.length ? (
                   projectReports.map((item) => {
                     const isDeleting = deletingId === item.id;

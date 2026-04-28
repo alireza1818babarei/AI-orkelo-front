@@ -9,10 +9,10 @@ import {
   Form,
   Modal,
   Row,
-  Spinner,
   Table,
 } from 'react-bootstrap';
 import AppPagination from '../../../Components/Common/AppPagination';
+import { TableSkeleton } from '../../../Components/Common/LoadingSkeleton';
 import { alertConfirm, toastError, toastSuccess } from '../../../utils/sweetAlert';
 import {
   financialCounterpartiesErrorSelector,
@@ -348,10 +348,12 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
         ) : null}
 
         {loading ? (
-          <div className='manage-finance__state'>
-            <Spinner animation='border' />
-            <span>Loading counterparties...</span>
-          </div>
+          <TableSkeleton
+            rows={5}
+            columns={6}
+            wrapperClassName='manage-finance__counterparty-table'
+            tableClassName='table table-bordered align-middle mb-0'
+          />
         ) : counterparties.length > 0 ? (
           <div className='table-responsive manage-finance__counterparty-table'>
             <Table className='table table-bordered align-middle mb-0'>

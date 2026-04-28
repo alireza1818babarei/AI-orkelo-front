@@ -20,6 +20,10 @@ import {
 } from 'react-bootstrap';
 import api from '../../../api/axios';
 import AppPagination from '../../../Components/Common/AppPagination';
+import {
+  FinanceOperationDetailSkeleton,
+  FinanceOperationListSkeleton,
+} from '../../../Components/Common/LoadingSkeleton';
 import { formatFullDate, formatMonthDayTime } from '../../../utils/date';
 import { alertConfirm, toastError, toastSuccess } from '../../../utils/sweetAlert';
 import {
@@ -978,10 +982,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
           <Col xl={5}>
             <div className='manage-finance__operations-pane'>
               {operationsLoading ? (
-                <div className='manage-finance__state'>
-                  <Spinner animation='border' />
-                  <span>Loading operations...</span>
-                </div>
+                <FinanceOperationListSkeleton count={5} />
               ) : operationsError ? (
                 <Alert variant='danger' className='mb-0'>
                   {operationsError?.message || 'Failed to load financial operations.'}
@@ -1052,10 +1053,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
           <Col xl={7}>
             <div className='manage-finance__operations-pane'>
               {selectedOperationId && currentOperationLoading ? (
-                <div className='manage-finance__state'>
-                  <Spinner animation='border' />
-                  <span>Loading operation details...</span>
-                </div>
+                <FinanceOperationDetailSkeleton />
               ) : currentOperationError ? (
                 <Alert variant='danger' className='mb-0'>
                   {currentOperationError?.message ||

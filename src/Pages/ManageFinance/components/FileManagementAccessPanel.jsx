@@ -5,9 +5,9 @@ import {
   Button,
   Card,
   Form,
-  Spinner,
 } from 'react-bootstrap';
 import { resolveUserAvatarWithFallback } from '../../../utils/mediaUrl';
+import { FinanceAccessMembersSkeleton } from '../../../Components/Common/LoadingSkeleton';
 
 const ROLE_LABELS = {
   company_owner: 'Company Owner',
@@ -233,10 +233,7 @@ export default function FileManagementAccessPanel({
         ) : null}
 
         {loading ? (
-          <div className='manage-finance__state'>
-            <Spinner animation='border' />
-            <span>Loading members...</span>
-          </div>
+          <FinanceAccessMembersSkeleton count={5} />
         ) : filteredMembers.length > 0 ? (
           <div className='manage-finance__member-list'>
             {filteredMembers.map((member) => {

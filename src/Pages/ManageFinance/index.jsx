@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Alert, Badge, Card, Col, Row, Spinner } from 'react-bootstrap';
+import { Alert, Badge, Card, Col, Row } from 'react-bootstrap';
 import {
   fileManagementAccessErrorSelector,
   fileManagementAccessMembersSelector,
@@ -21,6 +21,7 @@ import FileManagementAccessPanel from './components/FileManagementAccessPanel';
 import FinancialCounterpartiesPanel from './components/FinancialCounterpartiesPanel';
 import FinancialOverviewPanel from './components/FinancialOverviewPanel';
 import FinancialOperationsPanel from './components/FinancialOperationsPanel';
+import { StateScreenSkeleton } from '../../Components/Common/LoadingSkeleton';
 import './manageFinance.css';
 
 const FINANCE_CENTER_TAB = 'finance-center';
@@ -142,12 +143,7 @@ export default function ManageFinance() {
   };
 
   if (!isCompanyOwner && accessProbeStatus === 'loading' && !canOpenSection) {
-    return (
-      <div className='manage-finance__state-screen'>
-        <Spinner animation='border' />
-        <span>Checking your finance access...</span>
-      </div>
-    );
+    return <StateScreenSkeleton label='Checking your finance access' />;
   }
 
   if (!canOpenSection) {

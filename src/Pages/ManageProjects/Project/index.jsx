@@ -21,13 +21,16 @@ import {
   Col,
   Table,
   Row,
-  Spinner,
   Alert,
 } from 'react-bootstrap';
 import { Button } from 'reactstrap';
 import { formatFullDate } from '../../../utils/date';
 import { resolvePublicMediaUrl } from '../../../utils/mediaUrl';
 import { getProjectMembersThunk } from '../../../store/projects/projectMembersSlice';
+import {
+  MemberListSkeleton,
+  TableSkeleton,
+} from '../../../Components/Common/LoadingSkeleton';
 
 function ProjectManager() {
   const { projectId } = useParams();
@@ -127,14 +130,28 @@ function ProjectManager() {
     return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
   };
 
-  const memberRoleNormalized = (role) => {
-    switch (role) {
+  const normalizeRole = (role) =>
+    String(role ?? '')
+      .trim()
+      .toLowerCase();
+
+  const formatProjectMemberRole = (member) => {
+    const companyRole = normalizeRole(member?.company_role);
+
+    switch (companyRole) {
+      case 'company_owner':
+        return 'Company Owner';
+      case 'company_supervisor':
+        return 'Company Supervisor';
+      default:
+        break;
+    }
+
+    switch (normalizeRole(member?.project_role)) {
       case 'project_manager':
         return 'Project Manager';
-      case 'member':
-        return 'Member';
       default:
-        return '-';
+        return '';
     }
   };
 
@@ -155,9 +172,7 @@ function ProjectManager() {
             <h5 className='header-title-text'>Project Members</h5>
             <p className='text-muted'>Click on the user to see their reports</p>
             {projectMembersStatus === 'loading' ? (
-              <div className='d-flex justify-content-center py-4'>
-                <Spinner animation='border' />
-              </div>
+              <MemberListSkeleton count={5} />
             ) : projectMembersError ? (
               <Alert variant='danger' className='mt-3 mb-0'>
                 {typeof projectMembersError === 'string'
@@ -167,47 +182,53 @@ function ProjectManager() {
             ) : (
               <ul className='messages-list mt-3'>
                 {projectMembersItems.length > 0 ? (
-                  projectMembersItems.map((member) => (
-                    <li
-                      key={member.id}
-                      className='messages-list-item cursor-pointer'
-                      onClick={() =>
-                        navigate(
-                          `/manage-projects/${projectId}/user/${member.id}`,
-                          { state: { memberName: member.name } },
-                        )
-                      }
-                    >
-                      <div
-                        className={`h-40 w-40 d-flex-center b-r-15 overflow-hidden messages-list-avtar ${
-                          member.id % 2 === 0
-                            ? 'text-bg-light'
-                            : 'text-bg-secondary'
-                        }`}
-                      >
-                        {member.avatar ? (
-                          <img
-                            src={resolvePublicMediaUrl(member.avatar)}
-                            alt={member.name}
-                            className='img-fluid'
-                          />
-                        ) : (
-                          <div className='f-s-17'>
-                            {member.name?.slice(0, 1) || '?'}
-                          </div>
-                        )}
-                      </div>
+                  projectMembersItems.map((member) => {
+                    const displayRole = formatProjectMemberRole(member);
 
-                      <div className='messages-list-content'>
-                        <h6 className='mb-0 f-s-16 capitalized'>
-                          {member.name}
-                        </h6>
-                        <p className='mb-0 f-s-13 text-secondary'>
-                          {memberRoleNormalized(member.project_role)}
-                        </p>
-                      </div>
-                    </li>
-                  ))
+                    return (
+                      <li
+                        key={member.id}
+                        className='messages-list-item cursor-pointer'
+                        onClick={() =>
+                          navigate(
+                            `/manage-projects/${projectId}/user/${member.id}`,
+                            { state: { memberName: member.name } },
+                          )
+                        }
+                      >
+                        <div
+                          className={`h-40 w-40 d-flex-center b-r-15 overflow-hidden messages-list-avtar ${
+                            member.id % 2 === 0
+                              ? 'text-bg-light'
+                              : 'text-bg-secondary'
+                          }`}
+                        >
+                          {member.avatar ? (
+                            <img
+                              src={resolvePublicMediaUrl(member.avatar)}
+                              alt={member.name}
+                              className='img-fluid'
+                            />
+                          ) : (
+                            <div className='f-s-17'>
+                              {member.name?.slice(0, 1) || '?'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className='messages-list-content'>
+                          <h6 className='mb-0 f-s-16 capitalized'>
+                            {member.name}
+                          </h6>
+                          {displayRole && (
+                            <p className='mb-0 f-s-13 text-secondary'>
+                              {displayRole}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })
                 ) : (
                   <li className='messages-list-item'>
                     <div className='messages-list-content'>
@@ -238,9 +259,13 @@ function ProjectManager() {
 
           <CardBody className='p-0'>
             {projectReportsLoading ? (
-              <div className='d-flex justify-content-center align-items-center py-5'>
-                <Spinner animation='border' />
-              </div>
+              <TableSkeleton
+                rows={5}
+                columns={6}
+                firstColumn='avatar'
+                wrapperClassName='project-reports-table-wrapper'
+                tableClassName='table table-bottom-border project-reports-table align-middle table-hover mb-0'
+              />
             ) : projectReportsError ? (
               <div className='p-3'>
                 <Alert variant='danger' className='mb-0'>

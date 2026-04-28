@@ -1682,15 +1682,27 @@ nav.dark-sidebar ~ .app-content .task-detail-timer__reset {
 }
 
 .project-members-panel__role-badge {
-  max-width: 98px;
+  // Keep role chips contained inside the narrow project members sidebar.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 86px;
+  min-width: 0;
   min-height: 23px;
-  padding: 0.25rem 0.4rem;
+  padding: 0.25rem 0.45rem;
   border-radius: 8px;
+  overflow: hidden;
   color: rgba(var(--primary), 1);
   background: rgba(var(--primary), 0.1);
   font-size: 0.62rem;
   font-weight: 700;
   line-height: 1.2;
+  letter-spacing: 0;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .project-member-role-modal__member {

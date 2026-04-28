@@ -4,9 +4,7 @@ import {
   CardHeader,
   Col,
   Row,
-  Spinner,
   Alert,
-  CardFooter,
 } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
@@ -19,6 +17,10 @@ import { getFileManagerProjects } from '../../store/FileManager/projects/project
 import { resolvePublicMediaUrl } from '../../utils/mediaUrl';
 import { useNavigate } from 'react-router-dom';
 import { getCompanyMembersThunk } from '../../store/company/companyMembersSlice';
+import {
+  MemberCardsSkeleton,
+  ProjectCardsSkeleton,
+} from '../../Components/Common/LoadingSkeleton';
 
 const normalizeRole = (role) =>
   String(role ?? '')
@@ -85,16 +87,7 @@ function ManageProjects() {
         </Col>
 
         {projectsLoading ? (
-          <Col xs={12}>
-            <div className='d-flex flex-column align-items-center justify-content-center gap-3 py-5 text-primary'>
-              <Spinner
-                animation='border'
-                role='status'
-                style={{ width: '3rem', height: '3rem' }}
-              />
-              <span className='f-s-16 f-w-500'>Loading projects...</span>
-            </div>
-          </Col>
+          <ProjectCardsSkeleton count={6} />
         ) : projectsError ? (
           <Col xs={12}>
             <Alert variant='danger' className='mb-0'>
@@ -154,12 +147,9 @@ function ManageProjects() {
                 </p>
               </div>
 
-              {membersStatus === 'loading' && members.length === 0 && (
-                <div className='d-flex align-items-center gap-2 px-2 py-2 text-muted small'>
-                  <Spinner animation='border' size='sm' />
-                  <span>Loading members...</span>
-                </div>
-              )}
+              {membersStatus === 'loading' && members.length === 0 ? (
+                <MemberCardsSkeleton count={6} />
+              ) : null}
 
               {membersError && (
                 <Alert variant='danger'>

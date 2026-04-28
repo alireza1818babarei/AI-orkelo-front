@@ -8,7 +8,6 @@ import {
   Card,
   Col,
   Row,
-  Spinner,
 } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -18,6 +17,7 @@ import {
   financialOperationSummarySelector,
 } from '../../../store/FileManager/operations/operations.selector';
 import { getFinancialOperationSummary } from '../../../store/FileManager/operations/operations.thunk';
+import { FinanceOverviewSkeleton } from '../../../Components/Common/LoadingSkeleton';
 
 // Keep period values aligned with the backend summary request validation.
 const PERIOD_OPTIONS = [
@@ -186,60 +186,59 @@ export default function FinancialOverviewPanel({ enabled = true }) {
           </Alert>
         ) : null}
 
-        <Row className='g-3 mb-4'>
-          <Col md={6} xl={3}>
-            <OverviewMetric
-              iconClass='ph-duotone ph-arrow-circle-up-right'
-              label='Total Income'
-              value={formatFinancialAmount(totals.incomeValue)}
-              helper='Approved deposits'
-              tone='income'
-            />
-          </Col>
-          <Col md={6} xl={3}>
-            <OverviewMetric
-              iconClass='ph-duotone ph-arrow-circle-down-left'
-              label='Total Outcome'
-              value={formatFinancialAmount(totals.outcomeValue)}
-              helper='Approved withdrawals'
-              tone='outcome'
-            />
-          </Col>
-          <Col md={6} xl={3}>
-            <OverviewMetric
-              iconClass='ph-duotone ph-chart-line-up'
-              label='Net Balance'
-              value={formatFinancialAmount(totals.netValue)}
-              helper='Income minus outcome'
-              tone={netTone}
-            />
-          </Col>
-          <Col md={6} xl={3}>
-            <OverviewMetric
-              iconClass='ph-duotone ph-clock-countdown'
-              label='Pending Review'
-              value={formatFinancialAmount(totals.pendingAmountValue)}
-              helper={`${pendingCount} pending operation${pendingCount === 1 ? '' : 's'}`}
-              tone='pending'
-            />
-          </Col>
-        </Row>
+        {loading ? (
+          <FinanceOverviewSkeleton />
+        ) : (
+          <>
+            <Row className='g-3 mb-4'>
+              <Col md={6} xl={3}>
+                <OverviewMetric
+                  iconClass='ph-duotone ph-arrow-circle-up-right'
+                  label='Total Income'
+                  value={formatFinancialAmount(totals.incomeValue)}
+                  helper='Approved deposits'
+                  tone='income'
+                />
+              </Col>
+              <Col md={6} xl={3}>
+                <OverviewMetric
+                  iconClass='ph-duotone ph-arrow-circle-down-left'
+                  label='Total Outcome'
+                  value={formatFinancialAmount(totals.outcomeValue)}
+                  helper='Approved withdrawals'
+                  tone='outcome'
+                />
+              </Col>
+              <Col md={6} xl={3}>
+                <OverviewMetric
+                  iconClass='ph-duotone ph-chart-line-up'
+                  label='Net Balance'
+                  value={formatFinancialAmount(totals.netValue)}
+                  helper='Income minus outcome'
+                  tone={netTone}
+                />
+              </Col>
+              <Col md={6} xl={3}>
+                <OverviewMetric
+                  iconClass='ph-duotone ph-clock-countdown'
+                  label='Pending Review'
+                  value={formatFinancialAmount(totals.pendingAmountValue)}
+                  helper={`${pendingCount} pending operation${pendingCount === 1 ? '' : 's'}`}
+                  tone='pending'
+                />
+              </Col>
+            </Row>
 
-        <div className='manage-finance__overview-chart'>
-          {loading ? (
-            <div className='manage-finance__overview-loading'>
-              <Spinner animation='border' />
-              <span>Loading financial overview...</span>
+            <div className='manage-finance__overview-chart'>
+              <Chart
+                options={chartOptions}
+                series={chartSeries}
+                type='line'
+                height={350}
+              />
             </div>
-          ) : (
-            <Chart
-              options={chartOptions}
-              series={chartSeries}
-              type='line'
-              height={350}
-            />
-          )}
-        </div>
+          </>
+        )}
       </Card.Body>
     </Card>
   );
