@@ -1,16 +1,19 @@
 import React, { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { toastSuccess } from '../../utils/sweetAlert';
+import { useDispatch, useSelector } from 'react-redux';
+import { toastError, toastSuccess } from '../../utils/sweetAlert';
 import HomePanel from './components/HomePanel';
 import { HOME_PROJECT_FALLBACK_ITEMS, HOME_TASK_ITEMS } from './data/home.data';
 import './home.css';
 import TrackingTasks from './components/TrackingTasks';
 import { formatFullDate } from '../../utils/date';
+import { markNotificationAsReadThunk } from '../../store/notifications/notificationsSlice';
+import { resolveNotificationTarget } from '../../utils/notificationNavigation';
 
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const user = useSelector((s) => s.auth?.user ?? null);
   const projects = useSelector((s) => s.projects?.items ?? []);
@@ -51,6 +54,8 @@ const Home = () => {
         title: notification.title,
         body: notification.body,
         time: formatFullDate(notification.created_at),
+        isRead: Boolean(notification.is_read),
+        target: resolveNotificationTarget(notification),
       }));
     } else {
       return 'You dont have any notification yet.';
@@ -58,6 +63,24 @@ const Home = () => {
   }, [notifications]);
 
   const userName = String(user?.name || 'there').trim() || 'there';
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification?.target?.path) return;
+
+    // Keep the unread badge accurate when users open a notification from the dashboard.
+    if (notification.id && !notification.isRead) {
+      try {
+        await dispatch(
+          markNotificationAsReadThunk({ notificationId: notification.id }),
+        ).unwrap();
+      } catch (err) {
+        toastError(err?.message || 'Failed to mark notification as seen');
+        return;
+      }
+    }
+
+    navigate(notification.target.path);
+  };
 
   return (
     <section className='home-dashboard' aria-label='Home dashboard'>
@@ -90,10 +113,29 @@ const Home = () => {
                     key={notification.id || notification.title}
                     className='home-list__item'
                   >
-                    <span className='home-list__title'>
-                      {notification.title}
-                    </span>
-                    <span className='home-list__meta'>{notification.time}</span>
+                    {notification.target ? (
+                      <button
+                        type='button'
+                        className='home-list__button'
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                        <span className='home-list__title'>
+                          {notification.title}
+                        </span>
+                        <span className='home-list__meta'>
+                          {notification.time}
+                        </span>
+                      </button>
+                    ) : (
+                      <>
+                        <span className='home-list__title'>
+                          {notification.title}
+                        </span>
+                        <span className='home-list__meta'>
+                          {notification.time}
+                        </span>
+                      </>
+                    )}
                   </li>
                 ))
               ) : (

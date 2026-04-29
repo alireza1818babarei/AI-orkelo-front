@@ -261,7 +261,7 @@ function ProjectManager() {
             {projectReportsLoading ? (
               <TableSkeleton
                 rows={5}
-                columns={6}
+                columns={7}
                 firstColumn='avatar'
                 wrapperClassName='project-reports-table-wrapper'
                 tableClassName='table table-bottom-border project-reports-table align-middle table-hover mb-0'
@@ -280,6 +280,7 @@ function ProjectManager() {
                   <colgroup>
                     <col className='project-reports-table__name-col' />
                     <col className='project-reports-table__file-col' />
+                    <col className='project-reports-table__description-col' />
                     <col className='project-reports-table__project-col' />
                     <col className='project-reports-table__size-col' />
                     <col className='project-reports-table__date-col' />
@@ -290,6 +291,7 @@ function ProjectManager() {
                     <tr>
                       <th>Name</th>
                       <th>File name</th>
+                      <th>Description</th>
                       <th>Project Name</th>
                       <th>Size</th>
                       <th>Uploaded At</th>
@@ -333,6 +335,14 @@ function ProjectManager() {
                             <td>
                               <span className='project-reports-table__text'>
                                 {item.reportName || '-'}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className='project-reports-table__text project-reports-table__description'
+                                title={item.description || ''}
+                              >
+                                {item.description || '-'}
                               </span>
                             </td>
                             <td>
@@ -420,7 +430,7 @@ function ProjectManager() {
                       })
                     ) : (
                       <tr>
-                        <td colSpan='6' className='text-center py-4'>
+                        <td colSpan='7' className='text-center py-4'>
                           No reports found
                         </td>
                       </tr>

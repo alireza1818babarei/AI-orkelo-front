@@ -435,6 +435,17 @@ header {
           .notification-message {
             position: relative;
 
+            &.notification-message--clickable {
+              cursor: pointer;
+              transition: background-color 0.18s ease, border-color 0.18s ease;
+            }
+
+            &.notification-message--clickable:hover,
+            &.notification-message--clickable:focus-visible {
+              background-color: rgba(var(--primary), 0.08);
+              outline: 0;
+            }
+
             .message-images {
               position: absolute;
               top: 22px;

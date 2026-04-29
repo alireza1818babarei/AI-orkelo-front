@@ -30,15 +30,19 @@
 }
 
 .project-reports-table__name-col {
-  width: 28%;
+  width: 22%;
 }
 
 .project-reports-table__file-col {
-  width: 19%;
+  width: 18%;
+}
+
+.project-reports-table__description-col {
+  width: 18%;
 }
 
 .project-reports-table__project-col {
-  width: 17%;
+  width: 14%;
 }
 
 .project-reports-table__size-col {
@@ -46,11 +50,11 @@
 }
 
 .project-reports-table__date-col {
-  width: 14%;
+  width: 10%;
 }
 
 .project-reports-table__actions-col {
-  width: 14%;
+  width: 10%;
 }
 
 .project-reports-table__user {
@@ -90,6 +94,10 @@
   white-space: nowrap;
 }
 
+.project-reports-table__description {
+  color: rgba(var(--secondary), 0.95);
+}
+
 .project-reports-table__actions {
   display: flex;
   align-items: center;
@@ -106,6 +114,6 @@
   }
 
   .project-reports-table {
-    min-width: 760px;
+    min-width: 960px;
   }
 }

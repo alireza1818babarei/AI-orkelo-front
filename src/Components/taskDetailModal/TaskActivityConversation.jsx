@@ -19,6 +19,7 @@ const normalizeActionLabel = (action) => {
   if (a === 'checklist_item.created') return 'Checklist item added';
   if (a === 'checklist_item.completed') return 'Checklist item completed';
   if (a === 'checklist_item.deleted') return 'Checklist item deleted';
+  if (a === 'tracker_expired') return 'Timer expired';
   if (a === 'task.created') return 'Task created';
   if (a === 'task.completed') return 'Task completed';
   if (a === 'task.assignee.assigned') return 'Assignee assigned';
@@ -67,6 +68,14 @@ const resolveActivityUi = (action) => {
       titleClass: 'text-secondary',
       iconWrapClass: 'text-light-secondary',
       contentClass: 'bg-light-secondary b-1-secondary',
+    };
+  }
+  if (a === 'tracker_expired') {
+    return {
+      iconClass: 'ti ti-alert-triangle',
+      titleClass: 'text-danger',
+      iconWrapClass: 'text-light-danger',
+      contentClass: 'bg-light-danger b-1-danger',
     };
   }
   if (a === 'task.assignee.cleared') {
@@ -217,6 +226,14 @@ const buildActivityMessage = (item, checklistItemTextById) => {
   if (action === 'tracker_started') return 'started the timer';
   if (action === 'tracker_resumed') return 'resumed the timer';
   if (action === 'tracker_stopped') return 'stopped the timer';
+  if (action === 'tracker_expired') {
+    // Use the backend-provided limit so the message stays accurate if the tracker policy changes.
+    const maxDurationHours = Number(properties?.max_duration_hours ?? 24);
+
+    return Number.isFinite(maxDurationHours) && maxDurationHours > 0
+      ? `timer expired after ${maxDurationHours} hours`
+      : 'timer expired';
+  }
   if (action === 'task.created') {
     return taskTitle ? `created the task ${taskTitle}` : 'created the task';
   }

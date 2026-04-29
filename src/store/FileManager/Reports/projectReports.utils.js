@@ -6,6 +6,7 @@ export const normalizedProjectReport = (reports = []) => {
     createdAt: report.created_at,
     downloadUrl: report.download_url,
     reportName: report.original_name,
+    description: report.description || '',
     projectName: report.project?.name || '-',
     reportSize: report.size,
     uploaderName: report.uploader?.name || '-',

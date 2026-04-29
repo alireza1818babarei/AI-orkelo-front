@@ -5,6 +5,8 @@ import {
 } from './reportFileFormats';
 
 export const dailyReportSchema = Yup.object({
+  // The backend accepts description as nullable text, so the upload form can submit it optionally.
+  description: Yup.string().nullable(),
   file: Yup.mixed()
     .required('File is required')
     .test(

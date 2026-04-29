@@ -35,6 +35,7 @@ import {
   markAllNotificationsReadThunk,
   markNotificationAsReadThunk,
 } from "../../store/notifications/notificationsSlice.js";
+import { resolveNotificationTarget } from "../../utils/notificationNavigation.js";
 
 const HeaderMenu = () => {
   const navigate = useNavigate();
@@ -75,6 +76,7 @@ const HeaderMenu = () => {
   } = useSelector((s) => s.notifications || {});
 
   const companyMenuRef = useRef(null);
+  const notificationCanvasRef = useRef(null);
   const [companyActionOpen, setCompanyActionOpen] = useState(false);
   const [companyMembersModalOpen, setCompanyMembersModalOpen] = useState(false);
   const [companyAddMemberModalOpen, setCompanyAddMemberModalOpen] =
@@ -295,6 +297,40 @@ const HeaderMenu = () => {
     }
   };
 
+  const closeNotificationCanvas = () => {
+    // Reuse Bootstrap's own dismiss behavior so the backdrop and body classes are cleaned up correctly.
+    notificationCanvasRef.current
+      ?.querySelector('[data-bs-dismiss="offcanvas"]')
+      ?.click();
+  };
+
+  const handleOpenNotification = async (notification) => {
+    const target = resolveNotificationTarget(notification);
+    if (!target?.path) return;
+
+    const notificationId = String(notification?.id ?? "");
+    if (notificationId && !notification?.is_read) {
+      try {
+        await dispatch(
+          markNotificationAsReadThunk({ notificationId }),
+        ).unwrap();
+      } catch (err) {
+        toastError(err?.message || "Failed to mark notification as seen");
+        return;
+      }
+    }
+
+    closeNotificationCanvas();
+    navigate(target.path);
+  };
+
+  const handleNotificationKeyDown = (event, notification) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    handleOpenNotification(notification);
+  };
+
   const companyMenuActions = [
     ...(canEditCompany
       ? [
@@ -352,6 +388,7 @@ const HeaderMenu = () => {
             ) : null}
           </a>
           <div
+            ref={notificationCanvasRef}
             className="offcanvas offcanvas-end header-notification-canvas"
             tabIndex="-1"
             id="notificationcanvasRight"
@@ -408,6 +445,7 @@ const HeaderMenu = () => {
                   notificationsItems.map((notification) => {
                     const notificationId = String(notification?.id ?? "");
                     const isRead = Boolean(notification?.is_read);
+                    const target = resolveNotificationTarget(notification);
                     const actorName =
                       notification?.actor?.name ??
                       notification?.title ??
@@ -419,7 +457,29 @@ const HeaderMenu = () => {
                     return (
                       <div
                         key={notificationId || notification?.created_at}
-                        className="notification-message head-box"
+                        className={`notification-message head-box ${
+                          target ? "notification-message--clickable" : ""
+                        }`}
+                        role={target ? "button" : undefined}
+                        tabIndex={target ? 0 : undefined}
+                        aria-label={
+                          target
+                            ? `${target.label}: ${
+                                notification?.title ?? "Notification"
+                              }`
+                            : undefined
+                        }
+                        onClick={
+                          target
+                            ? () => handleOpenNotification(notification)
+                            : undefined
+                        }
+                        onKeyDown={
+                          target
+                            ? (event) =>
+                                handleNotificationKeyDown(event, notification)
+                            : undefined
+                        }
                       >
                         <div className="message-images">
                           <span
@@ -465,7 +525,10 @@ const HeaderMenu = () => {
                               <button
                                 type="button"
                                 className="notification-mark-read-btn btn btn-outline-primary mt-1"
-                                onClick={() => handleMarkAsSeen(notificationId)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleMarkAsSeen(notificationId);
+                                }}
                                 disabled={Boolean(
                                   notificationsMarkingById[notificationId],
                                 )}

@@ -6,6 +6,9 @@ import {
   CardHeader,
   Col,
   Container,
+  Modal,
+  ModalBody,
+  ModalHeader,
   Row,
   Spinner,
 } from 'reactstrap';
@@ -48,6 +51,7 @@ function MyProjects() {
   const quickAccessItems = useSelector(selectQuickAccessItems);
   const quickAccessLoading = useSelector(selectQuickAccessLoading);
   const [quickAccessBusyId, setQuickAccessBusyId] = useState(null);
+  const [descriptionModalReport, setDescriptionModalReport] = useState(null);
   const currentProject = myProjectsItems.find(
     (project) => String(project.id) === String(projectId),
   );
@@ -67,11 +71,13 @@ function MyProjects() {
     dispatch(getMyProjects());
   }, [currentProject, dispatch]);
 
-  const handleUpload = async (file) => {
+  const handleUpload = async (file, description = '') => {
     try {
-      await dailyReportSchema.validate({ file });
+      await dailyReportSchema.validate({ file, description });
 
-      await dispatch(uploadDailyReport({ projectId, file })).unwrap();
+      await dispatch(
+        uploadDailyReport({ projectId, file, description }),
+      ).unwrap();
       await dispatch(
         getDailyReports({ project_id: projectId, page: 1, per_page: 10 }),
       ).unwrap();
@@ -113,6 +119,10 @@ function MyProjects() {
     } finally {
       setQuickAccessBusyId(null);
     }
+  };
+
+  const closeDescriptionModal = () => {
+    setDescriptionModalReport(null);
   };
 
   const handleBack = () => {
@@ -210,6 +220,20 @@ function MyProjects() {
                             >
                               {item.originalName}
                             </p>
+                            {item.description ? (
+                              <button
+                                type='button'
+                                className='quick-access__description'
+                                title={item.description}
+                                onClick={() => setDescriptionModalReport(item)}
+                              >
+                                {item.description}
+                              </button>
+                            ) : (
+                              <span className='quick-access__description quick-access__description--empty'>
+                                No description
+                              </span>
+                            )}
                             <span className='d-block text-center text-secondary f-s-12'>
                               {formatDateTime(item.createdAt)}
                             </span>
@@ -228,6 +252,25 @@ function MyProjects() {
           <FileTable projectId={projectId} onChanged={refreshQuickAccess} />
         </Col>
       </Row>
+
+      <Modal
+        isOpen={Boolean(descriptionModalReport)}
+        toggle={closeDescriptionModal}
+        centered
+        size='md'
+      >
+        <ModalHeader toggle={closeDescriptionModal}>
+          Report Description
+        </ModalHeader>
+        <ModalBody>
+          <div className='daily-report-description-modal__file'>
+            {descriptionModalReport?.originalName || 'Report'}
+          </div>
+          <div className='daily-report-description-modal__text'>
+            {descriptionModalReport?.description || '-'}
+          </div>
+        </ModalBody>
+      </Modal>
     </Container>
   );
 }

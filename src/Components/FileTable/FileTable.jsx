@@ -68,8 +68,6 @@ const FileTable = ({ projectId, onChanged }) => {
     ? `Showing ${reportsStart} to ${reportsEnd} of ${meta.total} reports`
     : 'No reports found.';
 
-  console.log(dailyReportItems);
-
   useEffect(() => {
     if (!projectId) return;
 
@@ -161,10 +159,11 @@ const FileTable = ({ projectId, onChanged }) => {
 
       <CardBody className='p-0'>
         <div className='table-responsive'>
-          <Table className='table table-bottom-border recent-table align-middle table-hover mb-0'>
+          <Table className='table table-bottom-border recent-table daily-reports-table align-middle table-hover mb-0'>
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Description</th>
                 <th>Project</th>
                 <th>Size</th>
                 <th>Uploaded At</th>
@@ -175,7 +174,7 @@ const FileTable = ({ projectId, onChanged }) => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan='5' className='text-center py-4 text-muted'>
+                  <td colSpan='6' className='text-center py-4 text-muted'>
                     <Spinner size='sm' color='primary' className='me-2' />
                     Loading reports...
                   </td>
@@ -196,6 +195,14 @@ const FileTable = ({ projectId, onChanged }) => {
                           />
                           <span className='table-text'>{item.originalName}</span>
                         </div>
+                      </td>
+                      <td>
+                        <span
+                          className='daily-reports-table__description'
+                          title={item.description || ''}
+                        >
+                          {item.description || '-'}
+                        </span>
                       </td>
                       <td>{item.project?.name || '-'}</td>
                       <td>{formatBytes(item.size)}</td>
@@ -230,7 +237,7 @@ const FileTable = ({ projectId, onChanged }) => {
                 })
               ) : (
                 <tr>
-                  <td colSpan='5' className='text-center py-4 text-muted'>
+                  <td colSpan='6' className='text-center py-4 text-muted'>
                     No reports found.
                   </td>
                 </tr>

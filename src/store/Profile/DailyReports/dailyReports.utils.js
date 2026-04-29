@@ -27,6 +27,7 @@ export const normalizeReport = (report) => {
     projectId: report.project_id,
     uploadedBy: report.uploaded_by,
     originalName: report.original_name,
+    description: report.description || '',
     mime: report.mime,
     size: report.size,
     downloadUrl: report.download_url,

@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../../utils/getError';
 
 export const uploadDailyReport = createAsyncThunk(
   'dailyReports/uploadDailyReport',
-  async ({ projectId, file }, { rejectWithValue }) => {
+  async ({ projectId, file, description = '' }, { rejectWithValue }) => {
     const id = String(projectId ?? '').trim();
 
     if (!id) {
@@ -22,6 +22,12 @@ export const uploadDailyReport = createAsyncThunk(
     try {
       const formData = new FormData();
       formData.append('file', file);
+
+      const normalizedDescription = String(description ?? '').trim();
+      if (normalizedDescription) {
+        // The reports API accepts nullable description text alongside the uploaded file.
+        formData.append('description', normalizedDescription);
+      }
 
       const response = await api.post(
         `/file-management/projects/${id}/reports`,

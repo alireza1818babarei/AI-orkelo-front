@@ -122,6 +122,25 @@
   background: rgba(255, 255, 255, 0.45);
 }
 
+.home-list__button {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-list__button:focus-visible {
+  outline: 2px solid rgba(var(--primary), 0.6);
+  outline-offset: 3px;
+}
+
 .home-list__title {
   color: rgba(var(--dark), 0.95);
   white-space: nowrap;

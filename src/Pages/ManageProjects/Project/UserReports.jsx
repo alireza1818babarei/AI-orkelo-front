@@ -167,6 +167,7 @@ function UserReports() {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>Description</th>
                   <th>Project</th>
                   <th>Size</th>
                   <th>Uploaded At</th>
@@ -176,7 +177,7 @@ function UserReports() {
 
               <tbody>
                 {projectReportsLoading ? (
-                  <TableRowsSkeleton rows={5} columns={5} firstColumn='file' />
+                  <TableRowsSkeleton rows={5} columns={6} firstColumn='file' />
                 ) : projectReports.length ? (
                   projectReports.map((item) => {
                     const isDeleting = deletingId === item.id;
@@ -195,6 +196,14 @@ function UserReports() {
                           </div>
                         </td>
 
+                        <td>
+                          <span
+                            className="daily-reports-table__description"
+                            title={item.description || ''}
+                          >
+                            {item.description || '-'}
+                          </span>
+                        </td>
                         <td>{item.projectName || '-'}</td>
                         <td>{formatBytes(item.reportSize)}</td>
                         <td>{formatFullDate(item.createdAt)}</td>
@@ -225,7 +234,7 @@ function UserReports() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" className="text-center py-4 text-muted">
+                    <td colSpan="6" className="text-center py-4 text-muted">
                       No reports found.
                     </td>
                   </tr>
