@@ -254,6 +254,26 @@ nav.dark-sidebar
   z-index: 999999;
 }
 
+.board-item-meta {
+  min-width: 0;
+  padding-right: 52px;
+}
+
+.board-item-meta-item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: rgba(var(--secondary), 0.72);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.board-item-meta-icon {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 /* Completed states */
 .board-item.task-completed .board-item-content {
   border: 2px solid rgba(var(--success));

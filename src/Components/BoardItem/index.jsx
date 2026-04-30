@@ -7,6 +7,8 @@ const BoardItem = ({
   taskBody,
   taskDate,
   taskFileAttachCount,
+  taskChecklistCompletedCount,
+  taskChecklistTotalCount,
   taskTags,
   taskUserImg,
   isCompleted = false,
@@ -41,12 +43,23 @@ const BoardItem = ({
   const taskDateText = String(taskDate ?? '').trim();
   const taskFileAttachCountText = String(taskFileAttachCount ?? '').trim();
   const taskFileAttachCountNumber = Number(taskFileAttachCountText);
+  const normalizeCount = (value) => {
+    const count = Number(value);
+    return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  };
+  const checklistTotalCount = normalizeCount(taskChecklistTotalCount);
+  const checklistCompletedCount = Math.min(
+    normalizeCount(taskChecklistCompletedCount),
+    checklistTotalCount,
+  );
+  const showTaskChecklistProgress = checklistTotalCount > 0;
   const showTaskDate = Boolean(taskDateText);
   const showTaskFileAttachCount =
     Boolean(taskFileAttachCountText) &&
     (!Number.isFinite(taskFileAttachCountNumber) ||
       taskFileAttachCountNumber > 0);
-  const showTaskMeta = showTaskDate || showTaskFileAttachCount;
+  const showTaskMeta =
+    showTaskDate || showTaskFileAttachCount || showTaskChecklistProgress;
   const getTagName = (t) =>
     t?.name ?? t?.title ?? t?.label ?? t?.text ?? String(t ?? '');
   const getTagColor = (t) => String(t?.color ?? t?.hex ?? '').trim();
@@ -201,13 +214,9 @@ const BoardItem = ({
 
           {showTaskMeta ? (
             <div className='d-flex align-items-center justify-content-between'>
-              <div className='board-item-meta'>
+              <div className='board-item-meta d-flex align-items-center flex-wrap gap-2'>
                 {showTaskDate ? (
-                  <span
-                    className={`board-item-meta-item ${
-                      showTaskFileAttachCount ? 'me-2' : ''
-                    }`}
-                  >
+                  <span className='board-item-meta-item'>
                     <i className='ti ti-calendar board-item-meta-icon'></i>{' '}
                     <span className='f-s-14'>{taskDateText}</span>
                   </span>
@@ -216,6 +225,18 @@ const BoardItem = ({
                   <span className='board-item-meta-item'>
                     <i className='ti ti-unlink board-item-meta-icon'></i>{' '}
                     <span className='f-s-14'>{taskFileAttachCountText}</span>
+                  </span>
+                ) : null}
+                {showTaskChecklistProgress ? (
+                  <span
+                    className='board-item-meta-item'
+                    title={`${checklistCompletedCount} of ${checklistTotalCount} checklist items checked`}
+                    aria-label={`${checklistCompletedCount} of ${checklistTotalCount} checklist items checked`}
+                  >
+                    <i className='ti ti-list-check board-item-meta-icon'></i>{' '}
+                    <span className='f-s-14'>
+                      {checklistCompletedCount}/{checklistTotalCount}
+                    </span>
                   </span>
                 ) : null}
               </div>

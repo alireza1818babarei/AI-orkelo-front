@@ -115,6 +115,21 @@ const formatHoursMinutes = (totalSeconds) => {
   return `${hours}h ${minutes}m`;
 };
 
+const countChecklistProgress = (items = []) =>
+  (Array.isArray(items) ? items : []).reduce(
+    (summary, item) => {
+      const childrenSummary = countChecklistProgress(item?.children || []);
+      return {
+        total: summary.total + 1 + childrenSummary.total,
+        completed:
+          summary.completed +
+          (item?.is_completed ? 1 : 0) +
+          childrenSummary.completed,
+      };
+    },
+    { total: 0, completed: 0 },
+  );
+
 const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectMembers = [] }) => {
   const propTask = task || {};
 
@@ -264,6 +279,34 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     const url = getTaskUpdateUrl();
     if (!url) throw new Error("Project/column/task id missing");
     return api.patch(url, payload);
+  };
+  const refreshTaskCard = () => {
+    const columnIdForStore = resolvedColumnId ?? taskColumnId;
+    if (!effectiveProjectId || !columnIdForStore) return;
+
+    dispatch(
+      getColumnTasksThunk({
+        projectId: effectiveProjectId,
+        columnId: columnIdForStore,
+        force: true,
+      }),
+    );
+  };
+  const updateTaskCardChecklistProgress = (items) => {
+    if (!taskId) return;
+
+    const progress = countChecklistProgress(items);
+
+    dispatch(
+      updateTaskInColumn({
+        columnId: resolvedColumnId ?? taskColumnId,
+        taskId,
+        patch: {
+          checklist_items_total: progress.total,
+          checklist_items_completed_count: progress.completed,
+        },
+      }),
+    );
   };
 
   // comments + activity are rendered in TaskActivityConversation
@@ -509,12 +552,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         _savedText: item.text ?? trimmed,
         children: item.children || [],
       };
-      setChecklistItems((prev) =>
-        parentId
-          ? addChildToTree(prev, parentId, nextItem)
-          : [...prev, nextItem],
-      );
+      const nextItems = parentId
+        ? addChildToTree(checklistItems, parentId, nextItem)
+        : [...checklistItems, nextItem];
+      setChecklistItems(nextItems);
+      updateTaskCardChecklistProgress(nextItems);
       refreshDetail();
+      refreshTaskCard();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -765,13 +809,14 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         `/projects/${projectId}/tasks/${taskId}/checklist-items/${item.id}`,
         { is_completed: checked ? 1 : 0 },
       );
-      setChecklistItems((prev) =>
-        updateItemInTree(prev, item.id, (i) => ({
-          ...i,
-          is_completed: checked ? 1 : 0,
-        })),
-      );
+      const nextItems = updateItemInTree(checklistItems, item.id, (i) => ({
+        ...i,
+        is_completed: checked ? 1 : 0,
+      }));
+      setChecklistItems(nextItems);
+      updateTaskCardChecklistProgress(nextItems);
       refreshDetail();
+      refreshTaskCard();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -797,8 +842,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
             ...i,
             children: removeFromTree(i.children || []),
           }));
-      setChecklistItems((prev) => removeFromTree(prev));
+      const nextItems = removeFromTree(checklistItems);
+      setChecklistItems(nextItems);
+      updateTaskCardChecklistProgress(nextItems);
       refreshDetail();
+      refreshTaskCard();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||

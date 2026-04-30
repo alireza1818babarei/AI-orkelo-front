@@ -38,6 +38,64 @@ const getTaskAttachmentCount = (task) => {
   return 0;
 };
 
+const normalizeNonNegativeCount = (value) => {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 0) return Math.floor(parsed);
+  }
+
+  return null;
+};
+
+const isChecklistItemChecked = (item) => {
+  const value = item?.is_completed;
+  if (value === true || value === 1) return true;
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
+};
+
+const countChecklistItems = (items = []) =>
+  (Array.isArray(items) ? items : []).reduce(
+    (summary, item) => {
+      const childrenSummary = countChecklistItems(item?.children || []);
+      return {
+        total: summary.total + 1 + childrenSummary.total,
+        completed:
+          summary.completed +
+          (isChecklistItemChecked(item) ? 1 : 0) +
+          childrenSummary.completed,
+      };
+    },
+    { total: 0, completed: 0 },
+  );
+
+const getTaskChecklistProgress = (task) => {
+  const total = normalizeNonNegativeCount(
+    task?.checklist_items_total ??
+      task?.checklistItemsTotal ??
+      task?.checklist_total_count,
+  );
+  const completed = normalizeNonNegativeCount(
+    task?.checklist_items_completed_count ??
+      task?.checklistItemsCompletedCount ??
+      task?.checklist_items_checked,
+  );
+
+  if (total !== null) {
+    return {
+      total,
+      completed: Math.min(completed ?? 0, total),
+    };
+  }
+
+  // Count nested checklist items when the task was sourced from a detail payload.
+  return countChecklistItems(task?.checklist_items || task?.checklistItems || []);
+};
+
 const normalizeBoard = (columns = []) => {
   const tasksById = {};
   const nextColumns = (columns || []).map((col) => {
@@ -161,6 +219,7 @@ const TaskCard = memo(function TaskCard({
 }) {
   if (!task) return null;
   const completed = isTaskCompleted(task);
+  const checklistProgress = getTaskChecklistProgress(task);
   const overdue = !completed && isTaskOverdue(task);
   const trackingActive =
     String(task?.type ?? "")
@@ -251,6 +310,8 @@ const TaskCard = memo(function TaskCard({
         taskBody={task.description || ""}
         taskDate={formatTaskDate(task)}
         taskFileAttachCount={getTaskAttachmentCount(task) || "0"}
+        taskChecklistCompletedCount={checklistProgress.completed}
+        taskChecklistTotalCount={checklistProgress.total}
         taskTags={task.tags ?? []}
         taskUserImg={resolveTaskAssigneeAvatar(task)}
         isCompleted={completed}
