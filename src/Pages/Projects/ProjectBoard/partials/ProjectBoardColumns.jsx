@@ -1,4 +1,5 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
 import { createPortal } from "react-dom";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 
@@ -539,9 +540,7 @@ const ProjectBoardColumns = ({
     delete columnContentElsRef.current[key];
   }, []);
 
-  const scrollColumnToBottom = useCallback((columnId, behavior = "smooth") => {
-    const key = String(columnId ?? "");
-    const el = columnContentElsRef.current[key];
+  const scrollContentElementToBottom = useCallback((el, behavior = "auto") => {
     if (!el) return false;
 
     if (typeof el.scrollTo === "function") {
@@ -555,6 +554,45 @@ const ProjectBoardColumns = ({
 
     return true;
   }, []);
+
+  const scrollColumnToBottom = useCallback(
+    (columnId, behavior = "smooth") => {
+      const key = String(columnId ?? "");
+      return scrollContentElementToBottom(
+        columnContentElsRef.current[key],
+        behavior,
+      );
+    },
+    [scrollContentElementToBottom],
+  );
+
+  const scrollAllColumnsToBottom = useCallback(
+    (behavior = "auto") => {
+      Object.values(columnContentElsRef.current || {}).forEach((el) => {
+        scrollContentElementToBottom(el, behavior);
+      });
+    },
+    [scrollContentElementToBottom],
+  );
+
+  useLayoutEffect(() => {
+    if (isDraggingRef.current) return undefined;
+
+    let raf1 = 0;
+    let raf2 = 0;
+
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        scrollAllColumnsToBottom("auto");
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+    };
+  }, [board, status, tasksLoading, scrollAllColumnsToBottom]);
+
 
   useEffect(() => {
     if (isDraggingRef.current) return;

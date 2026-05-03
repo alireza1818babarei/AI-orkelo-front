@@ -41,12 +41,22 @@ import TaskTimer from "./TaskTimer";
 import { restoreArchivedTasks } from "../../store/projects/projectArchivedTasksSlice";
 import { getTextDirectionProps } from "../../utils/textDirection";
 
+const getChecklistOrder = (item) => {
+  const value = Number(item?.position ?? 0);
+  return Number.isFinite(value) ? value : 0;
+};
+
 const sortChecklistByPosition = (items = []) =>
   [...(items || [])].sort((a, b) => {
-    const aPos = Number(a?.position ?? 0);
-    const bPos = Number(b?.position ?? 0);
-    if (aPos !== bPos) return aPos - bPos;
-    return String(a?.id ?? "").localeCompare(String(b?.id ?? ""));
+    const aCompleted = a?.is_completed ? 1 : 0;
+    const bCompleted = b?.is_completed ? 1 : 0;
+
+    if (aCompleted !== bCompleted) return aCompleted - bCompleted;
+
+    const positionDiff = getChecklistOrder(a) - getChecklistOrder(b);
+    if (positionDiff !== 0) return positionDiff;
+
+    return Number(a?.id ?? 0) - Number(b?.id ?? 0);
   });
 
 const arrayMove = (list, from, to) => {
@@ -313,11 +323,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
 
   const isSaveCombo = (e) => e.key === "Enter" && !e.shiftKey;
 
-  const normalizeTree = (items) =>
+  const normalizeTree = (items = []) =>
     sortChecklistByPosition(items).map((item) => ({
       ...item,
+      is_completed: !!item.is_completed,
       text: item.text ?? "",
-      _savedText: item.text ?? "",
+      _savedText: item._savedText ?? item.text ?? "",
       children: normalizeTree(item.children || []),
     }));
 
@@ -384,6 +395,15 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
       return item;
     });
   };
+
+  const normalizeDraggedChecklistOrder = (items = [], parentId = null) =>
+    sortChecklistByPosition(items).map((item, index) => ({
+      ...item,
+      is_completed: !!item.is_completed,
+      parent_item_id: parentId ?? null,
+      position: index + 1,
+      children: normalizeDraggedChecklistOrder(item.children || [], item.id),
+    }));
 
   const collectChecklistSiblingIds = (items, parentId) => {
     const toIds = (list) =>
@@ -553,8 +573,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         children: item.children || [],
       };
       const nextItems = parentId
-        ? addChildToTree(checklistItems, parentId, nextItem)
-        : [...checklistItems, nextItem];
+        ? normalizeTree(addChildToTree(checklistItems, parentId, nextItem))
+        : normalizeTree([...checklistItems, nextItem]);
       setChecklistItems(nextItems);
       updateTaskCardChecklistProgress(nextItems);
       refreshDetail();
@@ -809,10 +829,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         `/projects/${projectId}/tasks/${taskId}/checklist-items/${item.id}`,
         { is_completed: checked ? 1 : 0 },
       );
-      const nextItems = updateItemInTree(checklistItems, item.id, (i) => ({
-        ...i,
-        is_completed: checked ? 1 : 0,
-      }));
+      const nextItems = normalizeTree(
+        updateItemInTree(checklistItems, item.id, (i) => ({
+          ...i,
+          is_completed: !!checked,
+        })),
+      );
+
       setChecklistItems(nextItems);
       updateTaskCardChecklistProgress(nextItems);
       refreshDetail();
@@ -858,6 +881,16 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     }
   };
 
+  const completeChecklistTree = (items = []) =>
+    normalizeTree(
+      items.map((item) => ({
+        ...item,
+        is_completed: true,
+        children: completeChecklistTree(item.children || []),
+      })),
+    );
+
+
   const handleCompleteTask = async () => {
     if (taskCompleted || taskCompleting) return;
     if (!projectId || !taskId) return;
@@ -887,6 +920,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
       const completedAt =
         deriveCompletedAt(updated) ?? new Date().toISOString();
       setTaskCompletedAt(completedAt);
+      const completedChecklistItems = completeChecklistTree(checklistItems);
+      setChecklistItems(completedChecklistItems);
+      updateTaskCardChecklistProgress(completedChecklistItems);
       toastSuccess("Task completed");
       refreshDetail();
     } catch (err) {
@@ -948,12 +984,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
       normalizedTaskId > 0;
 
     const previousItems = checklistItems;
-    const nextItems = reorderChecklistSiblings(
+    const movedItems = reorderChecklistSiblings(
       previousItems,
       parentId,
       sourceIndex,
       destinationIndex,
     );
+    const nextItems = normalizeDraggedChecklistOrder(movedItems);
     const orderedIds = collectChecklistSiblingIds(nextItems, parentId);
 
     if (!orderedIds.length) return;
@@ -1182,23 +1219,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
                 </div>
 
                 <div className="py-3">
-                  <div className="mt-2">
-                    <ChecklistTree
-                      items={checklistItems}
-                      checklistBusyId={checklistBusyId}
-                      subInputById={subInputById}
-                      setSubInputById={setSubInputById}
-                      skipSubBlurByIdRef={skipSubBlurByIdRef}
-                      hoveredChecklistId={hoveredChecklistId}
-                      setHoveredChecklistId={setHoveredChecklistId}
-                      onToggleChecklistItem={toggleChecklistItem}
-                      onUpdateChecklistText={updateChecklistText}
-                      onDeleteChecklistItem={deleteChecklistItem}
-                      onCreateChecklistItem={createChecklistItem}
-                      onChangeItemText={handleChecklistTextChange}
-                      onReorderChecklist={handleChecklistReorder}
-                    />
-                  </div>
                   <button
                     type="button"
                     className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-primary"
@@ -1253,6 +1273,24 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
                       />
                     </div>
                   ) : null}
+
+                  <div className="mt-2">
+                    <ChecklistTree
+                      items={checklistItems}
+                      checklistBusyId={checklistBusyId}
+                      subInputById={subInputById}
+                      setSubInputById={setSubInputById}
+                      skipSubBlurByIdRef={skipSubBlurByIdRef}
+                      hoveredChecklistId={hoveredChecklistId}
+                      setHoveredChecklistId={setHoveredChecklistId}
+                      onToggleChecklistItem={toggleChecklistItem}
+                      onUpdateChecklistText={updateChecklistText}
+                      onDeleteChecklistItem={deleteChecklistItem}
+                      onCreateChecklistItem={createChecklistItem}
+                      onChangeItemText={handleChecklistTextChange}
+                      onReorderChecklist={handleChecklistReorder}
+                    />
+                  </div>
                 </div>
 
                 <TaskAttachments
