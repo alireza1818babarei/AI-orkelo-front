@@ -285,14 +285,31 @@
 
 .manage-finance__operations-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1 1 50rem;
+  flex-wrap: nowrap;
   gap: 0.75rem;
   align-items: center;
   justify-content: flex-end;
+  max-width: 52rem;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.manage-finance__operations-toolbar .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .manage-finance__operations-search {
-  min-width: 16rem;
+  flex: 0 0 15rem;
+  width: 15rem;
+  min-width: 0;
+}
+
+.manage-finance__operations-date-filter {
+  flex: 0 0 15.5rem;
+  width: 15.5rem;
+  min-width: 0;
 }
 
 .manage-finance__operations-pane {
@@ -613,6 +630,7 @@
   }
 
   .manage-finance__filter-actions,
+  .manage-finance__operations-toolbar,
   .manage-finance__member-meta,
   .manage-finance__member-access,
   .manage-finance__file-actions,
@@ -620,7 +638,22 @@
     justify-content: flex-start;
   }
 
+  .manage-finance__operations-toolbar {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    max-width: 100%;
+    width: 100%;
+    margin-left: 0;
+  }
+
   .manage-finance__operations-search {
+    flex-basis: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .manage-finance__operations-date-filter {
+    flex-basis: 100%;
     min-width: 0;
     width: 100%;
   }

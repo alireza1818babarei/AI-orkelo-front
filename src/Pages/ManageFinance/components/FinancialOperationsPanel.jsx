@@ -18,6 +18,7 @@ import {
   Row,
   Spinner,
 } from 'react-bootstrap';
+import Flatpickr from 'react-flatpickr';
 import api from '../../../api/axios';
 import AppPagination from '../../../Components/Common/AppPagination';
 import {
@@ -88,6 +89,24 @@ const toDateTimeLocalValue = (value) => {
   const timezoneOffset = parsed.getTimezoneOffset() * 60 * 1000;
   return new Date(parsed.getTime() - timezoneOffset).toISOString().slice(0, 16);
 };
+
+const formatDateFilterValue = (value) => {
+  if (!value) return '';
+
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+const getDateRangeFilters = (range = []) => ({
+  fromDate: formatDateFilterValue(range[0]),
+  toDate: formatDateFilterValue(range[1]),
+});
 
 const getOperationForm = (operation = null) => ({
   title: String(operation?.title ?? '').trim(),
@@ -429,6 +448,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
   const isCompanyOwner = companyRole === 'company_owner';
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [operationDateRange, setOperationDateRange] = useState([]);
   const [page, setPage] = useState(1);
   const [selectedOperationId, setSelectedOperationId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -440,6 +460,17 @@ export default function FinancialOperationsPanel({ enabled = true }) {
   const fileInputRef = useRef(null);
   const uploadDragDepthRef = useRef(0);
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const operationDateFilters = useMemo(
+    () => getDateRangeFilters(operationDateRange),
+    [operationDateRange],
+  );
+  const operationFromDate = operationDateFilters.fromDate;
+  const operationToDate = operationDateFilters.toDate;
+  const hasOperationFilters = Boolean(
+    String(deferredSearchTerm ?? '').trim() ||
+      operationFromDate ||
+      operationToDate,
+  );
 
   useEffect(() => {
     if (!enabled) return;
@@ -448,10 +479,19 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       getFinancialOperations({
         page,
         title: deferredSearchTerm,
+        fromDate: operationFromDate,
+        toDate: operationToDate,
         perPage: OPERATIONS_PAGE_SIZE,
       }),
     );
-  }, [deferredSearchTerm, dispatch, enabled, page]);
+  }, [
+    deferredSearchTerm,
+    dispatch,
+    enabled,
+    operationFromDate,
+    operationToDate,
+    page,
+  ]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -495,7 +535,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
 
   useEffect(() => {
     setPage(1);
-  }, [deferredSearchTerm]);
+  }, [deferredSearchTerm, operationFromDate, operationToDate]);
 
   useEffect(() => {
     setSelectedFile(null);
@@ -552,6 +592,8 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       getFinancialOperations({
         page,
         title: deferredSearchTerm,
+        fromDate: operationFromDate,
+        toDate: operationToDate,
         perPage: OPERATIONS_PAGE_SIZE,
       }),
     );
@@ -637,12 +679,15 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       setCreateModalOpen(false);
       dispatch(resetFinancialOperationMutationState());
       setSearchTerm('');
+      setOperationDateRange([]);
       setPage(1);
 
       dispatch(
         getFinancialOperations({
           page: 1,
           title: '',
+          fromDate: '',
+          toDate: '',
           perPage: OPERATIONS_PAGE_SIZE,
         }),
       );
@@ -692,6 +737,8 @@ export default function FinancialOperationsPanel({ enabled = true }) {
         getFinancialOperations({
           page,
           title: deferredSearchTerm,
+          fromDate: operationFromDate,
+          toDate: operationToDate,
           perPage: OPERATIONS_PAGE_SIZE,
         }),
       );
@@ -745,6 +792,8 @@ export default function FinancialOperationsPanel({ enabled = true }) {
         getFinancialOperations({
           page,
           title: deferredSearchTerm,
+          fromDate: operationFromDate,
+          toDate: operationToDate,
           perPage: OPERATIONS_PAGE_SIZE,
         }),
       );
@@ -959,7 +1008,6 @@ export default function FinancialOperationsPanel({ enabled = true }) {
         </div>
 
         <div className='manage-finance__operations-toolbar'>
-          <Button onClick={handleOpenCreateModal}>Create Operation</Button>
           <Form.Control
             type='search'
             placeholder='Search operations by title'
@@ -967,6 +1015,29 @@ export default function FinancialOperationsPanel({ enabled = true }) {
             onChange={(event) => setSearchTerm(event.target.value)}
             className='manage-finance__operations-search'
           />
+          <Flatpickr
+            className='form-control manage-finance__operations-date-filter'
+            value={operationDateRange}
+            onChange={(dates) => setOperationDateRange(dates)}
+            options={{
+              mode: 'range',
+              dateFormat: 'Y-m-d',
+            }}
+            placeholder='YYYY-MM-DD to YYYY-MM-DD'
+          />
+          {hasOperationFilters ? (
+            <Button
+              variant='outline-secondary'
+              onClick={() => {
+                setSearchTerm('');
+                setOperationDateRange([]);
+                setPage(1);
+              }}
+              disabled={operationsLoading}
+            >
+              Clear Filters
+            </Button>
+          ) : null}
           <Button
             variant='outline-secondary'
             onClick={handleRefresh}
@@ -974,6 +1045,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
           >
             Refresh
           </Button>
+          <Button onClick={handleOpenCreateModal}>Create Operation</Button>
         </div>
       </Card.Header>
 

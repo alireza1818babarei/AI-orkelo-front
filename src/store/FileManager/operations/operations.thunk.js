@@ -10,13 +10,26 @@ import {
 
 export const getFinancialOperations = createAsyncThunk(
   'financialOperations/getAll',
-  async ({ page = 1, title = '', perPage = 10 } = {}, { rejectWithValue }) => {
+  async (
+    { page = 1, title = '', fromDate = '', toDate = '', perPage = 10 } = {},
+    { rejectWithValue },
+  ) => {
     try {
       const params = { page, per_page: perPage };
       const normalizedTitle = String(title ?? '').trim();
+      const normalizedFromDate = String(fromDate ?? '').trim();
+      const normalizedToDate = String(toDate ?? '').trim();
 
       if (normalizedTitle) {
         params.title = normalizedTitle;
+      }
+
+      if (normalizedFromDate) {
+        params.from_date = normalizedFromDate;
+      }
+
+      if (normalizedToDate) {
+        params.to_date = normalizedToDate;
       }
 
       const res = await api.get('/finance-center/operations', { params });
