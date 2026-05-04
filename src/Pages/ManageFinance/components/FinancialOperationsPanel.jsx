@@ -342,27 +342,27 @@ function OperationFormFields({
         </Col>
       </Row>
 
-      {form.type === 'deposit' ? (
-        <Row className='g-3'>
-          <Col md={6}>
-            <Form.Group>
-              <Form.Label>Counterparty</Form.Label>
-              <Form.Select
-                value={form.counterpartyId}
-                onChange={onChange('counterpartyId')}
-                disabled={disabled || counterpartiesLoading}
-              >
-                <option value=''>None</option>
-                {counterparties.map((counterparty) => (
-                  <option key={counterparty.id} value={counterparty.id}>
-                    {counterparty.fullName}
-                    {counterparty.bankName ? ` - ${counterparty.bankName}` : ''}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-          </Col>
+      <Row className='g-3'>
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>Counterparty</Form.Label>
+            <Form.Select
+              value={form.counterpartyId}
+              onChange={onChange('counterpartyId')}
+              disabled={disabled || counterpartiesLoading}
+            >
+              <option value=''>None</option>
+              {counterparties.map((counterparty) => (
+                <option key={counterparty.id} value={counterparty.id}>
+                  {counterparty.fullName}
+                  {counterparty.bankName ? ` - ${counterparty.bankName}` : ''}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
 
+        {form.type === 'deposit' ? (
           <Col md={6}>
             <Form.Group>
               <Form.Label>Deposit Source</Form.Label>
@@ -375,8 +375,8 @@ function OperationFormFields({
               />
             </Form.Group>
           </Col>
-        </Row>
-      ) : null}
+        ) : null}
+      </Row>
 
       <Form.Group>
         <Form.Label>Description</Form.Label>
@@ -650,7 +650,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       ...current,
       [field]: nextValue,
       ...(field === 'type' && nextValue === 'withdrawal'
-        ? { counterpartyId: '', depositSource: '' }
+        ? { depositSource: '' }
         : {}),
     }));
   };

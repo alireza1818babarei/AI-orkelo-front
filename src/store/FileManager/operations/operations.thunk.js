@@ -80,19 +80,15 @@ export const createFinancialOperation = createAsyncThunk(
         description: String(payload?.description ?? '').trim() || undefined,
       };
 
+      const counterpartyId = Number(payload?.counterpartyId);
+      body.counterparty_id =
+        Number.isInteger(counterpartyId) && counterpartyId > 0
+          ? counterpartyId
+          : null;
+
       if (body.type === 'deposit') {
-        const depositSource = String(payload?.depositSource ?? '').trim();
-        const counterpartyId = Number(payload?.counterpartyId);
-
-        // Counterparty is optional, so an empty select is sent as null.
-        body.counterparty_id =
-          Number.isInteger(counterpartyId) && counterpartyId > 0
-            ? counterpartyId
-            : null;
-
-        if (depositSource) {
-          body.deposit_source = depositSource;
-        }
+        body.deposit_source =
+          String(payload?.depositSource ?? '').trim() || null;
       }
 
       const res = await api.post('/finance-center/operations', body);
@@ -120,14 +116,13 @@ export const updateFinancialOperation = createAsyncThunk(
         description: String(payload?.description ?? '').trim() || null,
       };
 
-      if (body.type === 'deposit') {
-        const counterpartyId = Number(payload?.counterpartyId);
+      const counterpartyId = Number(payload?.counterpartyId);
+      body.counterparty_id =
+        Number.isInteger(counterpartyId) && counterpartyId > 0
+          ? counterpartyId
+          : null;
 
-        // Counterparty is optional, so an empty select is sent as null.
-        body.counterparty_id =
-          Number.isInteger(counterpartyId) && counterpartyId > 0
-            ? counterpartyId
-            : null;
+      if (body.type === 'deposit') {
         body.deposit_source =
           String(payload?.depositSource ?? '').trim() || null;
       }
