@@ -1,22 +1,28 @@
 export const APP_UPDATES = [
   {
-    id: "2026-05-03-workspace-finance-reports-and-board-updates",
-    version: "v1.1.0",
-    releasedAt: "2026-05-03",
+    id: "2026-05-04-finance-dashboard-board-notifications-and-tracker-updates",
+    version: "v1.1.1",
+    releasedAt: "2026-05-04",
     title: "Latest Update",
     summary:
-      "This release improves Finance Center, daily reports, Home dashboard navigation, project member controls, task boards, checklists, and general loading experience across Orkelo.",
+      "This release brings new Finance Center tools, better daily reports, dynamic dashboard navigation, stronger project controls, improved checklist behavior, cleaner notifications, and time tracker updates.",
     newFeatures: [
       {
         title: "Expanded Finance Center",
         description:
-          "Finance Center now supports financial operations, operation files, counterparties, status review, selected-user access, and a financial overview chart with 6-month and 12-month filters.",
+          "Finance Center now supports financial operations, operation files, status review, selected-user access, counterparties, and a financial overview with 6-month and 12-month chart filters.",
         icon: "ph-duotone ph-wallet",
       },
       {
-        title: "Counterparty Management",
+        title: "Operations Date Filter",
         description:
-          "Deposit operations can now be linked to counterparties, with search, pagination, create, edit, and delete workflows available inside Finance Center.",
+          "Operations & Files can now be filtered by title and date range, with the selected dates kept during refresh, edit, delete, and pagination.",
+        icon: "ph-duotone ph-calendar-dots",
+      },
+      {
+        title: "Deposit And Withdrawal Counterparties",
+        description:
+          "Counterparties can now be used for both deposit and withdrawal operations, while deposit source remains available only for deposit records.",
         icon: "ph-duotone ph-handshake",
       },
       {
@@ -28,7 +34,7 @@ export const APP_UPDATES = [
       {
         title: "Dynamic Home Dashboard",
         description:
-          "Home dashboard cards now load real project, task, and notification data, with direct navigation to the related project or task.",
+          "Home dashboard sections now load real task, notification, and project data with direct navigation to the related destination.",
         icon: "ph-duotone ph-house-line",
       },
       {
@@ -44,6 +50,12 @@ export const APP_UPDATES = [
         icon: "ph-duotone ph-check-square",
       },
       {
+        title: "Automatic Checklist Completion",
+        description:
+          "Checklist state now stays aligned with task completion so completed tasks do not keep inconsistent checklist states.",
+        icon: "ph-duotone ph-list-checks",
+      },
+      {
         title: "Column Completed Task Archive",
         description:
           "Completed tasks can now be archived from a column settings menu, keeping the active board cleaner while preserving archived task history.",
@@ -55,6 +67,12 @@ export const APP_UPDATES = [
           "Home tracking task cards now use a compact responsive grid with Show more and Show less behavior for cleaner scanning.",
         icon: "ph-duotone ph-timer",
       },
+      {
+        title: "Manager Active Trackers",
+        description:
+          "Authorized managers can now review active trackers with role-based visibility, search, pagination, and live running time display.",
+        icon: "ph-duotone ph-gauge",
+      },
     ],
     bugFixes: [
       "Fixed project member report filtering so member reports stay scoped to the selected project.",
@@ -64,16 +82,22 @@ export const APP_UPDATES = [
       "Fixed project member role badges so Owner and Supervisor labels stay readable without overflow.",
       "Fixed checklist drag behavior so completed items stay below active checklist items.",
       "Fixed Home tracking task time display and removed the empty time placeholder.",
+      "Fixed timer expiration notifications so the timer owner is notified even when they are not watching the task.",
+      "Fixed duplicate notifications that could be sent to other users when a task timer expired.",
+      "Fixed time tracker notification noise so pause, stop, and resume actions remain in the activity log without creating unnecessary notifications.",
     ],
     improvements: [
       "Added skeleton loading states for Manage Projects and Finance Center to make loading screens clearer.",
       "Improved Financial Overview with total income, total outcome, net balance, pending review, and monthly chart filters.",
       "Improved operation list pagination with a compact 5-item page layout in Finance Center.",
+      "Improved Operations & Files search with a responsive date range picker using YYYY-MM-DD dates.",
       "Improved project member role visibility and removal rules across owner, supervisor, project manager, and member roles.",
       "Improved checklist behavior so active items stay first and checklist state stays aligned after task completion.",
       "Improved board column behavior so project columns stay scrolled to the bottom after load and board updates.",
       "Improved dashboard navigation so project, task, and notification items open their related destination directly.",
-      "Improved access control separation between project management and Finance Center workflows.",
+      "Improved timer expiration messaging with a dedicated your timer message for the timer owner and separate wording for other related users.",
+      "Reviewed project list ordering and prepared the project list flow for A-Z sorting.",
+      "Verified related frontend builds and backend time tracker tests after the update.",
     ],
     active: true,
   },
