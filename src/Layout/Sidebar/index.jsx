@@ -251,9 +251,15 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
 
   return (
     <nav className={`vertical-sidebar ${sidebarOpen ? 'semi-nav' : ''}`}>
-      <div className='pt-3 ps-2 d-flex flex-column'>
-        <Link className=' d-inline-block overflow-hidden' to='/'>
-          <img src='/assets/images/logo/orkelo.png' alt='' className='w-50' />
+      <div className='sidebar-brand pt-3 px-2 d-flex flex-column'>
+        <Link
+          className='orkelo-sidebar-logo d-inline-flex align-items-center overflow-hidden'
+          to='/'
+          aria-label='Orkelo home'
+        >
+          <img src='/assets/images/logo/orkelo.png' alt='' className='orkelo-sidebar-logo__icon' />
+          <img src='/assets/images/logo/Orkelo2.png' alt='' className='orkelo-sidebar-logo__full orkelo-sidebar-logo__full--light' />
+          <img src='/assets/images/logo/Orkelo-for-darkmode.png' alt='' className='orkelo-sidebar-logo__full orkelo-sidebar-logo__full--dark' />
         </Link>
 
         <span

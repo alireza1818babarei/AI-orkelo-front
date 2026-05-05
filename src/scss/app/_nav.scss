@@ -73,7 +73,39 @@ nav {
         }
     }
 
-    .app-nav {
+    .sidebar-brand {
+        gap: 0.35rem;
+    }
+
+    .orkelo-sidebar-logo {
+        width: 150px;
+        min-height: 40px;
+        transition: var(--app-transition);
+
+        img {
+            object-fit: contain;
+        }
+
+        &__icon {
+            display: none;
+            width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+        }
+
+        &__full {
+            display: block;
+            width: 145px;
+            max-height: 32px;
+        }
+
+        &__full--dark {
+            display: none;
+        }
+    }
+
+
+  .app-nav {
         height: calc(100% - 50px);
         overflow: auto;
 
@@ -366,6 +398,16 @@ nav {
                 }
             }
         }
+    }
+}
+
+body.dark nav {
+    .orkelo-sidebar-logo__full--light {
+        display: none;
+    }
+
+    .orkelo-sidebar-logo__full--dark {
+        display: block;
     }
 }
 
@@ -680,6 +722,26 @@ nav.vertical-sidebar {
 
         // Compact layout: only when collapsed AND not being hovered
         &:not(:hover) {
+            .sidebar-brand {
+                align-items: center;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            .orkelo-sidebar-logo {
+                width: 32px;
+                justify-content: center;
+                margin: 0 auto;
+            }
+
+            .orkelo-sidebar-logo__icon {
+                display: block;
+            }
+
+            .orkelo-sidebar-logo__full {
+                display: none !important;
+            }
+
             .app-nav .main-nav {
                 >li.sidebar-dropdown--compact-projects {
                     >ul.sidebar-submenu--compact-projects {

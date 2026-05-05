@@ -16,6 +16,11 @@ const normalizeAmountNumber = (value) => {
   return Number.isFinite(numberValue) ? numberValue : 0;
 };
 
+const getOperationSortTime = (operation) => {
+  const timestamp = new Date(operation?.operatedAt ?? '').getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
 const normalizeUser = (user) => {
   if (!user || typeof user !== 'object') return null;
 
@@ -80,6 +85,18 @@ export const normalizeFinancialOperation = (operation) => ({
   updatedAt: operation?.updated_at ?? null,
 });
 
+export const sortFinancialOperationsByOperatedAt = (operations = []) =>
+  [...operations].sort((firstOperation, secondOperation) => {
+    const timeDifference =
+      getOperationSortTime(secondOperation) - getOperationSortTime(firstOperation);
+
+    if (timeDifference !== 0) {
+      return timeDifference;
+    }
+
+    return Number(secondOperation?.id ?? 0) - Number(firstOperation?.id ?? 0);
+  });
+
 export const normalizeFinancialOperationsResponse = (payload) => {
   const root = payload && typeof payload === 'object' ? payload : {};
   const data = Array.isArray(root?.data)
@@ -89,7 +106,9 @@ export const normalizeFinancialOperationsResponse = (payload) => {
       : [];
 
   return {
-    operations: data.map(normalizeFinancialOperation),
+    operations: sortFinancialOperationsByOperatedAt(
+      data.map(normalizeFinancialOperation),
+    ),
     links: root?.links ?? null,
     meta: root?.meta ?? null,
     total: Number(root?.total ?? root?.meta?.total ?? data.length ?? 0) || 0,

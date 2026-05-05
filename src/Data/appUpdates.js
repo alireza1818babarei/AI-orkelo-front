@@ -1,11 +1,11 @@
 export const APP_UPDATES = [
   {
-    id: "2026-05-04-finance-dashboard-board-notifications-and-tracker-updates",
-    version: "v1.1.1",
-    releasedAt: "2026-05-04",
+    id: "2026-05-05-finance-dashboard-board-notifications-tracker-layout-and-operation-ordering-updates",
+    version: "v1.1.3",
+    releasedAt: "2026-05-05",
     title: "Latest Update",
     summary:
-      "This release brings new Finance Center tools, better daily reports, dynamic dashboard navigation, stronger project controls, improved checklist behavior, cleaner notifications, and time tracker updates.",
+      "This release brings new Finance Center tools, better daily reports, dynamic dashboard navigation, stronger project controls, improved checklist behavior, cleaner notifications, time tracker updates, and layout refinements.",
     newFeatures: [
       {
         title: "Expanded Finance Center",
@@ -44,6 +44,12 @@ export const APP_UPDATES = [
         icon: "ph-duotone ph-bell-ringing",
       },
       {
+        title: "Project Manager Member Access",
+        description:
+          "Project managers can now load available company members and add them to projects they manage, while regular members remain blocked.",
+        icon: "ph-duotone ph-user-plus",
+      },
+      {
         title: "Checklist Progress on Task Cards",
         description:
           "Task cards now show checklist progress such as 2/8, and the value updates after checklist changes without requiring a full board reload.",
@@ -56,16 +62,16 @@ export const APP_UPDATES = [
         icon: "ph-duotone ph-list-checks",
       },
       {
-        title: "Column Completed Task Archive",
-        description:
-          "Completed tasks can now be archived from a column settings menu, keeping the active board cleaner while preserving archived task history.",
-        icon: "ph-duotone ph-archive-box",
-      },
-      {
         title: "Compact Tracking Task Cards",
         description:
           "Home tracking task cards now use a compact responsive grid with Show more and Show less behavior for cleaner scanning.",
         icon: "ph-duotone ph-timer",
+      },
+      {
+        title: "Company Balance Display",
+        description:
+          "Finance Center now shows company balance clearly, with positive and zero balances in blue and negative balances in red.",
+        icon: "ph-duotone ph-chart-line-up",
       },
       {
         title: "Manager Active Trackers",
@@ -82,6 +88,8 @@ export const APP_UPDATES = [
       "Fixed project member role badges so Owner and Supervisor labels stay readable without overflow.",
       "Fixed checklist drag behavior so completed items stay below active checklist items.",
       "Fixed Home tracking task time display and removed the empty time placeholder.",
+      "Fixed attachment icon placement on expired task cards so attachment and checklist metadata align in a cleaner secondary row.",
+      "Fixed Finance Operations ordering so the newest Operated At date appears first instead of ordering by creation date.",
       "Fixed timer expiration notifications so the timer owner is notified even when they are not watching the task.",
       "Fixed duplicate notifications that could be sent to other users when a task timer expired.",
       "Fixed time tracker notification noise so pause, stop, and resume actions remain in the activity log without creating unnecessary notifications.",
@@ -91,10 +99,13 @@ export const APP_UPDATES = [
       "Improved Financial Overview with total income, total outcome, net balance, pending review, and monthly chart filters.",
       "Improved operation list pagination with a compact 5-item page layout in Finance Center.",
       "Improved Operations & Files search with a responsive date range picker using YYYY-MM-DD dates.",
+      "Improved Finance Operations date display so the highlighted date badge stays aligned with the Operated At value.",
+      "Improved operation amount colors based on operation type and company balance color behavior based on net value.",
       "Improved project member role visibility and removal rules across owner, supervisor, project manager, and member roles.",
       "Improved checklist behavior so active items stay first and checklist state stays aligned after task completion.",
       "Improved board column behavior so project columns stay scrolled to the bottom after load and board updates.",
       "Improved dashboard navigation so project, task, and notification items open their related destination directly.",
+      "Improved sidebar logo display for expanded, collapsed, light mode, and dark mode states.",
       "Improved timer expiration messaging with a dedicated your timer message for the timer owner and separate wording for other related users.",
       "Reviewed project list ordering and prepared the project list flow for A-Z sorting.",
       "Verified related frontend builds and backend time tracker tests after the update.",

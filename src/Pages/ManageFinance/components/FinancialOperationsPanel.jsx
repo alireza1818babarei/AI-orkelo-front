@@ -41,6 +41,9 @@ import {
   financialOperationDeletingFileIdsSelector,
   financialOperationFileUploadErrorSelector,
   financialOperationFileUploadStatusSelector,
+  financialOperationSummaryErrorSelector,
+  financialOperationSummaryLoadingSelector,
+  financialOperationSummarySelector,
   financialOperationStatusUpdateErrorSelector,
   financialOperationStatusUpdateStatusSelector,
   financialOperationsErrorSelector,
@@ -409,6 +412,13 @@ export default function FinancialOperationsPanel({ enabled = true }) {
   const operationsError = useSelector(financialOperationsErrorSelector);
   const operationsMeta = useSelector(financialOperationsMetaSelector);
   const operationsTotal = useSelector(financialOperationsTotalSelector);
+  const operationSummary = useSelector(financialOperationSummarySelector);
+  const operationSummaryLoading = useSelector(
+    financialOperationSummaryLoadingSelector,
+  );
+  const operationSummaryError = useSelector(
+    financialOperationSummaryErrorSelector,
+  );
   const createStatus = useSelector(financialOperationCreateStatusSelector);
   const createError = useSelector(financialOperationCreateErrorSelector);
   const operationDeleteStatus = useSelector(
@@ -986,6 +996,24 @@ export default function FinancialOperationsPanel({ enabled = true }) {
 
   const currentStatusOption = getOperationStatusOption(currentOperation?.status);
   const files = Array.isArray(currentOperation?.files) ? currentOperation.files : [];
+  const companyTotalAmount =
+    operationSummary?.totals?.netValue ?? operationSummary?.totals?.net;
+  const companyTotalValue = Number(companyTotalAmount ?? 0);
+  const companyTotalToneClass =
+    companyTotalValue < 0 ? 'is-negative' : 'is-positive';
+  const companyTotalDisplay = operationSummaryLoading
+    ? 'Loading...'
+    : operationSummaryError?.message
+      ? '-'
+      : formatAmount(companyTotalAmount);
+  const isDepositOperation =
+    String(currentOperation?.type ?? '').trim().toLowerCase() === 'deposit';
+  const operationAmountToneClass = isDepositOperation
+    ? 'is-deposit'
+    : 'is-withdrawal';
+  const operationAmountIconClass = isDepositOperation
+    ? 'ph-duotone ph-arrow-circle-up-right'
+    : 'ph-duotone ph-arrow-circle-down-left';
 
   return (
     <Card className='manage-finance__operations-card shadow-sm border-0'>
@@ -1220,9 +1248,43 @@ export default function FinancialOperationsPanel({ enabled = true }) {
                           ? 'Deleting...'
                           : 'Delete Operation'}
                       </Button>
-                      <div className='manage-finance__operation-amount'>
-                        <span className='text-muted small'>Amount</span>
-                        <strong>{formatAmount(currentOperation.amount)}</strong>
+                    </div>
+
+                    <div className='manage-finance__operation-amount-strip'>
+                      <div
+                        className={[
+                          'manage-finance__operation-amount',
+                          'manage-finance__operation-amount--operation',
+                          operationAmountToneClass,
+                        ].join(' ')}
+                      >
+                        <span className='manage-finance__operation-amount-icon'>
+                          <i className={operationAmountIconClass}></i>
+                        </span>
+                        <span className='manage-finance__operation-amount-copy'>
+                          <span className='manage-finance__operation-amount-label'>
+                            Operation Amount
+                          </span>
+                          <strong>{formatAmount(currentOperation.amount)}</strong>
+                        </span>
+                      </div>
+
+                      <div
+                        className={[
+                          'manage-finance__operation-amount',
+                          'manage-finance__operation-amount--company-total',
+                          companyTotalToneClass,
+                        ].join(' ')}
+                      >
+                        <span className='manage-finance__operation-amount-icon'>
+                          <i className='ph-duotone ph-buildings'></i>
+                        </span>
+                        <span className='manage-finance__operation-amount-copy'>
+                          <span className='manage-finance__operation-amount-label'>
+                            Company Balance
+                          </span>
+                          <strong>{companyTotalDisplay}</strong>
+                        </span>
                       </div>
                     </div>
                   </div>

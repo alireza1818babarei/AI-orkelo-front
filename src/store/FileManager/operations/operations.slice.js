@@ -10,6 +10,7 @@ import {
   updateFinancialOperation,
   uploadFinancialOperationFile,
 } from './operations.thunk';
+import { sortFinancialOperationsByOperatedAt } from './operations.utils';
 
 const emptyFinancialOperationSummary = {
   period: '12_months',
@@ -113,6 +114,7 @@ const financialOperationsSlice = createSlice({
             state.total = Number(state.total ?? 0) + 1;
           }
 
+          state.items = sortFinancialOperationsByOperatedAt(state.items);
           state.currentOperation = nextOperation;
           state.summaryRefreshKey += 1;
         }
@@ -145,6 +147,7 @@ const financialOperationsSlice = createSlice({
               }
             : operation,
         );
+        state.items = sortFinancialOperationsByOperatedAt(state.items);
 
         state.currentOperation = nextOperation;
         state.summaryRefreshKey += 1;
@@ -175,6 +178,7 @@ const financialOperationsSlice = createSlice({
             ? { ...operation, ...nextOperation }
             : operation,
         );
+        state.items = sortFinancialOperationsByOperatedAt(state.items);
 
         if (
           state.currentOperation &&
@@ -236,7 +240,7 @@ const financialOperationsSlice = createSlice({
         state.loading = false;
         state.error = null;
         state.items = Array.isArray(action.payload?.operations)
-          ? action.payload.operations
+          ? sortFinancialOperationsByOperatedAt(action.payload.operations)
           : [];
         state.links = action.payload?.links ?? null;
         state.meta = action.payload?.meta ?? null;
