@@ -1,22 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { getTextDirectionProps } from '../../utils/textDirection';
+import React, {useEffect, useState} from 'react';
+import {getTextDirectionProps} from '../../utils/textDirection';
 
 const BoardItem = ({
-  taskId,
-  taskTitle,
-  taskBody,
-  taskDate,
-  taskFileAttachCount,
-  taskChecklistCompletedCount,
-  taskChecklistTotalCount,
-  taskTags,
-  taskUserImg,
-  isCompleted = false,
-  innerRef,
-  className = '',
-  style,
-  ...rest
-}) => {
+                     taskId,
+                     taskTitle,
+                     taskBody,
+                     taskDate,
+                     taskFileAttachCount,
+                     taskChecklistCompletedCount,
+                     taskChecklistTotalCount,
+                     taskTags,
+                     taskUserImg,
+                     isCompleted = false,
+                     innerRef,
+                     className = '',
+                     style,
+                     ...rest
+                   }) => {
   const normalizedTaskUserImg = String(taskUserImg || '').trim();
   const [showTaskUserImg, setShowTaskUserImg] = useState(
     Boolean(normalizedTaskUserImg)
@@ -34,7 +34,7 @@ const BoardItem = ({
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
-        .map((name) => ({ name }));
+        .map((name) => ({name}));
     }
     return [];
   };
@@ -83,9 +83,9 @@ const BoardItem = ({
     const full =
       m.length === 3
         ? m
-            .split('')
-            .map((c) => c + c)
-            .join('')
+          .split('')
+          .map((c) => c + c)
+          .join('')
         : m;
     if (!/^[0-9a-fA-F]{6}$/.test(full)) return '#fff';
     const r = parseInt(full.slice(0, 2), 16);
@@ -101,32 +101,32 @@ const BoardItem = ({
       style={style}
       {...rest}
     >
-      <div className='board-item-content position-relative'>
+      <div className="board-item-content position-relative">
         {isCompleted ? (
           <div
-            className='box-ribbon box-right board-item-completed-ribbon'
-            title='Completed'
-            aria-label='Completed'
+            className="box-ribbon box-right board-item-completed-ribbon"
+            title="Completed"
+            aria-label="Completed"
           >
-            <div className='ribbonbox ribbon-success'>
-              <span className='f-s-10'>Completed</span>
+            <div className="ribbonbox ribbon-success">
+              <span className="f-s-10">Completed</span>
             </div>
           </div>
         ) : null}
 
-        <div className='gap-1 d-flex flex-column'>
-          <div className='d-flex justify-content-between align-items-center gap-2'>
+        <div className="gap-1 d-flex flex-column">
+          <div className="d-flex justify-content-between align-items-center gap-2">
             <div>
               {taskId ? (
                 <div
-                  className='board-item-id position-absolute bottom-0 f-s-11'
-                  style={{ right: 5 }}
+                  className="board-item-id position-absolute bottom-0 f-s-11"
+                  style={{right: 5}}
                 >
-                  #<span className='fw-semibold'>{taskId}</span>
+                  #<span className="fw-semibold">{taskId}</span>
                 </div>
               ) : null}
               <div
-                className='f-w-500 f-s-15 board-item-title text-break capitalized text-muted'
+                className="f-w-500 f-s-15 board-item-title text-break capitalized text-muted"
                 {...taskTitleDirectionProps}
               >
                 {taskTitle}
@@ -134,12 +134,12 @@ const BoardItem = ({
             </div>
 
             {showTaskUserImg ? (
-              <div className='d-flex align-items-center gap-1'>
-                <div className='h-40 w-40 d-flex-center b-r-50 overflow-hidden text-bg-primary'>
+              <div className="d-flex align-items-center gap-1">
+                <div className="h-40 w-40 d-flex-center b-r-50 overflow-hidden text-bg-primary">
                   <img
                     src={normalizedTaskUserImg}
-                    alt=''
-                    className='img-fluid'
+                    alt=""
+                    className="img-fluid"
                     style={{
                       width: '100%',
                       height: '100%',
@@ -156,7 +156,7 @@ const BoardItem = ({
 
           <div>
             <div
-              className='small f-s-13 board-item-desc mt-2'
+              className="small f-s-13 board-item-desc mt-2"
               {...taskBodyDirectionProps}
               title={taskBody || ''}
             >
@@ -164,33 +164,33 @@ const BoardItem = ({
             </div>
           </div>
 
-          <div className='d-flex flex-wrap gap-1'>
+          <div className="d-flex flex-wrap gap-1">
             {tags.length
               ? tags.map((t, idx) => {
-                  const tagName = getTagName(t);
-                  const tagColor = getTagColor(t);
+                const tagName = getTagName(t);
+                const tagColor = getTagColor(t);
 
-                  return (
-                    <span
-                      key={t?.id ?? `${tagName}-${idx}`}
-                      className='badge d-inline-flex align-items-center gap-1'
-                      style={{
-                        maxWidth: 140,
-                        fontSize: 11,
-                        borderRadius: 12,
-                        padding: '0.2rem 0.6rem',
-                        background: tagColor
-                          ? tagColor
-                          : 'rgba(var(--primary), 0.12)',
-                        color: tagColor
-                          ? getContrastText(tagColor)
-                          : 'rgba(var(--primary), 1)',
-                      }}
-                      title={tagName}
-                    >
+                return (
+                  <span
+                    key={t?.id ?? `${tagName}-${idx}`}
+                    className="badge d-inline-flex align-items-center gap-1"
+                    style={{
+                      maxWidth: 140,
+                      fontSize: 11,
+                      borderRadius: 12,
+                      padding: '0.2rem 0.6rem',
+                      background: tagColor
+                        ? tagColor
+                        : 'rgba(var(--primary), 0.12)',
+                      color: tagColor
+                        ? getContrastText(tagColor)
+                        : 'rgba(var(--primary), 1)',
+                    }}
+                    title={tagName}
+                  >
                       {tagColor ? null : (
                         <span
-                          aria-hidden='true'
+                          aria-hidden="true"
                           style={{
                             width: 8,
                             height: 8,
@@ -200,43 +200,44 @@ const BoardItem = ({
                           }}
                         />
                       )}
-                      <span
-                        className='text-truncate d-inline-block'
-                        {...getTextDirectionProps(tagName, { maxWidth: 110 })}
-                      >
+                    <span
+                      className="text-truncate d-inline-block"
+                      {...getTextDirectionProps(tagName, {maxWidth: 110})}
+                    >
                         {tagName}
                       </span>
                     </span>
-                  );
-                })
+                );
+              })
               : null}
           </div>
 
           {showTaskMeta ? (
-            <div className='d-flex align-items-center justify-content-between'>
-              <div className='board-item-meta d-flex align-items-center flex-wrap gap-2'>
-                {showTaskDate ? (
-                  <span className='board-item-meta-item'>
-                    <i className='ti ti-calendar board-item-meta-icon'></i>{' '}
-                    <span className='f-s-14'>{taskDateText}</span>
-                  </span>
+            <div className="board-item-meta">
+              {showTaskDate ? (
+                <span className="board-item-meta-item board-item-meta-item--date">
+                  <i className="ti ti-calendar board-item-meta-icon"></i>
+                  <span className="f-s-14">{taskDateText}</span>
+                </span>
+              ) : null}
+
+              <div className="board-item-meta-secondary">
+                {showTaskFileAttachCount ? (<span className="board-item-meta-item">
+                <i className="ti ti-paperclip board-item-meta-icon"></i>
+                <span className="f-s-14">{taskFileAttachCountText}</span>
+                </span>
                 ) : null}
-                {showTaskFileAttachCount ? (
-                  <span className='board-item-meta-item'>
-                    <i className='ti ti-unlink board-item-meta-icon'></i>{' '}
-                    <span className='f-s-14'>{taskFileAttachCountText}</span>
-                  </span>
-                ) : null}
+
                 {showTaskChecklistProgress ? (
                   <span
-                    className='board-item-meta-item'
+                    className="board-item-meta-item"
                     title={`${checklistCompletedCount} of ${checklistTotalCount} checklist items checked`}
                     aria-label={`${checklistCompletedCount} of ${checklistTotalCount} checklist items checked`}
                   >
-                    <i className='ti ti-list-check board-item-meta-icon'></i>{' '}
-                    <span className='f-s-14'>
-                      {checklistCompletedCount}/{checklistTotalCount}
-                    </span>
+                    <i className="ti ti-list-check board-item-meta-icon"></i>
+                      <span className="f-s-14">
+                        {checklistCompletedCount}/{checklistTotalCount}
+                      </span>
                   </span>
                 ) : null}
               </div>

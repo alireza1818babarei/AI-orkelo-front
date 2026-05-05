@@ -255,17 +255,34 @@ nav.dark-sidebar
 }
 
 .board-item-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
   min-width: 0;
   padding-right: 52px;
+}
+
+.board-item-meta-secondary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  min-width: 0;
 }
 
 .board-item-meta-item {
   display: inline-flex;
   align-items: center;
+  gap: 0.18rem;
   min-width: 0;
   color: rgba(var(--secondary), 0.72);
   line-height: 1.2;
   white-space: nowrap;
+}
+
+.board-item-meta-item--date {
+  max-width: 100%;
 }
 
 .board-item-meta-icon {
@@ -273,6 +290,7 @@ nav.dark-sidebar
   font-size: 1rem;
   line-height: 1;
 }
+
 
 /* Completed states */
 .board-item.task-completed .board-item-content {

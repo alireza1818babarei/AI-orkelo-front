@@ -32,9 +32,14 @@ const getUserIdFromMember = (member) =>
 
 export const getCompanyMembersThunk = createAsyncThunk(
   "companyMembers/getAll",
-  async (_, { rejectWithValue }) => {
+  async (projectId, { rejectWithValue }) => {
     try {
-      const res = await api.get("/companies/my/members");
+      // Project boards use the project-scoped endpoint so project managers can load the modal list.
+      const normalizedProjectId = String(projectId ?? "").trim();
+      const url = normalizedProjectId
+        ? `/projects/${normalizedProjectId}/available-members`
+        : "/companies/my/members";
+      const res = await api.get(url);
       return normalizeMembersPayload(res?.data);
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));

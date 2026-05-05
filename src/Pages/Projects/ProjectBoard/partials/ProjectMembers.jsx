@@ -149,15 +149,13 @@ const ProjectMembers = ({
     [data, currentUserId],
   );
   const actorProjectRole = currentProjectMember?.projectRole ?? 'member';
-  const hasProjectManagerRole = Array.isArray(user?.project_roles)
-    ? user.project_roles.some(
-        (item) => normalizeRole(item?.role) === 'project_manager',
-      )
-    : false;
+  // The add-member button must depend on the user's role in this project,
+  // not any project manager role from another project.
   const canAddProjectMember =
     companyRole === 'company_owner' ||
     companyRole === 'company_supervisor' ||
-    hasProjectManagerRole;
+    actorProjectRole === 'project_manager';
+
   const canManageProjectRoles =
     companyRole === 'company_owner' || companyRole === 'company_supervisor';
 

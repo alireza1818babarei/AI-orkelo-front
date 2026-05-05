@@ -635,11 +635,11 @@ const ProjectBoard = () => {
 
   const openAddMemberModal = () => {
     setAddMemberModalOpen(true);
-    dispatch(getCompanyMembersThunk());
+    dispatch(getCompanyMembersThunk(id));
   };
 
   const handleReloadCompanyMembers = () => {
-    dispatch(getCompanyMembersThunk());
+    dispatch(getCompanyMembersThunk(id));
   };
 
   const handleAddProjectMember = async (companyMember) => {
