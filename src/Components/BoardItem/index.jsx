@@ -1,6 +1,37 @@
 import React, {useEffect, useState} from 'react';
 import {getTextDirectionProps} from '../../utils/textDirection';
 
+const TASK_PRIORITY_META = {
+  low: {
+    label: 'Low',
+    background: '#198754',
+  },
+  medium: {
+    label: 'Medium',
+    background: '#0d6efd',
+  },
+  high: {
+    label: 'High',
+    background: '#f97316',
+  },
+  urgent: {
+    label: 'Urgent',
+    background: '#dc3545',
+  },
+};
+
+const getTaskPriorityMeta = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  const key = Object.prototype.hasOwnProperty.call(TASK_PRIORITY_META, normalized)
+    ? normalized
+    : 'medium';
+
+  return {
+    value: key,
+    ...TASK_PRIORITY_META[key],
+  };
+};
+
 const BoardItem = ({
                      taskId,
                      taskTitle,
@@ -10,6 +41,7 @@ const BoardItem = ({
                      taskChecklistCompletedCount,
                      taskChecklistTotalCount,
                      taskTags,
+                     taskPriority,
                      taskUserImg,
                      isCompleted = false,
                      innerRef,
@@ -40,6 +72,7 @@ const BoardItem = ({
   };
 
   const tags = normalizeTags(taskTags);
+  const priority = getTaskPriorityMeta(taskPriority);
   const taskDateText = String(taskDate ?? '').trim();
   const taskFileAttachCountText = String(taskFileAttachCount ?? '').trim();
   const taskFileAttachCountNumber = Number(taskFileAttachCountText);
@@ -101,7 +134,20 @@ const BoardItem = ({
       style={style}
       {...rest}
     >
-      <div className="board-item-content position-relative">
+      <div
+        className="board-item-content position-relative"
+        style={{'--board-item-priority-color': priority.background}}
+      >
+        <div
+          className={`board-item-priority-cue board-item-priority-cue--${priority.value}`}
+          aria-label={`Priority: ${priority.label}`}
+          title={`${priority.label} priority`}
+        >
+          <span className="board-item-priority-cue__label">
+            {priority.label} priority
+          </span>
+        </div>
+
         {isCompleted ? (
           <div
             className="box-ribbon box-right board-item-completed-ribbon"
@@ -164,9 +210,9 @@ const BoardItem = ({
             </div>
           </div>
 
-          <div className="d-flex flex-wrap gap-1">
-            {tags.length
-              ? tags.map((t, idx) => {
+          {tags.length ? (
+            <div className="board-item-tags-row d-flex flex-wrap gap-1">
+              {tags.map((t, idx) => {
                 const tagName = getTagName(t);
                 const tagColor = getTagColor(t);
 
@@ -206,11 +252,11 @@ const BoardItem = ({
                     >
                         {tagName}
                       </span>
-                    </span>
+                  </span>
                 );
-              })
-              : null}
-          </div>
+              })}
+            </div>
+          ) : null}
 
           {showTaskMeta ? (
             <div className="board-item-meta">
