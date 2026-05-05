@@ -41,9 +41,6 @@ import {
   financialOperationDeletingFileIdsSelector,
   financialOperationFileUploadErrorSelector,
   financialOperationFileUploadStatusSelector,
-  financialOperationSummaryErrorSelector,
-  financialOperationSummaryLoadingSelector,
-  financialOperationSummarySelector,
   financialOperationStatusUpdateErrorSelector,
   financialOperationStatusUpdateStatusSelector,
   financialOperationsErrorSelector,
@@ -412,13 +409,6 @@ export default function FinancialOperationsPanel({ enabled = true }) {
   const operationsError = useSelector(financialOperationsErrorSelector);
   const operationsMeta = useSelector(financialOperationsMetaSelector);
   const operationsTotal = useSelector(financialOperationsTotalSelector);
-  const operationSummary = useSelector(financialOperationSummarySelector);
-  const operationSummaryLoading = useSelector(
-    financialOperationSummaryLoadingSelector,
-  );
-  const operationSummaryError = useSelector(
-    financialOperationSummaryErrorSelector,
-  );
   const createStatus = useSelector(financialOperationCreateStatusSelector);
   const createError = useSelector(financialOperationCreateErrorSelector);
   const operationDeleteStatus = useSelector(
@@ -996,16 +986,6 @@ export default function FinancialOperationsPanel({ enabled = true }) {
 
   const currentStatusOption = getOperationStatusOption(currentOperation?.status);
   const files = Array.isArray(currentOperation?.files) ? currentOperation.files : [];
-  const companyTotalAmount =
-    operationSummary?.totals?.netValue ?? operationSummary?.totals?.net;
-  const companyTotalValue = Number(companyTotalAmount ?? 0);
-  const companyTotalToneClass =
-    companyTotalValue < 0 ? 'is-negative' : 'is-positive';
-  const companyTotalDisplay = operationSummaryLoading
-    ? 'Loading...'
-    : operationSummaryError?.message
-      ? '-'
-      : formatAmount(companyTotalAmount);
   const isDepositOperation =
     String(currentOperation?.type ?? '').trim().toLowerCase() === 'deposit';
   const operationAmountToneClass = isDepositOperation
@@ -1162,19 +1142,23 @@ export default function FinancialOperationsPanel({ enabled = true }) {
               ) : selectedOperationId && currentOperation ? (
                 <div className='manage-finance__operation-detail'>
                   <div className='manage-finance__operation-detail-header'>
-                    <div>
-                      <div className='d-flex flex-wrap align-items-center gap-2 mb-2'>
-                        <h5 className='mb-0'>{currentOperation.title || '-'}</h5>
-                        <Badge bg={getOperationTypeVariant(currentOperation.type)}>
-                          {currentOperation.type === 'deposit'
-                            ? 'Deposit'
-                            : 'Withdrawal'}
-                        </Badge>
-                        <Badge bg={getOperationStatusVariant(currentOperation.status)}>
-                          {currentOperation.status || 'pending'}
-                        </Badge>
+                    <div className='manage-finance__operation-detail-main'>
+                      <div className='manage-finance__operation-detail-title-row'>
+                        <h5 className='manage-finance__operation-detail-title mb-0'>
+                          {currentOperation.title || '-'}
+                        </h5>
+                        <div className='manage-finance__operation-detail-badges'>
+                          <Badge bg={getOperationTypeVariant(currentOperation.type)}>
+                            {currentOperation.type === 'deposit'
+                              ? 'Deposit'
+                              : 'Withdrawal'}
+                          </Badge>
+                          <Badge bg={getOperationStatusVariant(currentOperation.status)}>
+                            {currentOperation.status || 'pending'}
+                          </Badge>
+                        </div>
                       </div>
-                      <p className='text-muted mb-0'>
+                      <p className='manage-finance__operation-detail-description text-muted mb-0'>
                         {currentOperation.description || 'No description added.'}
                       </p>
                     </div>
@@ -1233,20 +1217,28 @@ export default function FinancialOperationsPanel({ enabled = true }) {
                       <Button
                         variant='outline-secondary'
                         size='sm'
+                        className='manage-finance__operation-icon-action'
                         onClick={handleOpenEditModal}
                         disabled={operationDeleteStatus === 'loading'}
+                        aria-label='Edit operation'
+                        title='Edit operation'
                       >
-                        Edit Operation
+                        <i className='ph-duotone ph-pencil-simple'></i>
                       </Button>
                       <Button
                         variant='outline-danger'
                         size='sm'
+                        className='manage-finance__operation-icon-action'
                         onClick={handleDeleteOperation}
                         disabled={operationDeleteStatus === 'loading'}
+                        aria-label='Delete operation'
+                        title='Delete operation'
                       >
-                        {operationDeleteStatus === 'loading'
-                          ? 'Deleting...'
-                          : 'Delete Operation'}
+                        {operationDeleteStatus === 'loading' ? (
+                          <Spinner animation='border' size='sm' />
+                        ) : (
+                          <i className='ph-duotone ph-trash'></i>
+                        )}
                       </Button>
                     </div>
 
@@ -1266,24 +1258,6 @@ export default function FinancialOperationsPanel({ enabled = true }) {
                             Operation Amount
                           </span>
                           <strong>{formatAmount(currentOperation.amount)}</strong>
-                        </span>
-                      </div>
-
-                      <div
-                        className={[
-                          'manage-finance__operation-amount',
-                          'manage-finance__operation-amount--company-total',
-                          companyTotalToneClass,
-                        ].join(' ')}
-                      >
-                        <span className='manage-finance__operation-amount-icon'>
-                          <i className='ph-duotone ph-buildings'></i>
-                        </span>
-                        <span className='manage-finance__operation-amount-copy'>
-                          <span className='manage-finance__operation-amount-label'>
-                            Company Balance
-                          </span>
-                          <strong>{companyTotalDisplay}</strong>
                         </span>
                       </div>
                     </div>
