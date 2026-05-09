@@ -82,6 +82,7 @@
   color: var(--bs-body-color);
 }
 
+
 .manage-finance__overview-metric.is-income .manage-finance__overview-metric-icon {
   color: #15803d;
   background: rgba(22, 163, 74, 0.12);
