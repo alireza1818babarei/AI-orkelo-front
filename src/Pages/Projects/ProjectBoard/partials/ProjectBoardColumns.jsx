@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createPortal } from "react-dom";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
@@ -375,7 +375,6 @@ const Column = memo(function Column({
 
   flashCompletedTaskIds,
   enterTaskIds,
-  registerContentRef,
 }) {
   const taskIds = column.taskIds || [];
   const columnTaskCount = getColumnTaskCount(column);
@@ -386,9 +385,8 @@ const Column = memo(function Column({
       } else if (contentRef && typeof contentRef === "object") {
         contentRef.current = node;
       }
-      registerContentRef?.(column.id, node);
     },
-    [column.id, contentRef, registerContentRef],
+    [contentRef],
   );
 
   const footer = useMemo(() => {
@@ -510,7 +508,6 @@ const Column = memo(function Column({
 });
 
 const ProjectBoardColumns = ({
-  projectId,
   columns: columnsProp,
   status,
   tasksLoading = false,
@@ -537,102 +534,6 @@ const ProjectBoardColumns = ({
   const [enterTaskIds, setEnterTaskIds] = useState(() => new Set());
   const seenTaskIdsRef = useRef(new Set());
   const enterTimeoutsRef = useRef({});
-  const columnContentElsRef = useRef({});
-  const pendingCreatedTaskScrollColumnIdRef = useRef(null);
-  const readyCreatedTaskScrollColumnIdRef = useRef(null);
-  const initialScrollProjectKeyRef = useRef(null);
-  const projectScrollKey = String(projectId ?? "default");
-
-  const registerColumnContentRef = useCallback((columnId, node) => {
-    const key = String(columnId ?? "");
-    if (!key) return;
-    if (node) {
-      columnContentElsRef.current[key] = node;
-      return;
-    }
-    delete columnContentElsRef.current[key];
-  }, []);
-
-  const scrollContentElementToBottom = useCallback((el, behavior = "auto") => {
-    if (!el) return false;
-
-    if (typeof el.scrollTo === "function") {
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior,
-      });
-    } else {
-      el.scrollTop = el.scrollHeight;
-    }
-
-    return true;
-  }, []);
-
-  const scrollColumnToBottom = useCallback(
-    (columnId, behavior = "smooth") => {
-      const key = String(columnId ?? "");
-      return scrollContentElementToBottom(
-        columnContentElsRef.current[key],
-        behavior,
-      );
-    },
-    [scrollContentElementToBottom],
-  );
-
-  const scrollAllColumnsToBottom = useCallback(
-    (behavior = "auto") => {
-      let didScroll = false;
-
-      Object.values(columnContentElsRef.current || {}).forEach((el) => {
-        if (scrollContentElementToBottom(el, behavior)) {
-          didScroll = true;
-        }
-      });
-
-      return didScroll;
-    },
-    [scrollContentElementToBottom],
-  );
-
-  useLayoutEffect(() => {
-    if (isDraggingRef.current) return undefined;
-    if (initialScrollProjectKeyRef.current === projectScrollKey) return undefined;
-    if (status === "loading" || tasksLoading || !board.columns.length) return undefined;
-
-    let raf1 = 0;
-    let raf2 = 0;
-    let retryTimeout = 0;
-    let attempts = 0;
-
-    const runScroll = () => {
-      if (scrollAllColumnsToBottom("auto")) {
-        initialScrollProjectKeyRef.current = projectScrollKey;
-        return;
-      }
-
-      attempts += 1;
-      if (attempts <= 4) {
-        retryTimeout = window.setTimeout(runScroll, 50);
-      }
-    };
-
-    raf1 = window.requestAnimationFrame(() => {
-      raf2 = window.requestAnimationFrame(runScroll);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(raf1);
-      window.cancelAnimationFrame(raf2);
-      window.clearTimeout(retryTimeout);
-    };
-  }, [
-    board.columns.length,
-    projectScrollKey,
-    status,
-    tasksLoading,
-    scrollAllColumnsToBottom,
-  ]);
-
 
   useEffect(() => {
     if (isDraggingRef.current) return;
@@ -701,18 +602,6 @@ const ProjectBoardColumns = ({
       });
     }
 
-    const pendingScrollColumnId = pendingCreatedTaskScrollColumnIdRef.current;
-    if (pendingScrollColumnId && newIds.length) {
-      const newTaskIdSet = new Set(newIds.map(String));
-      const targetColumn = (nextBoard.columns || []).find(
-        (col) => String(col.id) === String(pendingScrollColumnId),
-      );
-
-      if (targetColumn?.taskIds?.some((id) => newTaskIdSet.has(String(id)))) {
-        readyCreatedTaskScrollColumnIdRef.current = String(pendingScrollColumnId);
-        pendingCreatedTaskScrollColumnIdRef.current = null;
-      }
-    }
   }, [columnsProp]);
 
   useEffect(() => {
@@ -723,39 +612,6 @@ const ProjectBoardColumns = ({
       enterTimeoutsRef.current = {};
     };
   }, []);
-
-  useEffect(() => {
-    const targetColumnId = readyCreatedTaskScrollColumnIdRef.current;
-    if (!targetColumnId) return undefined;
-
-    let raf1 = 0;
-    let raf2 = 0;
-    let fallbackTimeout = 0;
-
-    const runScroll = () => {
-      const didScroll = scrollColumnToBottom(targetColumnId, "smooth");
-      if (didScroll) {
-        readyCreatedTaskScrollColumnIdRef.current = null;
-        return;
-      }
-
-      fallbackTimeout = window.setTimeout(() => {
-        if (scrollColumnToBottom(targetColumnId, "auto")) {
-          readyCreatedTaskScrollColumnIdRef.current = null;
-        }
-      }, 80);
-    };
-
-    raf1 = window.requestAnimationFrame(() => {
-      raf2 = window.requestAnimationFrame(runScroll);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(raf1);
-      window.cancelAnimationFrame(raf2);
-      window.clearTimeout(fallbackTimeout);
-    };
-  }, [board, scrollColumnToBottom]);
 
   const startAddTask = (column) => {
     if (!column?.id) return;
@@ -774,19 +630,7 @@ const ProjectBoardColumns = ({
       cancelAddTask();
       return;
     }
-    const targetColumnId = String(column?.id ?? "");
-    if (targetColumnId) {
-      pendingCreatedTaskScrollColumnIdRef.current = targetColumnId;
-    }
-
-    const maybePromise = onAddTask?.(column, text);
-    if (maybePromise && typeof maybePromise.then === "function") {
-      maybePromise.catch(() => {
-        if (pendingCreatedTaskScrollColumnIdRef.current === targetColumnId) {
-          pendingCreatedTaskScrollColumnIdRef.current = null;
-        }
-      });
-    }
+    onAddTask?.(column, text);
     cancelAddTask();
   };
 
@@ -986,7 +830,6 @@ const ProjectBoardColumns = ({
                       onSubmitAddTask={submitAddTask}
                       flashCompletedTaskIds={flashCompletedTaskIds}
                       enterTaskIds={enterTaskIds}
-                      registerContentRef={registerColumnContentRef}
                     />
                   </PortalDraggable>
                 )}

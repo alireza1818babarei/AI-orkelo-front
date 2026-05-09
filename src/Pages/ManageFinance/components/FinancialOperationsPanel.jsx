@@ -26,6 +26,7 @@ import {
   FinanceOperationListSkeleton,
 } from '../../../Components/Common/LoadingSkeleton';
 import { formatFullDate, formatMonthDayTime } from '../../../utils/date';
+import { formatTomanAmount } from '../../../utils/financeCurrency';
 import { alertConfirm, toastError, toastSuccess } from '../../../utils/sweetAlert';
 import {
   financialOperationCreateErrorSelector,
@@ -123,18 +124,7 @@ const getOperationForm = (operation = null) => ({
   depositSource: String(operation?.depositSource ?? '').trim(),
 });
 
-const formatAmount = (value) => {
-  const numberValue = Number(value ?? 0);
-
-  if (!Number.isFinite(numberValue)) {
-    return '-';
-  }
-
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(numberValue);
-};
+const formatAmount = (value) => formatTomanAmount(value, '-');
 
 const formatBytes = (bytes) => {
   const size = Number(bytes ?? 0);

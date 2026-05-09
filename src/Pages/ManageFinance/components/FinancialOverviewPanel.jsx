@@ -18,25 +18,13 @@ import {
 } from '../../../store/FileManager/operations/operations.selector';
 import { getFinancialOperationSummary } from '../../../store/FileManager/operations/operations.thunk';
 import { FinanceOverviewSkeleton } from '../../../Components/Common/LoadingSkeleton';
+import { formatTomanAmount } from '../../../utils/financeCurrency';
 
 // Keep period values aligned with the backend summary request validation.
 const PERIOD_OPTIONS = [
   { value: '6_months', label: '6M' },
   { value: '12_months', label: '12M' },
 ];
-
-const formatFinancialAmount = (value) => {
-  const numberValue = Number(value ?? 0);
-
-  if (!Number.isFinite(numberValue)) {
-    return '0';
-  }
-
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(numberValue);
-};
 
 function OverviewMetric({ iconClass, label, value, helper, tone = 'primary' }) {
   return (
@@ -125,7 +113,7 @@ export default function FinancialOverviewPanel({ enabled = true }) {
       // income, outcome, and net visually comparable.
       yaxis: {
         labels: {
-          formatter: (value) => formatFinancialAmount(value),
+          formatter: (value) => formatTomanAmount(value),
         },
       },
       grid: {
@@ -140,7 +128,7 @@ export default function FinancialOverviewPanel({ enabled = true }) {
         shared: true,
         intersect: false,
         y: {
-          formatter: (value) => formatFinancialAmount(value),
+          formatter: (value) => formatTomanAmount(value),
         },
       },
     }),
@@ -195,7 +183,7 @@ export default function FinancialOverviewPanel({ enabled = true }) {
                 <OverviewMetric
                   iconClass='ph-duotone ph-arrow-circle-up-right'
                   label='Total Income'
-                  value={formatFinancialAmount(totals.incomeValue)}
+                  value={formatTomanAmount(totals.incomeValue)}
                   helper='Approved deposits'
                   tone='income'
                 />
@@ -204,7 +192,7 @@ export default function FinancialOverviewPanel({ enabled = true }) {
                 <OverviewMetric
                   iconClass='ph-duotone ph-arrow-circle-down-left'
                   label='Total Outcome'
-                  value={formatFinancialAmount(totals.outcomeValue)}
+                  value={formatTomanAmount(totals.outcomeValue)}
                   helper='Approved withdrawals'
                   tone='outcome'
                 />
@@ -213,7 +201,7 @@ export default function FinancialOverviewPanel({ enabled = true }) {
                 <OverviewMetric
                   iconClass='ph-duotone ph-chart-line-up'
                   label='Net Balance'
-                  value={formatFinancialAmount(totals.netValue)}
+                  value={formatTomanAmount(totals.netValue)}
                   helper='Income minus outcome'
                   tone={netTone}
                 />
@@ -222,7 +210,7 @@ export default function FinancialOverviewPanel({ enabled = true }) {
                 <OverviewMetric
                   iconClass='ph-duotone ph-clock-countdown'
                   label='Pending Review'
-                  value={formatFinancialAmount(totals.pendingAmountValue)}
+                  value={formatTomanAmount(totals.pendingAmountValue)}
                   helper={`${pendingCount} pending operation${pendingCount === 1 ? '' : 's'}`}
                   tone='pending'
                 />
