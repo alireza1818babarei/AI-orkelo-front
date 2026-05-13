@@ -97,6 +97,16 @@ const normalizeSummaryPayload = (payload) => {
 };
 
 const formatDateOnly = (value) => {
+  const dateOnly = String(value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (dateOnly) {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3])));
+  }
+
   const date = new Date(value ?? '');
   if (Number.isNaN(date.getTime())) return '-';
 
@@ -107,10 +117,10 @@ const formatDateOnly = (value) => {
   }).format(date);
 };
 
-const formatRequestStart = (request) => formatDateOnly(request.start_at);
+const formatRequestStart = (request) => formatDateOnly(request.start_date || request.start_at);
 
 const formatRequestEnd = (request) =>
-  request.leave_type === 'hourly' ? '-' : formatDateOnly(request.end_at);
+  request.leave_type === 'hourly' ? '-' : formatDateOnly(request.end_date || request.end_at);
 
 const formatLeaveType = (value) => {
   switch (String(value ?? '').toLowerCase()) {
