@@ -76,6 +76,9 @@ export default function ManageFinance() {
 
   const user = useSelector((state) => state.auth?.user ?? null);
   const activeCompany = useSelector((state) => state.companyContext?.activeCompany);
+  const companyContextStatus = useSelector(
+    (state) => state.companyContext?.status ?? 'idle',
+  );
   const activeCompanyId = useSelector(
     (state) =>
       state.companyContext?.activeCompanyId ??
@@ -96,7 +99,15 @@ export default function ManageFinance() {
     activeCompany?.membership?.role ?? user?.company_role ?? user?.user_type,
   );
   const isCompanyOwner = companyRole === 'company_owner';
-  const canOpenSection = isCompanyOwner || canView;
+  const financeAccessFromContext =
+    activeCompany?.membership?.has_finance_center_access ??
+    activeCompany?.membership?.hasFinanceCenterAccess;
+  const hasFinanceAccessInContext =
+    financeAccessFromContext !== undefined && financeAccessFromContext !== null;
+  const canOpenSection =
+    isCompanyOwner ||
+    Boolean(financeAccessFromContext) ||
+    (!hasFinanceAccessInContext && canView);
 
   useEffect(() => {
     if (!isCompanyOwner && activeTab === SECTION_ACCESS_TAB) {
@@ -115,9 +126,19 @@ export default function ManageFinance() {
       return;
     }
 
-    // Non-owner users must be checked before opening the finance workspace.
+    if (hasFinanceAccessInContext) {
+      return;
+    }
+
+    // Fallback for older company-context payloads that do not include finance access.
     dispatch(probeFileManagementSectionAccess());
-  }, [activeCompanyId, activeTab, dispatch, isCompanyOwner]);
+  }, [
+    activeCompanyId,
+    activeTab,
+    dispatch,
+    hasFinanceAccessInContext,
+    isCompanyOwner,
+  ]);
 
   const handleRefreshAccess = () => {
     dispatch(getFileManagementAccessUsers());
@@ -134,7 +155,16 @@ export default function ManageFinance() {
     toastError(resultAction.payload?.message || 'Failed to update financial access');
   };
 
-  if (!isCompanyOwner && accessProbeStatus === 'loading' && !canOpenSection) {
+  if (!activeCompany && ['idle', 'loading'].includes(companyContextStatus)) {
+    return <StateScreenSkeleton label='Loading your company access' />;
+  }
+
+  if (
+    !isCompanyOwner &&
+    !hasFinanceAccessInContext &&
+    accessProbeStatus === 'loading' &&
+    !canOpenSection
+  ) {
     return <StateScreenSkeleton label='Checking your finance access' />;
   }
 

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getToken } from "../utils/tokenStorage";
 
-// NOTE :    API configuration for project.
+// NOTE : API configuration for project.
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 15000,

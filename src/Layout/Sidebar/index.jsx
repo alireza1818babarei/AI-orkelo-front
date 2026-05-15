@@ -39,6 +39,7 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
   const activeCompanyRole = useSelector(
     (s) => s.companyContext?.activeCompany?.membership?.role ?? null
   );
+  const activeCompany = useSelector((s) => s.companyContext?.activeCompany ?? null);
   const projects = useSelector((s) => s.projects.items);
   const loading = useSelector((s) => s.projects.loading);
 
@@ -69,7 +70,15 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
   const companyRole = String(
     activeCompanyRole ?? user?.company_role ?? user?.user_type ?? ''
   ).trim().toLowerCase();
+  const isCompanyOwner = companyRole === 'company_owner';
   const canSeeCompanyManagement = COMPANY_MANAGEMENT_ROLES.has(companyRole);
+  const hasFinanceCenterAccess = Boolean(
+    activeCompany?.membership?.has_finance_center_access ??
+      activeCompany?.membership?.hasFinanceCenterAccess
+  );
+  const canSeeFinanceCenter = isCompanyOwner || hasFinanceCenterAccess;
+  const canSeeFinanceCenterInWorkspace =
+    !canSeeCompanyManagement && canSeeFinanceCenter;
 
   useEffect(() => {
     register('visibility');
@@ -180,70 +189,86 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
     ];
 
     if (canSeeCompanyManagement) {
+      const companyManagementChildren = [
+        {
+          name: 'Requests Management',
+          path: '/requests-management',
+          iconClass: 'ph-duotone ph-clipboard-text',
+          className: 'sidebar-icon-submenu-item',
+        },
+        {
+          name: 'User Performance Analyze',
+          path: '/user-performance-analyze',
+          iconClass: 'ph-duotone ph-chart-line-up',
+          className: 'sidebar-icon-submenu-item',
+        },
+        {
+          name: 'Manage Projects',
+          path: '/manage-projects',
+          iconClass: 'ph-duotone ph-folder-open',
+          className: 'sidebar-icon-submenu-item',
+        },
+        {
+          name: 'Active Trackers',
+          path: '/active-trackers',
+          iconClass: 'ph-duotone ph-timer',
+          className: 'sidebar-icon-submenu-item',
+        },
+      ];
+
+      if (canSeeFinanceCenter) {
+        companyManagementChildren.push({
+          name: 'Finance Center',
+          path: '/manage-finance',
+          iconClass: 'ph-duotone ph-wallet',
+          className: 'sidebar-icon-submenu-item',
+        });
+      }
+
       items.push({
         type: 'dropdown',
         name: 'Company Management',
         iconClass: 'ph-duotone ph-buildings',
         collapseId: 'company-management-collapse',
-        children: [
-          {
-            name: 'Requests Management',
-            path: '/requests-management',
-            iconClass: 'ph-duotone ph-clipboard-text',
-            className: 'sidebar-icon-submenu-item',
-          },
-          {
-            name: 'User Performance Analyze',
-            path: '/user-performance-analyze',
-            iconClass: 'ph-duotone ph-chart-line-up',
-            className: 'sidebar-icon-submenu-item',
-          },
-          {
-            name: 'Manage Projects',
-            path: '/manage-projects',
-            iconClass: 'ph-duotone ph-folder-open',
-            className: 'sidebar-icon-submenu-item',
-          },
-          {
-            name: 'Active Trackers',
-            path: '/active-trackers',
-            iconClass: 'ph-duotone ph-timer',
-            className: 'sidebar-icon-submenu-item',
-          },
-          {
-            name: 'Finance Center',
-            path: '/manage-finance',
-            iconClass: 'ph-duotone ph-wallet',
-            className: 'sidebar-icon-submenu-item',
-          },
-        ],
+        children: companyManagementChildren,
       });
     } else {
+      const workspaceChildren = [
+        {
+          name: 'Requests',
+          path: '/requests',
+          iconClass: 'ph-duotone ph-clipboard-text',
+          className: 'sidebar-icon-submenu-item',
+        },
+        {
+          name: 'My File Manager',
+          path: '/profile/projects',
+          iconClass: 'ph-duotone ph-folder-open',
+          className: 'sidebar-icon-submenu-item',
+        },
+        {
+          name: 'My Performance Analyze',
+          path: '/user-performance-analyze',
+          iconClass: 'ph-duotone ph-chart-line-up',
+          className: 'sidebar-icon-submenu-item',
+        },
+      ];
+
+      if (canSeeFinanceCenterInWorkspace) {
+        workspaceChildren.push({
+          name: 'Finance Center',
+          path: '/manage-finance',
+          iconClass: 'ph-duotone ph-wallet',
+          className: 'sidebar-icon-submenu-item',
+        });
+      }
+
       items.push({
         type: 'dropdown',
         name: 'My Workspace',
         iconClass: 'ph-duotone ph-user-circle',
         collapseId: 'my-workspace-collapse',
-        children: [
-          {
-            name: 'Requests',
-            path: '/requests',
-            iconClass: 'ph-duotone ph-clipboard-text',
-            className: 'sidebar-icon-submenu-item',
-          },
-          {
-            name: 'My File Manager',
-            path: '/profile/projects',
-            iconClass: 'ph-duotone ph-folder-open',
-            className: 'sidebar-icon-submenu-item',
-          },
-          {
-            name: 'My Performance Analyze',
-            path: '/user-performance-analyze',
-            iconClass: 'ph-duotone ph-chart-line-up',
-            className: 'sidebar-icon-submenu-item',
-          },
-        ],
+        children: workspaceChildren,
       });
     }
 
@@ -253,6 +278,8 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
     projectMenuItems,
     loading,
     canSeeCompanyManagement,
+    canSeeFinanceCenter,
+    canSeeFinanceCenterInWorkspace,
   ]);
 
   return (
