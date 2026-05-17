@@ -3535,8 +3535,23 @@
         display: block;
       }
 
+      .orkelo-sidebar-logo__full--dark {
+        display: none !important;
+      }
+
       .toggle-semi-nav {
         display: inline-flex !important;
+      }
+    }
+
+    body.dark & nav.vertical-sidebar:not(.semi-nav),
+    nav.vertical-sidebar.dark-sidebar:not(.semi-nav) {
+      .orkelo-sidebar-logo__full--light {
+        display: none !important;
+      }
+
+      .orkelo-sidebar-logo__full--dark {
+        display: block !important;
       }
     }
 
