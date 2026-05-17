@@ -153,13 +153,13 @@ function MyProjects() {
         </Col>
       </Row>
 
-      <Row className='g-4'>
-        <Col lg={4}>
+      <Row className='g-4 daily-report-top-row'>
+        <Col lg={4} className='daily-report-upload-col'>
           <LightFileupload uploading={uploading} onUpload={handleUpload} />
         </Col>
 
-        <Col lg={8}>
-          <Card className='mb-4'>
+        <Col lg={8} className='daily-report-quick-col'>
+          <Card className='mb-4 daily-report-quick-access-card'>
             <CardHeader>
               <h5>Quick-Access</h5>
             </CardHeader>
@@ -248,7 +248,11 @@ function MyProjects() {
               )}
             </CardBody>
           </Card>
+        </Col>
+      </Row>
 
+      <Row className='g-4 mt-0'>
+        <Col xs={12}>
           <FileTable projectId={projectId} onChanged={refreshQuickAccess} />
         </Col>
       </Row>

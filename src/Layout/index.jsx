@@ -2,12 +2,41 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { Outlet } from "react-router-dom";
 import ScrollArrow from "./Footer/ScrollArrow";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Customizer from "./Customizer";
 import AppUpdateModal from "../Components/AppUpdateModal";
 
+const SIDEBAR_COMPACT_QUERY = "(max-width: 1199px)";
+
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia(SIDEBAR_COMPACT_QUERY);
+    const syncSidebarMode = (event) => {
+      const matches = Boolean(event?.matches ?? mediaQuery.matches);
+      if (matches) {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    syncSidebarMode(mediaQuery);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", syncSidebarMode);
+      return () => {
+        mediaQuery.removeEventListener("change", syncSidebarMode);
+      };
+    }
+
+    mediaQuery.addListener(syncSidebarMode);
+    return () => {
+      mediaQuery.removeListener(syncSidebarMode);
+    };
+  }, []);
+
   return (
     <div className="app-wrapper default">
       <div

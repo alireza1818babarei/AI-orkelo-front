@@ -115,6 +115,42 @@
   word-break: break-word;
 }
 
+.daily-report-top-row {
+  align-items: stretch;
+}
+
+.daily-report-upload-col,
+.daily-report-quick-col {
+  display: flex;
+}
+
+.daily-report-upload-col > .card,
+.daily-report-quick-access-card {
+  width: 100%;
+  min-height: 100%;
+}
+
+.daily-report-quick-access-card {
+  display: flex;
+  flex-direction: column;
+
+  .card-body {
+    flex: 1;
+  }
+}
+
+@media screen and (max-width: 991px) {
+  .daily-report-upload-col,
+  .daily-report-quick-col {
+    display: block;
+  }
+
+  .daily-report-upload-col > .card,
+  .daily-report-quick-access-card {
+    min-height: 0;
+  }
+}
+
 .file-manager-sidebar {
   .border-bottom-1 {
     border-bottom: 1px solid rgb(var(--light));

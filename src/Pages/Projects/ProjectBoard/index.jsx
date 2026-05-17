@@ -98,6 +98,12 @@ const sortColumnsByPosition = (columns) => {
   });
 };
 
+const MEMBERS_PANEL_MOBILE_QUERY = "(max-width: 1199px)";
+
+const isMembersMobileViewport = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia(MEMBERS_PANEL_MOBILE_QUERY).matches;
+
 const ProjectBoard = () => {
   const { id, taskId } = useParams();
   const dispatch = useDispatch();
@@ -117,7 +123,12 @@ const ProjectBoard = () => {
   const [activeTask, setActiveTask] = useState(null);
   const [removedTaskIds, setRemovedTaskIds] = useState([]);
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
-  const [membersPanelCollapsed, setMembersPanelCollapsed] = useState(false);
+  const [desktopMembersPanelCollapsed, setDesktopMembersPanelCollapsed] =
+    useState(false);
+  const [mobileMembersPanelOpen, setMobileMembersPanelOpen] = useState(false);
+  const [membersMobileViewport, setMembersMobileViewport] = useState(
+    isMembersMobileViewport,
+  );
 
   const { data, error, loading } = useSelector((s) => s.projectDetails);
   const pageError = routeSwitched ? null : error;
@@ -233,8 +244,35 @@ const ProjectBoard = () => {
     setActiveTask(null);
     setRemovedTaskIds([]);
     setAddMemberModalOpen(false);
-    setMembersPanelCollapsed(false);
+    setMobileMembersPanelOpen(false);
   }, [id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia(MEMBERS_PANEL_MOBILE_QUERY);
+    const syncMembersViewport = (event) => {
+      const matches = Boolean(event?.matches ?? mediaQuery.matches);
+      setMembersMobileViewport(matches);
+      if (matches) {
+        setMobileMembersPanelOpen(false);
+      }
+    };
+
+    syncMembersViewport(mediaQuery);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", syncMembersViewport);
+      return () => {
+        mediaQuery.removeEventListener("change", syncMembersViewport);
+      };
+    }
+
+    mediaQuery.addListener(syncMembersViewport);
+    return () => {
+      mediaQuery.removeListener(syncMembersViewport);
+    };
+  }, []);
 
   useEffect(() => {
     if (!taskId) {
@@ -826,9 +864,24 @@ const ProjectBoard = () => {
     return <div className="p-3">Error: {pageError?.message || pageError}</div>;
   if (!project) return <div className="p-3">Project not found!</div>;
 
+  const membersPanelCollapsed = membersMobileViewport
+    ? !mobileMembersPanelOpen
+    : desktopMembersPanelCollapsed;
+
+  const toggleMembersPanel = () => {
+    if (membersMobileViewport) {
+      setMobileMembersPanelOpen((prev) => !prev);
+      return;
+    }
+
+    setDesktopMembersPanelCollapsed((prev) => !prev);
+  };
+
   return (
     <section
-      className={`project-board-layout ${membersPanelCollapsed ? "members-collapsed" : ""}`}
+      className={`project-board-layout ${
+        membersPanelCollapsed ? "members-collapsed" : ""
+      } ${membersMobileViewport ? "members-mobile" : ""}`}
     >
       <div className="project-board-main">
         <Container fluid className="project-board-main__container">
@@ -868,7 +921,7 @@ const ProjectBoard = () => {
       <button
         type="button"
         className="project-members-fab"
-        onClick={() => setMembersPanelCollapsed((prev) => !prev)}
+        onClick={toggleMembersPanel}
         aria-expanded={!membersPanelCollapsed}
         aria-label={
           membersPanelCollapsed

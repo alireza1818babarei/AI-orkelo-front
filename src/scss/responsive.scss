@@ -3351,3 +3351,202 @@
   }
 }
 
+@media screen and (max-width: 1199px) {
+  .app-wrapper {
+    nav.vertical-sidebar {
+      width: $sidebar-width;
+      overflow: visible;
+    }
+
+    nav.vertical-sidebar.semi-nav {
+      width: $semi-nav;
+
+      &:hover {
+        width: $semi-nav;
+      }
+
+      .sidebar-brand {
+        align-items: center;
+        gap: 0.65rem;
+        padding: 1rem 0 0.75rem !important;
+      }
+
+      .orkelo-sidebar-logo {
+        width: 34px;
+        min-height: 34px;
+        justify-content: center;
+        margin: 0 auto;
+      }
+
+      .orkelo-sidebar-logo__icon {
+        display: block;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+      }
+
+      .orkelo-sidebar-logo__full {
+        display: none !important;
+      }
+
+      .toggle-semi-nav {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        align-self: center !important;
+        width: 36px;
+        height: 36px;
+        margin: 0 !important;
+        padding: 0;
+        border-radius: 10px;
+        background: rgba(var(--secondary), 0.08) !important;
+        border-color: rgba(var(--secondary), 0.14);
+        box-shadow: none;
+
+        i {
+          font-size: 15px !important;
+          line-height: 1;
+        }
+      }
+
+      .app-nav {
+        width: 100%;
+
+        .menu-title span {
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 10px;
+          color: rgba(var(--primary), 1);
+        }
+
+        .main-nav {
+          > li:not(.menu-title) {
+            ul {
+              height: 0;
+              opacity: 0;
+            }
+
+            > a::after {
+              content: none;
+            }
+          }
+
+          > li.sidebar-dropdown--compact-projects > ul.sidebar-submenu--compact-projects {
+            height: auto !important;
+            opacity: 1 !important;
+            padding: 0;
+            margin-top: 10px;
+
+            li.add-project-item {
+              display: none;
+            }
+
+            li.project-submenu-item {
+              padding: 0.2rem 0 !important;
+
+              a {
+                justify-content: center !important;
+                gap: 0;
+                padding: 0.15rem 0;
+
+                &::before {
+                  display: none !important;
+                }
+              }
+
+              .sidebar-project-name {
+                display: none;
+              }
+
+              .sidebar-project-avatar {
+                width: 36px;
+                height: 36px;
+                flex: 0 0 36px;
+
+                &.sidebar-project-avatar--fallback {
+                  font-size: 10px;
+                }
+              }
+
+              &.active a .sidebar-project-avatar {
+                outline-width: 1px;
+                outline-offset: 1px;
+              }
+            }
+          }
+
+          li a {
+            justify-content: center !important;
+            padding-left: 0;
+            padding-right: 0;
+            font-size: 0;
+            text-align: center;
+
+            i {
+              margin: 0 auto;
+            }
+          }
+        }
+      }
+
+      .sidebar-company-switcher-wrap {
+        padding: 0.6rem 0.45rem 0.9rem;
+      }
+
+      .sidebar-company-switcher__trigger {
+        padding: 0.55rem 0.35rem;
+      }
+
+      .sidebar-company-switcher__avatar {
+        width: 42px;
+        height: 42px;
+      }
+
+      .sidebar-company-switcher__name,
+      .sidebar-company-switcher__hint,
+      .sidebar-company-switcher__caret {
+        display: none;
+      }
+
+      & ~ .app-content,
+      & ~ .app-content .header-main,
+      & ~ footer {
+        padding-left: $semi-nav;
+      }
+
+      & ~ .app-content::before {
+        content: none !important;
+        display: none !important;
+        pointer-events: none !important;
+      }
+    }
+
+    nav.vertical-sidebar:not(.semi-nav) {
+      width: $sidebar-width;
+      box-shadow: 0 18px 42px rgba(var(--dark), 0.18);
+
+      .orkelo-sidebar-logo__icon {
+        display: none;
+      }
+
+      .orkelo-sidebar-logo__full {
+        display: block;
+      }
+
+      .toggle-semi-nav {
+        display: inline-flex !important;
+      }
+    }
+
+    .app-content {
+      padding-left: $semi-nav;
+    }
+
+    .header-main {
+      padding-left: $semi-nav;
+    }
+  }
+}
+
