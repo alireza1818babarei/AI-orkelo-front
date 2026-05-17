@@ -14,6 +14,7 @@ const ProjectBoardHeader = ({
   disableEdit,
   disableInfo,
   disableArchives,
+  showDelete = true,
 }) => {
   useEffect(() => {
     $(function () {
@@ -83,15 +84,17 @@ const ProjectBoardHeader = ({
             >
               <i className='ph ph-info'></i>
             </Button>
-            <Button
-              className='btn project-board-header__icon-btn danger'
-              onClick={onDelete}
-              disabled={disableDelete}
-              aria-label='Project delete'
-              title='Delete project'
-            >
-              <i className='ph ph-trash-simple'></i>
-            </Button>
+            {showDelete ? (
+              <Button
+                className='btn project-board-header__icon-btn danger'
+                onClick={onDelete}
+                disabled={disableDelete}
+                aria-label='Project delete'
+                title='Delete project'
+              >
+                <i className='ph ph-trash-simple'></i>
+              </Button>
+            ) : null}
           </div>
         </div>
       </Col>

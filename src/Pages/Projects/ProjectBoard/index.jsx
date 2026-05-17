@@ -57,6 +57,12 @@ import {
 import ProjectTaskManager from "./partials/ProjectTaskManager";
 
 const PROJECT_STATUS = ["active", "deactive"];
+const COMPANY_MANAGEMENT_ROLES = new Set(["company_owner", "company_supervisor"]);
+
+const normalizeRole = (role) =>
+  String(role ?? "")
+    .trim()
+    .toLowerCase();
 
 const normalizeVisibilityValue = (value) => {
   if (typeof value === "string") {
@@ -131,6 +137,10 @@ const ProjectBoard = () => {
   );
 
   const { data, error, loading } = useSelector((s) => s.projectDetails);
+  const currentUser = useSelector((s) => s.auth?.user ?? null);
+  const activeCompanyRole = useSelector(
+    (s) => s.companyContext?.activeCompany?.membership?.role ?? null,
+  );
   const pageError = routeSwitched ? null : error;
   const projectsList = useSelector((s) => s.projects?.items ?? []);
   const {
@@ -466,6 +476,10 @@ const ProjectBoard = () => {
     () => resolveProjectImageSrc(project),
     [project],
   );
+  const companyRole = normalizeRole(
+    activeCompanyRole ?? currentUser?.company_role ?? currentUser?.user_type,
+  );
+  const canDeleteProject = COMPANY_MANAGEMENT_ROLES.has(companyRole);
 
   const onSubmit = async (values) => {
     if (!project?.id) return;
@@ -634,6 +648,11 @@ const ProjectBoard = () => {
   };
 
   const handleProjectDelete = async () => {
+    if (!canDeleteProject) {
+      toastError("You do not have permission to delete this project");
+      return;
+    }
+
     const projectId = project?.id ?? id;
     const projectName = String(project?.name ?? "").trim();
     if (!projectId) {
@@ -892,9 +911,10 @@ const ProjectBoard = () => {
             onEdit={openEditModal}
             onInfo={() => project && setInfoOpen(true)}
             disableAddColumn={!project?.id}
-            disableDelete={!project}
+            disableDelete={!project || !canDeleteProject}
             disableEdit={!id}
             disableInfo={!project}
+            showDelete={canDeleteProject}
           />
 
           <div className="project-board-main__content">
