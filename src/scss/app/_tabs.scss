@@ -63,7 +63,11 @@
     &.bg-#{$name}{
       .nav-link{
         &.active{
-          color: rgba(#{$color}, 1) !important;
+          @if $name == primary {
+            color: var(--font-title-color) !important;
+          } @else {
+            color: rgba(#{$color}, 1) !important;
+          }
          }
       }
     }
@@ -77,7 +81,11 @@
         .nav-link{
           color: var(--white) !important;
           &.active{
-              color:rgba(#{$color},1) !important;
+              @if $name == primary {
+                color: var(--font-title-color) !important;
+              } @else {
+                color: rgba(#{$color},1) !important;
+              }
               background-color: var(--white) !important;
              }
           }
@@ -89,10 +97,14 @@
   .app-tabs-#{$name} {
     .nav-item{
       .nav-link{
-        color: rgba(#{$color},1) !important;
+        @if $name == primary {
+          color: var(--font-title-color) !important;
+        } @else {
+          color: rgba(#{$color},1) !important;
+        }
         &.active{
             background-color: rgba(#{$color},1) !important;
-            color: var(--white) !important;
+            color: #fff !important;
            }
           }
         }
@@ -101,7 +113,11 @@
   .tab-outline-#{$name}{
     .nav-item{
       .nav-link{
-        color: rgba(#{$color},1) !important;
+        @if $name == primary {
+          color: var(--font-title-color) !important;
+        } @else {
+          color: rgba(#{$color},1) !important;
+        }
         &.active{
           background-color: transparent;
           border: 1px solid rgba(#{$color}, 1);
@@ -113,7 +129,11 @@
   .tab-light-#{$name} {
     .nav-item{
       .nav-link{
-        color: rgba(#{$color},1) !important;
+        @if $name == primary {
+          color: var(--font-title-color) !important;
+        } @else {
+          color: rgba(#{$color},1) !important;
+        }
         &.active{
           background-color: rgba(#{$color}, 0.2);
           border-color: rgba(#{$color}, 1);

@@ -313,7 +313,7 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
   };
 
   return (
-    <Card className='manage-finance__panel manage-finance__counterparties-card shadow-sm border-0'>
+    <Card className='manage-finance__panel manage-finance__counterparties-card border-0'>
       <Card.Body>
         <div className='d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4'>
           <div>

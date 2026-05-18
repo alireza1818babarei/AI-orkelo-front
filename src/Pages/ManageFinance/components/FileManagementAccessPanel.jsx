@@ -151,7 +151,7 @@ export default function FileManagementAccessPanel({
   };
 
   return (
-    <Card className='manage-finance__panel shadow-sm border-0'>
+    <Card className='manage-finance__panel border-0'>
       <Card.Header className='bg-transparent border-0 d-flex flex-wrap gap-3 justify-content-between align-items-start'>
         <div>
           <div className='d-flex flex-wrap align-items-center gap-2 mb-2'>

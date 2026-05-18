@@ -1,25 +1,43 @@
 // >>-- 01 Variables css start --<<
 :root {
-    --font-color: #15264b;
-    --font-title-color: #1c3264;
+    --app-text-rgb: 21, 38, 75;
+    --app-title-rgb: 28, 50, 100;
+    --app-muted-rgb: 91, 100, 114;
+    --font-color: rgb(var(--app-text-rgb));
+    --font-title-color: rgb(var(--app-title-rgb));
     --body-color: #f9f9f9;
     --bodybg-color: #f6f6f6;
-    --font-secondary-color: #22242c;
+    --font-secondary-color: rgba(var(--app-muted-rgb), 0.94);
+    --font-muted-color: rgba(var(--app-muted-rgb), 0.78);
     --font-light-color: #a0a0b0;
     --grid_color: rgba(144, 164, 246, 0.21);
     --border_color: rgba(0, 0, 0, 0.21);
     --primary: 72, 190, 206;
-    --secondary: 139, 132, 118;
+    --secondary: var(--app-muted-rgb);
     --success: 174, 204, 52;
     --danger: 299,94,64;
     --warning: 235,195,63;
     --info : 83,90,231;
     --light: 229, 227, 224;
-    --dark: 72, 68, 61;
+    --dark: var(--app-text-rgb);
     --black: 0, 0, 0;
     --border_color: #ebedf0;
+    --bs-body-color: var(--font-color);
+    --bs-body-color-rgb: var(--app-text-rgb);
+    --bs-heading-color: var(--font-title-color);
+    --bs-secondary: rgb(var(--secondary));
+    --bs-secondary-rgb: var(--secondary);
+    --bs-secondary-color: var(--font-secondary-color);
+    --bs-dark: rgb(var(--dark));
+    --bs-dark-rgb: var(--dark);
+    --bs-card-color: var(--font-color);
+    --bs-dropdown-color: var(--font-color);
+    --bs-list-group-color: var(--font-color);
+    --bs-modal-color: var(--font-color);
+    --bs-offcanvas-color: var(--font-color);
+    --bs-tertiary-color: var(--font-muted-color);
 
-    --bs-dropdown-link-active-color: rgba(var(--primary), 1);
+    --bs-dropdown-link-active-color: var(--font-title-color);
     --bs-dropdown-link-active-bg: rgba(var(--primary), 0.2);
 
 
@@ -83,48 +101,47 @@
 }
 .default{
     --primary: 79,201,218;
-    --secondary: 139, 132, 118;
 }
 .gold{
     --primary: 192,127,0;
-    --secondary: 76,61,61;
 }
 .warm{
     --primary: 255,103,125;
-    --secondary: 111,90,126;
 }
 .happy{
     --primary: 36,114,145;
-    --secondary: 129, 125, 141;
 }
 .nature{
     --primary: 127,180,20;
-    --secondary: 82,80,80;
 }
 .cold{
     --primary: 3, 4, 94;
-    //--secondary: 96, 114, 116;
 }
 .hot{
     --primary: 255,0,77;
-    --secondary: 29, 43, 83;
 }
 
 
 
 nav.dark-sidebar,
 body.dark {
+    --app-text-rgb: 255, 255, 255;
+    --app-title-rgb: 255, 255, 255;
+    --app-muted-rgb: 255, 255, 255;
     --white: #333644;
     --black: #DCE2F0;
     --bodybg-color: #282a36;
     --bs-body-bg: #333644;
-    --font-color: #fff;
+    --font-color: rgb(var(--app-text-rgb));
+    --font-title-color: rgb(var(--app-title-rgb));
+    --font-secondary-color: rgba(var(--app-muted-rgb), 0.84);
+    --font-muted-color: rgba(var(--app-muted-rgb), 0.68);
     --box-shadow: 0 0.2rem 1rem #333644;
     --hover-shadow: 0 0.2rem 2rem #333644;
     --light-gray: #333644;
      --light: 71, 71, 96;
-    --dark:  234, 234, 236;
-    --secondary: 185 ,179, 166;
+    --dark: var(--app-text-rgb);
+    --secondary: var(--app-muted-rgb);
     //--light:87, 88, 99l;
     //--dark: 87, 88, 99;
     --link-color: #eaeaec;
@@ -132,16 +149,23 @@ body.dark {
     --bs-border-color: #474a56;
     --bs-card-border-color: #5B5E69;
     --bs-form-control-bg: #333644;
-    --bs-body-color: #ffffff;
-    --bs-secondary-color:#eaeaec;
-    --bs-list-group-color:#eaeaec;
-    --bs-body-color-rgb:#eaeaec;
-    --bs-text-opacity: 0;
-    --bs-card-color:#eaeaec;
+    --bs-body-color: var(--font-color);
+    --bs-heading-color: var(--font-title-color);
+    --bs-secondary: rgb(var(--secondary));
+    --bs-secondary-rgb: var(--secondary);
+    --bs-secondary-color: var(--font-secondary-color);
+    --bs-list-group-color: var(--font-color);
+    --bs-body-color-rgb: var(--app-text-rgb);
+    --bs-dark: rgb(var(--dark));
+    --bs-dark-rgb: var(--dark);
+    --bs-text-opacity: 1;
+    --bs-card-color: var(--font-color);
+    --bs-dropdown-color: var(--font-color);
+    --bs-dropdown-link-active-color: var(--font-title-color);
+    --bs-modal-color: var(--font-color);
+    --bs-offcanvas-color: var(--font-color);
+    --bs-tertiary-color: var(--font-muted-color);
     --bs-tertiary-bg: #242425;
-    .default {
-        --secondary: 185 ,179, 166;
-    }
 
     //.btn-dark,.btn{
     //    --bs-btn-color: #000000;

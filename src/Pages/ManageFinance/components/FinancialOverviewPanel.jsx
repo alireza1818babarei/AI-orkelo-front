@@ -139,7 +139,7 @@ export default function FinancialOverviewPanel({ enabled = true }) {
   const pendingCount = Number(totals.pendingCount ?? 0) || 0;
 
   return (
-    <Card className='manage-finance__overview-card shadow-sm border-0'>
+    <Card className='manage-finance__overview-card border-0'>
       <Card.Body>
         <div className='manage-finance__overview-header'>
           <div>

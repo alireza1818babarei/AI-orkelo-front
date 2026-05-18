@@ -13,6 +13,11 @@ export function hexToRGB(hex, alpha) {
 }
 
 export function getLocalStorageItem(key, defaultValue = null) {
+    if (key === "color-secondary") {
+        // Secondary is now a fixed text/support color, so charts should not reuse old theme-font selections.
+        return defaultValue;
+    }
+
     return localStorage.getItem(`${themeName}-${key}`) ?? defaultValue;
 }
 

@@ -13,7 +13,7 @@ p{
 }
 
 a{
-  color: rgba(var(--dark),1);
+  color: rgba(var(--dark), 1);
   text-decoration: none;
   &:hover {
       text-decoration: none;
@@ -30,7 +30,11 @@ ul{
 }
 .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
 line-height: 1.4;
-color: white;
+color: var(--font-title-color);
+}
+
+.h1, .h2, h1, h2 {
+  color: rgba(var(--primary), 1);
 }
 
 h1{
@@ -117,6 +121,51 @@ color: var(--white);
 
 .cursor-pointer{
 cursor: pointer;
+}
+
+.text-dark {
+  color: rgba(var(--dark), var(--bs-text-opacity, 1)) !important;
+}
+
+.text-secondary {
+  color: var(--font-secondary-color) !important;
+}
+
+.font-primary {
+  color: var(--font-title-color) !important;
+}
+
+.text-muted {
+  color: var(--font-muted-color) !important;
+}
+
+.text-body {
+  color: var(--font-color) !important;
+}
+
+.card,
+.dropdown-menu,
+.list-group-item,
+.modal-content,
+.offcanvas,
+.table {
+  color: var(--font-color);
+}
+
+.table {
+  --bs-table-color: var(--font-color);
+  --bs-table-striped-color: var(--font-color);
+  --bs-table-hover-color: var(--font-color);
+}
+
+.form-control,
+.form-select {
+  color: var(--font-color);
+}
+
+.form-control::placeholder {
+  color: var(--font-muted-color);
+  opacity: 1;
 }
 
 .form-switch .form-check-input{

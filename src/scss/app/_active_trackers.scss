@@ -2,8 +2,8 @@
   --active-trackers-panel: rgba(255, 255, 255, 0.86);
   --active-trackers-control: rgba(255, 255, 255, 0.95);
   --active-trackers-border: rgba(31, 41, 55, 0.16);
-  --active-trackers-copy: rgba(var(--dark), 0.86);
-  --active-trackers-muted: rgba(var(--secondary), 0.94);
+  --active-trackers-copy: var(--font-color);
+  --active-trackers-muted: var(--font-muted-color);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -51,7 +51,7 @@
 }
 
 .active-trackers-page__header-stat strong {
-  color: rgba(var(--primary), 1);
+  color: var(--active-trackers-copy);
   font-size: 1.65rem;
   line-height: 1;
 }
@@ -152,8 +152,8 @@ nav.dark-sidebar ~ .app-content .active-trackers-page {
   --active-trackers-panel: rgba(var(--light), 0.86);
   --active-trackers-control: rgba(var(--white), 0.86);
   --active-trackers-border: rgba(var(--secondary), 0.14);
-  --active-trackers-copy: rgba(var(--dark), 0.86);
-  --active-trackers-muted: rgba(var(--secondary), 0.92);
+  --active-trackers-copy: var(--font-color);
+  --active-trackers-muted: var(--font-muted-color);
 }
 
 body.dark .active-trackers-page__table-wrap table th,

@@ -3,7 +3,6 @@ import { Alert, Badge, Button, Card, Col, Form, Row, Table } from 'react-bootstr
 import { useSelector } from 'react-redux';
 import api from '../../api/axios';
 import { toastError, toastSuccess } from '../../utils/sweetAlert';
-import './requests.css';
 
 const managerRoles = new Set(['company_owner', 'company_supervisor']);
 const REQUESTS_PER_PAGE = 10;
@@ -153,16 +152,22 @@ const LeaveTypeOption = ({ active, icon, title, description, onClick }) => (
   <button
     type='button'
     className={`requests-page__leave-type ${active ? 'is-active' : ''}`}
+    aria-pressed={active}
     onClick={onClick}
   >
     <span className='requests-page__leave-type-icon'>
       <i className={icon}></i>
     </span>
-    <span>
+    <span className='requests-page__leave-type-copy'>
       <strong>{title}</strong>
       <small>{description}</small>
     </span>
-    <i className={`ph ${active ? 'ph-radio-button' : 'ph-circle'}`}></i>
+    <i
+      className={`requests-page__leave-type-check ph ${
+        active ? 'ph-radio-button' : 'ph-circle'
+      }`}
+      aria-hidden='true'
+    ></i>
   </button>
 );
 

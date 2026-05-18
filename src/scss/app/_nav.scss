@@ -340,7 +340,7 @@ nav {
                                 a {
                                     display: flex;
                                     align-items: center;
-                                    color: rgba(var(--primary), 1);
+                                    color: var(--font-title-color);
                                     font-weight: 600;
                                     position: relative;
 
@@ -416,7 +416,7 @@ nav {
 
             span {
                 text-transform: uppercase;
-                color: rgba(var(--primary), 1);
+                color: var(--font-muted-color);
                 font-size: 14px;
                 background-color: var(--light-gray);
                 padding: 0.2rem 1rem;
@@ -452,6 +452,17 @@ body.dark nav {
 
     .orkelo-sidebar-logo__full--dark {
         display: block;
+    }
+
+    .sidebar-company-switcher {
+        &__trigger,
+        &__trigger:hover,
+        &__name,
+        &__hint,
+        &__caret,
+        &__avatar {
+            color: #e5e7eb;
+        }
     }
 }
 
@@ -513,7 +524,7 @@ nav.vertical-sidebar {
         &:hover {
             background: rgba(var(--primary), 0.12);
             border-color: rgba(var(--primary), 0.35);
-            color: rgba(var(--primary), 1);
+            color: var(--font-title-color);
         }
     }
 
@@ -605,7 +616,7 @@ nav.vertical-sidebar {
 
         &:hover:not(:disabled) {
             background: rgba(var(--primary), 0.12);
-            color: rgba(var(--primary), 1);
+            color: var(--font-title-color);
         }
 
         &:disabled {
@@ -615,7 +626,7 @@ nav.vertical-sidebar {
 
         &.is-active {
             background: rgba(var(--primary), 0.14);
-            color: rgba(var(--primary), 1);
+            color: var(--font-title-color);
             font-weight: 600;
         }
     }
@@ -690,7 +701,7 @@ nav.vertical-sidebar {
                         text-overflow: unset;
                         overflow: unset;
                         white-space: unset;
-                        color: rgba(var(--secondary), 1);
+                        color: var(--font-muted-color);
                         font-size: inherit;
                         transition: var(--app-transition);
                     }
@@ -871,14 +882,14 @@ nav.vertical-sidebar {
         }
 
         .app-nav {
-            .menu-title {
+                .menu-title {
                 >span {
                     display: block;
                     text-overflow: ellipsis;
                     overflow: hidden;
                     white-space: nowrap;
                     font-size: 10px;
-                    color: rgba(var(--primary), 1);
+                    color: var(--font-muted-color);
                     transition: var(--app-transition);
                 }
             }

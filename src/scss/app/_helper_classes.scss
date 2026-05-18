@@ -2,29 +2,53 @@
 
 @mixin text_mixin($name, $color) {
   .text-#{$name} {
-    color: rgba(#{$color}, 1) !important;
+    @if $name == primary {
+      color: var(--font-title-color) !important;
+    } @else {
+      color: rgba(#{$color}, 1) !important;
+    }
 
     &:hover {
-      color: rgba(#{$color}, 0.8) !important;
+      @if $name == primary {
+        color: var(--font-title-color) !important;
+      } @else {
+        color: rgba(#{$color}, 0.8) !important;
+      }
       cursor: pointer;
     }
   }
 
   .link-#{$name} {
-    color: rgba(#{$color}, 1) !important;
+    @if $name == primary {
+      color: var(--font-title-color) !important;
+    } @else {
+      color: rgba(#{$color}, 1) !important;
+    }
 
     &:hover {
-      color: rgba(#{$color}, 0.8) !important;
+      @if $name == primary {
+        color: var(--font-title-color) !important;
+      } @else {
+        color: rgba(#{$color}, 0.8) !important;
+      }
       cursor: pointer;
     }
   }
 
   .txt-bg-#{$name} {
     background-color: rgba(#{$color}, 0.1) !important;
-    color: rgba(#{$color}, 1) !important;
+    @if $name == primary {
+      color: var(--font-title-color) !important;
+    } @else {
+      color: rgba(#{$color}, 1) !important;
+    }
 
     &:hover {
-      color: rgba(#{$color}, 0.8) !important;
+      @if $name == primary {
+        color: var(--font-title-color) !important;
+      } @else {
+        color: rgba(#{$color}, 0.8) !important;
+      }
       cursor: pointer;
     }
   }

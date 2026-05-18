@@ -179,7 +179,7 @@
 .leave-summary__metric span,
 .leave-summary__metric small,
 .leave-summary__next span {
-  color: rgba(var(--secondary), 1);
+  color: #A1A1A1;
   display: block;
   font-size: 0.76rem;
   font-weight: 700;
@@ -210,7 +210,7 @@
   border: 1px solid rgba(var(--primary), 0.28);
   border-radius: 10px;
   background: rgba(var(--primary), 0.12);
-  color: rgba(var(--primary), 1);
+  color: var(--font-title-color);
   font-size: 0.86rem;
   font-weight: 700;
   min-height: 38px;
@@ -311,7 +311,7 @@ nav.dark-sidebar ~ .app-content .leave-summary__next strong {
 .trackerBadge__homePage{
     max-width: 100%;
     margin-bottom: 0.7rem;
-    color: rgba(var(--primary), 1);
+    color: var(--font-title-color);
     background: rgba(var(--primary), 0.12);
     border: 1px solid rgba(var(--primary), 0.18);
     font-size: 0.78rem;
@@ -358,7 +358,7 @@ nav.dark-sidebar ~ .app-content .leave-summary__next strong {
     border-radius: 10px;
     padding: 0.45rem 1.1rem;
     background: rgba(var(--primary), 0.12);
-    color: rgba(var(--primary), 1);
+    color: var(--font-title-color);
     font-size: 0.86rem;
     font-weight: 700;
     cursor: pointer;

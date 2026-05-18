@@ -22,7 +22,6 @@ import FinancialCounterpartiesPanel from './components/FinancialCounterpartiesPa
 import FinancialOverviewPanel from './components/FinancialOverviewPanel';
 import FinancialOperationsPanel from './components/FinancialOperationsPanel';
 import { StateScreenSkeleton } from '../../Components/Common/LoadingSkeleton';
-import './manageFinance.css';
 
 const FINANCE_CENTER_TAB = 'finance-center';
 const SECTION_ACCESS_TAB = 'section-access';
@@ -38,7 +37,7 @@ const normalizeRole = (role) => String(role ?? '').trim().toLowerCase();
 
 function FinanceTabs({ activeTab, isCompanyOwner, onChange }) {
   return (
-    <Card className='manage-finance__tabs-card shadow-sm border-0'>
+    <Card className='manage-finance__tabs-card border-0'>
       <Card.Body>
         <ul className='nav nav-tabs tab-light-primary manage-finance__tabs' role='tablist'>
           {FINANCE_TABS.map((tab) => {

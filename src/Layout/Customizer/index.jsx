@@ -43,6 +43,10 @@ const setLocalStorageItem = (key, value) => {
   localStorage.setItem(`${themeName}-${key}`, value);
 };
 
+const removeLocalStorageItem = (key) => {
+  localStorage.removeItem(`${themeName}-${key}`);
+};
+
 const applyWallpaperToApp = (wallpaperId) => {
   const appWrapper = document.querySelector(".app-wrapper");
   if (!appWrapper) return;
@@ -69,22 +73,12 @@ function rgbToHex(r, g, b) {
   return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-const setBootstrapThemeVars = ({ primaryRgb, secondaryRgb }) => {
+const setBootstrapThemeVars = ({ primaryRgb }) => {
   if (primaryRgb) {
     document.documentElement.style.setProperty("--bs-primary-rgb", primaryRgb);
     document.documentElement.style.setProperty(
       "--bs-primary",
       `rgb(${primaryRgb})`,
-    );
-  }
-  if (secondaryRgb) {
-    document.documentElement.style.setProperty(
-      "--bs-secondary-rgb",
-      secondaryRgb,
-    );
-    document.documentElement.style.setProperty(
-      "--bs-secondary",
-      `rgb(${secondaryRgb})`,
     );
   }
 };
@@ -155,10 +149,8 @@ const Customizer = ({ showLauncher = true }) => {
     const primaryRgb = getComputedStyle(tempElement)
       .getPropertyValue("--primary")
       .trim();
-    const secondaryRgb = getComputedStyle(tempElement)
-      .getPropertyValue("--secondary")
-      .trim();
-    setBootstrapThemeVars({ primaryRgb, secondaryRgb });
+    setBootstrapThemeVars({ primaryRgb });
+    removeLocalStorageItem("color-secondary");
 
     document.body.removeChild(tempElement);
 
@@ -197,26 +189,10 @@ const Customizer = ({ showLauncher = true }) => {
       }
     }
 
-    const secondaryColorValue = getComputedStyle(tempElement)
-      .getPropertyValue("--secondary")
-      .trim();
-
-    if (secondaryColorValue) {
-      let secondaryColorValues = secondaryColorValue.split(",");
-      if (secondaryColorValues.length === 3) {
-        let secondaryColorHex = rgbToHex(
-          parseInt(secondaryColorValues[0]),
-          parseInt(secondaryColorValues[1]),
-          parseInt(secondaryColorValues[2]),
-        );
-        setLocalStorageItem("color-secondary", secondaryColorHex);
-      }
-    }
-
     setBootstrapThemeVars({
       primaryRgb: primaryColorValue,
-      secondaryRgb: secondaryColorValue,
     });
+    removeLocalStorageItem("color-secondary");
 
     document.body.removeChild(tempElement);
 

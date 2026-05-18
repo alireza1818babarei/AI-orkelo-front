@@ -28,16 +28,19 @@
   grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr);
 }
 
+.user-performance-analyze__title h2,
 .user-performance-analyze__title span,
 .user-performance-analyze__title strong {
   display: block;
   line-height: 1.25;
 }
 
+.user-performance-analyze__title h2,
 .user-performance-analyze__title span {
   color: var(--upa-copy);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 800;
+  margin: 0;
 }
 
 .user-performance-analyze__title strong {
@@ -385,9 +388,9 @@ body.dark .user-performance-analyze,
 nav.dark-sidebar ~ .app-content .user-performance-analyze {
   --upa-surface: rgba(var(--white), 1);
   --upa-panel: rgba(var(--light), 0.86);
-  --upa-border: rgba(var(--secondary), 0.14);
-  --upa-copy: rgba(var(--dark), 0.86);
-  --upa-muted: rgba(var(--secondary), 0.94);
+  --upa-border: rgba(229, 231, 235, 0.14);
+  --upa-copy: #e5e7eb;
+  --upa-muted: rgba(229, 231, 235, 0.82);
   --upa-soft: rgba(var(--white), 0.86);
 }
 

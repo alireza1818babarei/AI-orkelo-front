@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import AppPagination from '../../Components/Common/AppPagination';
 import api from '../../api/axios';
 import { formatMonthDayTime } from '../../utils/date';
-import './activeTrackers.css';
 
 const TRACKERS_PER_PAGE = 10;
 const SEARCH_DEBOUNCE_MS = 800;

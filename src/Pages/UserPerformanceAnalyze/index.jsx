@@ -4,7 +4,6 @@ import Flatpickr from 'react-flatpickr';
 import { useSelector } from 'react-redux';
 import api from '../../api/axios';
 import { resolvePublicMediaUrl } from '../../utils/mediaUrl';
-import './userPerformanceAnalyze.css';
 
 const COMPANY_MANAGEMENT_ROLES = new Set(['company_owner', 'company_supervisor']);
 const WORK_DAY_MINUTES = 480;
@@ -508,7 +507,7 @@ export default function UserPerformanceAnalyze() {
       <Card className='user-performance-analyze__filters border-0 shadow-sm'>
         <Card.Body>
           <div className='user-performance-analyze__title'>
-            <span>User Performance Analyze</span>
+            <h2>User Performance Analyze</h2>
             <strong>{rangeLabel}</strong>
           </div>
 

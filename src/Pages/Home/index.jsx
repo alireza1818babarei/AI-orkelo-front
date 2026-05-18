@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toastError, toastSuccess } from '../../utils/sweetAlert';
 import HomePanel from './components/HomePanel';
-import './home.css';
 import TrackingTasks from './components/TrackingTasks';
 import { formatFullDate } from '../../utils/date';
 import {

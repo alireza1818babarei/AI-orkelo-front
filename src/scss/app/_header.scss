@@ -25,11 +25,11 @@ header {
     width: 100%;
     right: 0px;
     transition: var(--app-transition);
-    background-color: rgba(255, 255, 255, 0.85);
+    background-color: transparent;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-bottom: 1px solid rgba(139, 132, 118, 0.15);
-
+    box-shadow: 5px 5px 5px rgba(139, 132, 118, 0.15);
     &:before {
       display: none;
     }
@@ -100,6 +100,28 @@ header {
           }
         }
 
+        .header-theme-settings {
+          .head-icon i.ti {
+            color: #111827;
+
+            &:hover {
+              color: #111827;
+            }
+          }
+        }
+
+        body.dark & {
+          .header-theme-settings {
+            .head-icon i.ti {
+              color: #ffffff;
+
+              &:hover {
+                color: #ffffff;
+              }
+            }
+          }
+        }
+
         .header-company {
           margin-right: 10px;
 
@@ -116,7 +138,7 @@ header {
 
             &:hover {
               background: rgba(var(--primary), 0.12);
-              color: rgba(var(--primary), 1);
+              color: var(--font-title-color);
             }
 
             .company-menu-trigger__text {
@@ -226,7 +248,7 @@ header {
             &:hover,
             .active {
               background-color: rgba(var(--primary), 0.1);
-              color: rgba(var(--primary), 1) !important;
+              color: var(--font-title-color) !important;
               transition: var(--app-transition);
             }
           }
@@ -287,7 +309,7 @@ header {
 
           .search-list {
             .highlight-searchtext {
-              color: rgb(var(--primary), 1);
+              color: var(--font-title-color);
               font-weight: 600;
             }
 
@@ -738,7 +760,7 @@ nav.dark-sidebar {
   border: 1px solid rgba(var(--primary), 0.24);
   border-radius: 8px;
   background: rgba(var(--primary), 0.12);
-  color: rgba(var(--primary), 1);
+  color: var(--font-title-color);
   font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
@@ -1000,5 +1022,7 @@ body[style="overflow: hidden; padding-right: 17px;"] {
     }
   }
 }
+
+
 
 // >>-- 03 Header css end --<<

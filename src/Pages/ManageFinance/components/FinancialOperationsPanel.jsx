@@ -986,7 +986,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
     : 'ph-duotone ph-arrow-circle-down-left';
 
   return (
-    <Card className='manage-finance__operations-card shadow-sm border-0'>
+    <Card className='manage-finance__operations-card border-0'>
       <Card.Header className='bg-transparent border-0 d-flex flex-wrap gap-3 justify-content-between align-items-start'>
         <div>
           <div className='d-flex flex-wrap align-items-center gap-2 mb-2'>
