@@ -1,0 +1,6 @@
+{
+    "app": "orkelo",
+    "back-commit": "fix(workspace): show active trackers for project managers",
+    "front-commit": "fix(workspace): show active trackers for project managers",
+    "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
+}

@@ -294,11 +294,48 @@ export default function TaskAttachments({
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewAttachment, setPreviewAttachment] = useState(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [previewDownloading, setPreviewDownloading] = useState(false);
   const [attachmentDragActive, setAttachmentDragActive] = useState(false);
   const seededRef = useRef(false);
   const attachmentDragDepthRef = useRef(0);
+
+  const previewAttachmentCount = attachments.length;
+  const normalizedPreviewIndex = previewAttachmentCount
+    ? Math.min(Math.max(previewIndex, 0), previewAttachmentCount - 1)
+    : 0;
+  const previewAttachment =
+    previewOpen && previewAttachmentCount
+      ? attachments[normalizedPreviewIndex] ?? null
+      : null;
+  const canNavigatePreview = previewAttachmentCount > 1;
+
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    setPreviewIndex(0);
+  }, []);
+
+  const openPreview = useCallback((index) => {
+    setMenuOpenId(null);
+    setPreviewIndex(index);
+    setPreviewOpen(true);
+  }, []);
+
+  const showPreviousPreview = useCallback(() => {
+    setPreviewIndex((current) => {
+      if (previewAttachmentCount <= 1) return current;
+      const currentIndex = Math.min(Math.max(current, 0), previewAttachmentCount - 1);
+      return (currentIndex - 1 + previewAttachmentCount) % previewAttachmentCount;
+    });
+  }, [previewAttachmentCount]);
+
+  const showNextPreview = useCallback(() => {
+    setPreviewIndex((current) => {
+      if (previewAttachmentCount <= 1) return current;
+      const currentIndex = Math.min(Math.max(current, 0), previewAttachmentCount - 1);
+      return (currentIndex + 1) % previewAttachmentCount;
+    });
+  }, [previewAttachmentCount]);
 
   const safeFormatDateTime = (value) => {
     if (typeof formatDateTime === "function") return formatDateTime(value);
@@ -358,6 +395,40 @@ export default function TaskAttachments({
     setBoardCounts(initialAttachments);
     seededRef.current = true;
   }, [prefetched, initialAttachments, taskId]);
+
+  useEffect(() => {
+    if (!previewOpen) return undefined;
+
+    if (!previewAttachmentCount) {
+      closePreview();
+      return undefined;
+    }
+
+    setPreviewIndex((current) =>
+      Math.min(Math.max(current, 0), previewAttachmentCount - 1),
+    );
+
+    return undefined;
+  }, [closePreview, previewAttachmentCount, previewOpen]);
+
+  useEffect(() => {
+    if (!previewOpen) return undefined;
+
+    const handlePreviewKeyDown = (event) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        showPreviousPreview();
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        showNextPreview();
+      }
+    };
+
+    window.addEventListener("keydown", handlePreviewKeyDown);
+    return () => window.removeEventListener("keydown", handlePreviewKeyDown);
+  }, [previewOpen, showNextPreview, showPreviousPreview]);
 
   const downloadAttachment = async (attachment) => {
     const href = resolveAttachmentHref(getAttachmentUrl(attachment));
@@ -695,9 +766,7 @@ export default function TaskAttachments({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setMenuOpenId(null);
-                        setPreviewAttachment(a);
-                        setPreviewOpen(true);
+                        openPreview(idx);
                       }}
                     >
                       <div className="bg-light rounded-3 p-2 h-100">
@@ -748,22 +817,22 @@ export default function TaskAttachments({
 
       <Modal
         isOpen={previewOpen}
-        toggle={() => {
-          setPreviewOpen(false);
-          setPreviewAttachment(null);
-        }}
+        toggle={closePreview}
         centered
         size="lg"
+        className="task-attachment-preview-modal"
       >
-        <ModalHeader
-          toggle={() => {
-            setPreviewOpen(false);
-            setPreviewAttachment(null);
-          }}
-        >
-          {getAttachmentName(previewAttachment)}
+        <ModalHeader toggle={closePreview}>
+          <div className="task-attachment-preview-modal__title">
+            <span>{getAttachmentName(previewAttachment)}</span>
+            {previewAttachmentCount ? (
+              <span className="task-attachment-preview-modal__counter">
+                {normalizedPreviewIndex + 1} / {previewAttachmentCount}
+              </span>
+            ) : null}
+          </div>
         </ModalHeader>
-        <ModalBody>
+        <ModalBody className="task-attachment-preview-modal__body">
           {previewAttachment ? (
 	            (() => {
 	              const name = getAttachmentName(previewAttachment);
@@ -775,10 +844,21 @@ export default function TaskAttachments({
 
 	              return (
 	                <div className="d-flex flex-column gap-3">
-	                  <div
-                    className="bg-light rounded-3 d-flex-center overflow-hidden"
-                    style={{ minHeight: 360 }}
-                  >
+                    <div className="task-attachment-preview-modal__content">
+                      {canNavigatePreview ? (
+                        <button
+                          type="button"
+                          className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--prev"
+                          aria-label="Previous attachment"
+                          title="Previous attachment"
+                          onClick={showPreviousPreview}
+                        >
+                          <i className="ti ti-chevron-left" aria-hidden="true"></i>
+                          <span className="visually-hidden">Previous attachment</span>
+                        </button>
+                      ) : null}
+
+	                    <div className="task-attachment-preview-modal__stage bg-light rounded-3 d-flex-center overflow-hidden">
 	                    {isImg ? (
 	                      <AttachmentImage
 	                        attachment={previewAttachment}
@@ -802,6 +882,20 @@ export default function TaskAttachments({
                       </div>
                     )}
                   </div>
+
+                      {canNavigatePreview ? (
+                        <button
+                          type="button"
+                          className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--next"
+                          aria-label="Next attachment"
+                          title="Next attachment"
+                          onClick={showNextPreview}
+                        >
+                          <i className="ti ti-chevron-right" aria-hidden="true"></i>
+                          <span className="visually-hidden">Next attachment</span>
+                        </button>
+                      ) : null}
+                    </div>
 
                   <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <div className="text-muted small">
@@ -845,6 +939,10 @@ function AttachmentImage({ attachment, href, alt, fallbackIconSrc, ...imgProps }
   const [errored, setErrored] = useState(false);
   const iconSrc = toPublicAsset(resolveAttachmentIcon(attachment));
   const fallback = fallbackIconSrc || toPublicAsset("assets/images/icons/file.png");
+
+  useEffect(() => {
+    setErrored(false);
+  }, [attachment, href]);
 
   if (!href) {
     return (

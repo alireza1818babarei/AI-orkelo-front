@@ -1336,6 +1336,89 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
   color: var(--td-muted);
 }
 
+.task-attachment-preview-modal {
+  position: relative;
+}
+
+.task-attachment-preview-modal .modal-content {
+  overflow: visible;
+}
+
+.task-attachment-preview-modal__title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0.75rem;
+}
+
+.task-attachment-preview-modal__title > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-attachment-preview-modal__counter {
+  flex: 0 0 auto;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--td-line, rgba(148, 163, 184, 0.35));
+  border-radius: 999px;
+  color: var(--td-muted, #6c757d);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.task-attachment-preview-modal__body {
+  padding: 1rem;
+}
+
+.task-attachment-preview-modal__content {
+  position: static;
+}
+
+.task-attachment-preview-modal__stage {
+  min-height: 360px;
+  padding: 0.75rem;
+}
+
+.task-attachment-preview-modal__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+  transform: translateY(-50%);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.task-attachment-preview-modal__nav:hover,
+.task-attachment-preview-modal__nav:focus-visible {
+  border-color: rgba(var(--primary), 0.95);
+  background: rgba(var(--primary), 0.95);
+  transform: translateY(-50%) scale(1.04);
+}
+
+.task-attachment-preview-modal__nav--prev {
+  left: -66px;
+}
+
+.task-attachment-preview-modal__nav--next {
+  right: -66px;
+}
+
 .task-detail-modal-dialog .border,
 .task-detail-modal-dialog .border-top,
 .task-detail-modal-dialog .border-bottom,
@@ -1837,7 +1920,38 @@ nav.dark-sidebar ~ .app-content .task-detail-timer__reset {
   color: rgba(239, 239, 243, 0.94);
 }
 
+@media (max-width: 991.98px) {
+  .task-attachment-preview-modal__nav--prev {
+    left: -22px;
+  }
+
+  .task-attachment-preview-modal__nav--next {
+    right: -22px;
+  }
+}
+
 @media (max-width: 767.98px) {
+  .task-attachment-preview-modal__body {
+    padding: 0.75rem;
+  }
+
+  .task-attachment-preview-modal__stage {
+    min-height: 260px;
+  }
+
+  .task-attachment-preview-modal__nav {
+    width: 38px;
+    height: 38px;
+  }
+
+  .task-attachment-preview-modal__nav--prev {
+    left: 8px;
+  }
+
+  .task-attachment-preview-modal__nav--next {
+    right: 8px;
+  }
+
   .task-detail-modal__header {
     flex-direction: column;
     align-items: stretch;
