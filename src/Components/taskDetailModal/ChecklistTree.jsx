@@ -1,5 +1,6 @@
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import { getTextDirectionProps } from "../../utils/textDirection";
+import ChecklistItemAttachments from "./ChecklistItemAttachments";
 
 const CHECKLIST_DROPPABLE_PREFIX = "checklist-parent:";
 
@@ -45,6 +46,10 @@ const ChecklistTree = ({
   onCreateChecklistItem,
   onChangeItemText,
   onReorderChecklist,
+  projectId,
+  taskId,
+  onChecklistAttachmentChanged,
+  formatDateTime,
 }) => {
   const handleDragEnd = (result) => {
     const { source, destination, type } = result || {};
@@ -76,6 +81,7 @@ const ChecklistTree = ({
     const resolvedItemIdentity = itemIdentity ?? getChecklistItemIdentity(item, index);
     const checklistControlId =
       depth === 0 ? `checklist-toggle-${resolvedItemIdentity}` : null;
+    const attachmentInputId = `checklist-item-attachment-${resolvedItemIdentity}`;
     const itemTextDirectionProps = getTextDirectionProps(item.text, {
       resize: "none",
       overflow: "hidden",
@@ -193,19 +199,30 @@ const ChecklistTree = ({
         ) : null}
 
         {depth === 0 ? (
-          <div className="mt-2 ps-3">
-            <button
-              type="button"
-              className="btn px-0 text-info small f-s-12"
-              onClick={() =>
-                setSubInputById((prev) => ({
-                  ...prev,
-                  [item.id]: prev[item.id] ?? "",
-                }))
-              }
-            >
-              Add sub item
-            </button>
+          <div className="mt-2 ps-3 checklist-item-followup">
+            <div className="checklist-item-actions">
+              <button
+                type="button"
+                className="btn px-0 small f-s-12 checklist-item-action-link"
+                onClick={() =>
+                  setSubInputById((prev) => ({
+                    ...prev,
+                    [item.id]: prev[item.id] ?? "",
+                  }))
+                }
+              >
+                Add sub item
+              </button>
+              <label
+                htmlFor={attachmentInputId}
+                className="btn px-0 text-info small f-s-12 checklist-item-action-link"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <i className="ti ti-paperclip" aria-hidden="true"></i>
+                <span>Add attachment</span>
+              </label>
+            </div>
             {subInputById[item.id] !== undefined ? (
               <div className="mt-1">
                 <textarea
@@ -273,6 +290,16 @@ const ChecklistTree = ({
                 />
               </div>
             ) : null}
+            <ChecklistItemAttachments
+              projectId={projectId}
+              taskId={taskId}
+              checklistItem={item}
+              inputId={attachmentInputId}
+              showTrigger={false}
+              disabled={isItemBusy}
+              onChanged={onChecklistAttachmentChanged}
+              formatDateTime={formatDateTime}
+            />
           </div>
         ) : null}
       </div>

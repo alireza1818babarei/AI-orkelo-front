@@ -160,6 +160,14 @@ const countChecklistProgress = (items = []) =>
     { total: 0, completed: 0 },
   );
 
+const countChecklistAttachments = (items = []) =>
+  (Array.isArray(items) ? items : []).reduce((total, item) => {
+    const itemAttachments = Array.isArray(item?.attachments)
+      ? item.attachments.length
+      : 0;
+    return total + itemAttachments + countChecklistAttachments(item?.children || []);
+  }, 0);
+
 const markChecklistTreeCompleted = (items = []) =>
   (Array.isArray(items) ? items : []).map((item) => ({
     ...item,
@@ -297,6 +305,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
   const skipRootBlurRef = useRef(false);
   const skipSubBlurByIdRef = useRef({});
   const [hoveredChecklistId, setHoveredChecklistId] = useState(null);
+  const checklistAttachmentCount = useMemo(
+    () => countChecklistAttachments(checklistItems),
+    [checklistItems],
+  );
   const dispatch = useDispatch();
   const [actionOpen, setActionOpen] = useState(false);
   const actionRef = useRef(null);
@@ -406,6 +418,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         },
       }),
     );
+  };
+
+  const handleAttachmentChanged = () => {
+    refreshDetail();
+    refreshTaskCard();
   };
 
   // comments + activity are rendered in TaskActivityConversation
@@ -1854,6 +1871,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
                       onCreateChecklistItem={createChecklistItem}
                       onChangeItemText={handleChecklistTextChange}
                       onReorderChecklist={handleChecklistReorder}
+                      projectId={effectiveProjectId}
+                      taskId={taskId}
+                      onChecklistAttachmentChanged={handleAttachmentChanged}
+                      formatDateTime={formatDateTime}
                     />
                   </div>
                 </div>
@@ -1864,7 +1885,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
                   columnId={taskColumnId}
                   prefetched={!!detailTask}
                   initialAttachments={detailTask?.attachments}
-                  onChanged={refreshDetail}
+                  extraAttachmentCount={checklistAttachmentCount}
+                  onChanged={handleAttachmentChanged}
                   formatDateTime={formatDateTime}
                 />
 

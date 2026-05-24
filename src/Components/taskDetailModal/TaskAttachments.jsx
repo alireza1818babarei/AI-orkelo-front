@@ -15,13 +15,13 @@ import { getBackendOrigin, resolvePublicMediaUrl } from "../../utils/mediaUrl";
 import { alertConfirm, toastError, toastSuccess } from "../../utils/sweetAlert";
 import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
 
-const toPublicAsset = (relPath) => {
+export const toPublicAsset = (relPath) => {
   const base = import.meta.env.BASE_URL || "/";
   const cleanedBase = base.endsWith("/") ? base : `${base}/`;
   return `${cleanedBase}${String(relPath || "").replace(/^\//, "")}`;
 };
 
-const formatBytes = (bytes) => {
+export const formatBytes = (bytes) => {
   const n = Number(bytes);
   if (!Number.isFinite(n) || n <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -33,10 +33,10 @@ const formatBytes = (bytes) => {
   return `${val.toFixed(val >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
 };
 
-const getAttachmentName = (a) =>
+export const getAttachmentName = (a) =>
   a?.original_name ?? a?.name ?? a?.filename ?? a?.file_name ?? "Attachment";
 
-const getAttachmentUrl = (a) =>
+export const getAttachmentUrl = (a) =>
   a?.download_url ??
   a?.downloadUrl ??
   a?.url ??
@@ -79,7 +79,7 @@ const getAttachmentExt = (a) => {
   return getExtFromUrl(getAttachmentUrl(a) ?? a?.file ?? "");
 };
 
-const isImageAttachment = (a) => {
+export const isImageAttachment = (a) => {
   const mime = String(a?.mime || "").toLowerCase();
   if (mime.startsWith("image/")) return true;
   const ext = getAttachmentExt(a);
@@ -100,7 +100,7 @@ const isImageAttachment = (a) => {
   ].includes(ext);
 };
 
-const resolveAttachmentIcon = (a) => {
+export const resolveAttachmentIcon = (a) => {
   const mime = String(a?.mime || "").toLowerCase();
   const ext = getAttachmentExt(a);
 
@@ -134,7 +134,7 @@ const resolveAttachmentIcon = (a) => {
   return "assets/images/icons/file.png";
 };
 
-const resolveAttachmentHref = (url) => {
+export const resolveAttachmentHref = (url) => {
   const raw = String(url || "").trim();
   if (!raw) return "";
   if (raw.startsWith("blob:") || raw.startsWith("data:")) return raw;
@@ -234,7 +234,7 @@ const useAttachmentImageSrc = ({ attachment, href }) => {
   return { src: src || href || "", loading, isImg };
 };
 
-const parseFilenameFromContentDisposition = (headerValue) => {
+export const parseFilenameFromContentDisposition = (headerValue) => {
   const raw = String(headerValue || "").trim();
   if (!raw) return "";
 
@@ -255,7 +255,7 @@ const parseFilenameFromContentDisposition = (headerValue) => {
   return "";
 };
 
-const triggerBrowserDownload = ({ blob, filename }) => {
+export const triggerBrowserDownload = ({ blob, filename }) => {
   const name = String(filename || "Attachment").trim() || "Attachment";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -286,6 +286,7 @@ export default function TaskAttachments({
   formatDateTime,
   initialAttachments,
   prefetched = false,
+  extraAttachmentCount = 0,
 }) {
   const dispatch = useDispatch();
   const [attachments, setAttachments] = useState([]);
@@ -351,9 +352,16 @@ export default function TaskAttachments({
     }).format(date);
   };
 
-  const setBoardCounts = (items) => {
+  const setBoardCounts = useCallback((items) => {
     if (!taskId) return;
-    const count = Array.isArray(items) ? items.length : 0;
+    const taskAttachmentCount = Array.isArray(items) ? items.length : 0;
+    const checklistAttachmentCount = Number(extraAttachmentCount);
+    const count =
+      taskAttachmentCount +
+      (Number.isFinite(checklistAttachmentCount) && checklistAttachmentCount > 0
+        ? Math.floor(checklistAttachmentCount)
+        : 0);
+
     dispatch(
       updateTaskInColumn({
         columnId,
@@ -365,7 +373,7 @@ export default function TaskAttachments({
         },
       }),
     );
-  };
+  }, [columnId, dispatch, extraAttachmentCount, taskId]);
 
   const fetchAttachments = useCallback(async () => {
     if (!projectId || !taskId) return;
@@ -385,7 +393,7 @@ export default function TaskAttachments({
     } finally {
       setAttachmentsLoading(false);
     }
-  }, [projectId, taskId]);
+  }, [projectId, setBoardCounts, taskId]);
 
   useEffect(() => {
     if (!prefetched) return;
@@ -394,7 +402,7 @@ export default function TaskAttachments({
     setAttachments(initialAttachments);
     setBoardCounts(initialAttachments);
     seededRef.current = true;
-  }, [prefetched, initialAttachments, taskId]);
+  }, [prefetched, initialAttachments, setBoardCounts, taskId]);
 
   useEffect(() => {
     if (!previewOpen) return undefined;
@@ -934,7 +942,7 @@ export default function TaskAttachments({
   );
 }
 
-function AttachmentImage({ attachment, href, alt, fallbackIconSrc, ...imgProps }) {
+export function AttachmentImage({ attachment, href, alt, fallbackIconSrc, ...imgProps }) {
   const { src, loading } = useAttachmentImageSrc({ attachment, href });
   const [errored, setErrored] = useState(false);
   const iconSrc = toPublicAsset(resolveAttachmentIcon(attachment));

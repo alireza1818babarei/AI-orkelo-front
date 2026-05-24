@@ -1786,6 +1786,186 @@ nav.dark-sidebar ~ .app-content .task-approval-rating-modal__close {
   cursor: not-allowed;
 }
 
+.checklist-item-followup {
+  min-width: 0;
+}
+
+.checklist-item-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  min-height: 28px;
+}
+
+.checklist-item-action-link,
+.checklist-item-attachments__trigger {
+  color: #70ADFF !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 28px;
+  border: 0;
+  line-height: 1.2;
+  font-weight: 600;
+  cursor: pointer;
+
+  i {
+    font-size: 0.98rem;
+    line-height: 1;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: #70ADFF !important;
+  }
+}
+
+.checklist-item-attachments {
+  min-width: 0;
+}
+
+.checklist-item-attachments__uploading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  color: rgba(var(--secondary), 1);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.checklist-item-attachments__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 0.5rem;
+  max-height: 250px;
+  margin-top: 0.55rem;
+  padding-right: 0.2rem;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--primary), 0.58) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(var(--primary), 0.58);
+    border-radius: 999px;
+  }
+}
+
+.checklist-item-attachment-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid rgba(var(--secondary), 0.18);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(var(--light), 0.72);
+}
+
+.checklist-item-attachment-card__button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+}
+
+.checklist-item-attachment-card__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 76px;
+  overflow: hidden;
+  background: var(--white);
+
+  img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+}
+
+.checklist-item-attachment-card__meta {
+  display: block;
+  min-width: 0;
+  padding: 0.45rem 0.55rem 0.5rem;
+}
+
+.checklist-item-attachment-card__name,
+.checklist-item-attachment-card__size {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklist-item-attachment-card__name {
+  color: rgba(var(--dark), 0.86);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.checklist-item-attachment-card__size {
+  margin-top: 0.12rem;
+  color: rgba(var(--secondary), 0.92);
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.checklist-item-attachment-card__menu {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  z-index: 3;
+  width: 25px;
+  height: 25px;
+  border-radius: 8px;
+  background: rgba(var(--white), 0.9);
+  box-shadow: 0 4px 10px rgba(var(--dark), 0.1);
+}
+
+body.dark .checklist-item-attachment-card,
+nav.dark-sidebar ~ .app-content .checklist-item-attachment-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body.dark .checklist-item-attachment-card__preview,
+nav.dark-sidebar ~ .app-content .checklist-item-attachment-card__preview {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark .checklist-item-attachment-card__name,
+nav.dark-sidebar ~ .app-content .checklist-item-attachment-card__name {
+  color: rgba(244, 246, 250, 0.94);
+}
+
+body.dark .checklist-item-attachment-card__size,
+nav.dark-sidebar ~ .app-content .checklist-item-attachment-card__size,
+body.dark .checklist-item-attachments__uploading,
+nav.dark-sidebar ~ .app-content .checklist-item-attachments__uploading {
+  color: rgba(202, 207, 218, 0.82);
+}
+
+body.dark .checklist-item-attachment-card__menu,
+nav.dark-sidebar ~ .app-content .checklist-item-attachment-card__menu {
+  background: rgba(25, 28, 38, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+}
+
 .task-detail-timer {
   min-width: 216px;
   padding: 0.5rem 0.65rem 0.6rem;
