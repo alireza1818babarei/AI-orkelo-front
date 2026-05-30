@@ -11,7 +11,6 @@ import {
   getTaskExcludePeopleThunk,
   toggleTaskExcludedUserThunk,
 } from "../../store/tasks/taskExcludedPeopleSlice";
-import {getProjectMembersThunk} from "../../store/projects/projectMembersSlice";
 import {toastError} from "../../utils/sweetAlert";
 import {resolveUserAvatarWithFallback} from "../../utils/mediaUrl";
 
@@ -37,26 +36,6 @@ const getUserInitials = (u) => {
     .join("");
 };
 
-const mapProjectMembersToPeople = (members) => {
-  if (!Array.isArray(members)) return [];
-
-  const map = new Map();
-
-  members.forEach((m) => {
-    if (!m?.id) return;
-    if (map.has(m.id)) return;
-
-    map.set(m.id, {
-      id: m.id,
-      name: m.name ?? "",
-      email: m.email ?? "",
-      avatar: m.avatar ?? null,
-    });
-  });
-
-  return Array.from(map.values());
-};
-
 /* ================= Component ================= */
 
 export default function TaskExcludedUsersDropdown({
@@ -74,7 +53,6 @@ export default function TaskExcludedUsersDropdown({
   /* ===== Redux state ===== */
 
   const excludedState = useSelector((s) => s.taskExcludedPeople);
-  const projectMembersState = useSelector((s) => s.projectMembers);
 
   const taskData = excludedState.byTaskId?.[taskId] ?? {};
 
@@ -90,18 +68,6 @@ export default function TaskExcludedUsersDropdown({
     [excludedIds]
   );
 
-  const projectMembers = useMemo(
-    () =>
-      mapProjectMembersToPeople(
-        projectMembersState?.items ?? []
-      ),
-    [projectMembersState?.items]
-  );
-
-  // const combinedPeople = useMemo(() => {
-  //   return people.length ? people : projectMembers;
-  // }, [people, projectMembers]);
-
   const loading = open && excludedState.loading;
 
   /* ===== Effects ===== */
@@ -111,12 +77,6 @@ export default function TaskExcludedUsersDropdown({
       dispatch(getTaskExcludePeopleThunk({projectId, taskId}));
     }
   }, [open, projectId, taskId, dispatch]);
-
-  useEffect(() => {
-    if (open && projectId) {
-      dispatch(getProjectMembersThunk(projectId));
-    }
-  }, [open, projectId, dispatch]);
 
   /* ===== Handlers ===== */
 

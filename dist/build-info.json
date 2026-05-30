@@ -1,6 +1,6 @@
 {
     "app": "orkelo",
-    "back-commit": "fix(workspace): show active trackers for project managers",
-    "front-commit": "orkelo-build-info",
+    "back-commit": " feat(tasks): add checklist item attachments",
+    "front-commit": "feat(tasks): add checklist item attachments",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }

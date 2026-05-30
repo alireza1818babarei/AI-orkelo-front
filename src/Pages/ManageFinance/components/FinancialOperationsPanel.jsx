@@ -1,5 +1,4 @@
 import {
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -71,6 +70,7 @@ import {
 import { getFinancialCounterparties } from '../../../store/FileManager/counterparties/counterparties.thunk';
 
 const OPERATIONS_PAGE_SIZE = 5;
+const FINANCE_OPERATION_SEARCH_DEBOUNCE_MS = 500;
 
 const getDefaultOperationDateTime = () => {
   const now = new Date();
@@ -449,7 +449,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
   const [uploadDragActive, setUploadDragActive] = useState(false);
   const fileInputRef = useRef(null);
   const uploadDragDepthRef = useRef(0);
-  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const operationDateFilters = useMemo(
     () => getDateRangeFilters(operationDateRange),
     [operationDateRange],
@@ -457,10 +457,20 @@ export default function FinancialOperationsPanel({ enabled = true }) {
   const operationFromDate = operationDateFilters.fromDate;
   const operationToDate = operationDateFilters.toDate;
   const hasOperationFilters = Boolean(
-    String(deferredSearchTerm ?? '').trim() ||
+    String(debouncedSearchTerm ?? '').trim() ||
       operationFromDate ||
       operationToDate,
   );
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      // Wait for typing to pause before querying finance operations.
+      setDebouncedSearchTerm(String(searchTerm ?? '').trim());
+      setPage(1);
+    }, FINANCE_OPERATION_SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -468,14 +478,14 @@ export default function FinancialOperationsPanel({ enabled = true }) {
     dispatch(
       getFinancialOperations({
         page,
-        title: deferredSearchTerm,
+        title: debouncedSearchTerm,
         fromDate: operationFromDate,
         toDate: operationToDate,
         perPage: OPERATIONS_PAGE_SIZE,
       }),
     );
   }, [
-    deferredSearchTerm,
+    debouncedSearchTerm,
     dispatch,
     enabled,
     operationFromDate,
@@ -522,10 +532,6 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       }),
     );
   }, [dispatch, enabled, selectedOperationId]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [deferredSearchTerm, operationFromDate, operationToDate]);
 
   useEffect(() => {
     setSelectedFile(null);
@@ -581,7 +587,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
     dispatch(
       getFinancialOperations({
         page,
-        title: deferredSearchTerm,
+        title: debouncedSearchTerm,
         fromDate: operationFromDate,
         toDate: operationToDate,
         perPage: OPERATIONS_PAGE_SIZE,
@@ -669,6 +675,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       setCreateModalOpen(false);
       dispatch(resetFinancialOperationMutationState());
       setSearchTerm('');
+      setDebouncedSearchTerm('');
       setOperationDateRange([]);
       setPage(1);
 
@@ -726,7 +733,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       dispatch(
         getFinancialOperations({
           page,
-          title: deferredSearchTerm,
+          title: debouncedSearchTerm,
           fromDate: operationFromDate,
           toDate: operationToDate,
           perPage: OPERATIONS_PAGE_SIZE,
@@ -781,7 +788,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
       dispatch(
         getFinancialOperations({
           page,
-          title: deferredSearchTerm,
+          title: debouncedSearchTerm,
           fromDate: operationFromDate,
           toDate: operationToDate,
           perPage: OPERATIONS_PAGE_SIZE,
@@ -1016,7 +1023,10 @@ export default function FinancialOperationsPanel({ enabled = true }) {
           <Flatpickr
             className='form-control manage-finance__operations-date-filter'
             value={operationDateRange}
-            onChange={(dates) => setOperationDateRange(dates)}
+            onChange={(dates) => {
+              setOperationDateRange(dates);
+              setPage(1);
+            }}
             options={{
               mode: 'range',
               dateFormat: 'Y-m-d',
@@ -1028,6 +1038,7 @@ export default function FinancialOperationsPanel({ enabled = true }) {
               variant='outline-secondary'
               onClick={() => {
                 setSearchTerm('');
+                setDebouncedSearchTerm('');
                 setOperationDateRange([]);
                 setPage(1);
               }}

@@ -4,11 +4,15 @@ import { getErrorMessage } from "../../utils/getError";
 
 export const getTrackingTasks = createAsyncThunk(
   "trackingTasks/get",
-  async (_, {rejectWithValue})=> {
+  async (_, { rejectWithValue, signal }) => {
     try {
-      const res = await api.get('/time-trackers');
+      const res = await api.get("/time-trackers", { signal });
       return res.data.data;
     } catch (err) {
+      if (signal.aborted) {
+        throw err;
+      }
+
       return rejectWithValue(getErrorMessage(err));
     }
   }
@@ -32,13 +36,17 @@ const taskTrackerSlice = createSlice({
   extraReducers: (builder)=> {
     builder.addCase(getTrackingTasks.pending, (s)=> {
       s.loading = true;
-      s.error = null
+      s.error = null;
+      s.data = [];
     });
     builder.addCase(getTrackingTasks.fulfilled, (s, a)=> {
       s.loading = false;
-      s.data = a.payload;
+      s.error = null;
+      s.data = Array.isArray(a.payload) ? a.payload : [];
     });
     builder.addCase(getTrackingTasks.rejected, (s, a)=> {
+      if (a.meta.aborted) return;
+
       s.loading = false;
       s.error = a.payload || a.error.message;
     });

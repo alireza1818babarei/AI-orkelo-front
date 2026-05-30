@@ -110,12 +110,31 @@ const getTaskChecklistProgress = (task) => {
   return countChecklistItems(task?.checklist_items || task?.checklistItems || []);
 };
 
+const getTaskOrder = (task) => {
+  const value = Number(task?.position ?? 0);
+  return Number.isFinite(value) ? value : 0;
+};
+
+const sortTasksByReviewState = (tasks = []) =>
+  [...(Array.isArray(tasks) ? tasks : [])].sort((a, b) => {
+    // Keep approved task cards grouped at the bottom like checked checklist items.
+    const aCompleted = getTaskReviewStatus(a) === TASK_REVIEW_STATUS.APPROVED ? 1 : 0;
+    const bCompleted = getTaskReviewStatus(b) === TASK_REVIEW_STATUS.APPROVED ? 1 : 0;
+
+    if (aCompleted !== bCompleted) return aCompleted - bCompleted;
+
+    const positionDiff = getTaskOrder(a) - getTaskOrder(b);
+    if (positionDiff !== 0) return positionDiff;
+
+    return Number(a?.id ?? 0) - Number(b?.id ?? 0);
+  });
+
 const normalizeBoard = (columns = []) => {
   const tasksById = {};
   const nextColumns = (columns || []).map((col) => {
     const rawTasks = col.tasks;
     const tasksUndefined = rawTasks == null;
-    const taskIds = (rawTasks || []).map((t, index) => {
+    const taskIds = sortTasksByReviewState(rawTasks).map((t, index) => {
       const id = String(t.id ?? `${col.id || "col"}-${index}`);
       tasksById[id] = { ...t, id };
       return id;

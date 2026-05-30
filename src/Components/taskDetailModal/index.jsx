@@ -1277,6 +1277,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         completed_at: reviewedAt,
         status: "done",
       });
+      const stoppedTrackers = Array.isArray(updated?.time_trackers)
+        ? updated.time_trackers
+        : taskTrackers.map((tracker) =>
+            tracker?.stop_track == null
+              ? { ...tracker, stop_track: updated.reviewed_at ?? reviewedAt, type: "stop" }
+              : tracker,
+          );
 
       const reviewPatch = applyReviewState(
         {
@@ -1286,9 +1293,14 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
           reviewed_by: updated.reviewed_by ?? currentUserName,
           completed_at: updated.completed_at ?? reviewedAt,
           status: updated.status ?? "done",
+          time_trackers: stoppedTrackers,
+          type: updated.type ?? (hasActiveTracker ? "stop" : t?.type ?? null),
         },
         TASK_REVIEW_STATUS.APPROVED,
       );
+      setTrackedTotalOverrideSeconds(trackedTotalSeconds);
+      refreshDetail();
+      refreshTaskCard();
       setRejectReasonOpen(false);
       setRejectReason("");
       const approvedAssignee = getPrimaryTaskAssignee(reviewPatch);

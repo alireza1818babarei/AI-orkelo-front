@@ -53,7 +53,7 @@ const AddCompanyMemberModal = ({
 
         <ModalFooter>
           <Button
-            color="secondary"
+            color="danger"
             type="button"
             onClick={onClose}
             disabled={isSubmitting}

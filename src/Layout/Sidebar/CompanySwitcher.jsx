@@ -14,6 +14,7 @@ import { clearTagsState } from "../../store/tags/tagsSlice";
 import { clearComments } from "../../store/tasks/commentSlice";
 import { clearTaskDetail } from "../../store/tasks/taskDetailSlice";
 import { clearTaskPeople } from "../../store/tasks/taskPeopleSlice";
+import { clearInitialState } from "../../store/tasks/trackingTasksSlice";
 import { toastError } from "../../utils/sweetAlert";
 import { resolveUserAvatarUrl } from "../../utils/mediaUrl";
 
@@ -94,6 +95,7 @@ export default function CompanySwitcher() {
     dispatch(clearComments());
     dispatch(clearTaskPeople());
     dispatch(clearTaskDetail());
+    dispatch(clearInitialState());
   };
 
   const handleSwitchCompany = async (company) => {

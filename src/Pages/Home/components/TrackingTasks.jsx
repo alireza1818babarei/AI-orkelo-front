@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { getTrackingTasks } from "../../../store/tasks/trackingTasksSlice";
+import {
+  clearInitialState,
+  getTrackingTasks,
+} from "../../../store/tasks/trackingTasksSlice";
 import { formatMonthDayTime } from "../../../utils/date";
 
 const DEFAULT_TRACKER_COLUMNS = 4;
@@ -46,14 +49,30 @@ const TrackingTasks = () => {
   const dispatch = useDispatch();
   const trackerGridRef = useRef(null);
   const { data, error, loading } = useSelector((s) => s.taskTracking);
+  const activeCompanyId = useSelector(
+    (s) =>
+      s.companyContext?.activeCompanyId ??
+      s.companyContext?.activeCompany?.id ??
+      null
+  );
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [columnsPerRow, setColumnsPerRow] = useState(getFallbackColumnsPerRow);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    dispatch(getTrackingTasks());
-  }, [dispatch]);
+    if (activeCompanyId == null) {
+      dispatch(clearInitialState());
+      return undefined;
+    }
+
+    dispatch(clearInitialState());
+    const trackingRequest = dispatch(getTrackingTasks());
+
+    return () => {
+      trackingRequest.abort();
+    };
+  }, [activeCompanyId, dispatch]);
 
   useEffect(() => {
     // Refresh minute-level running time without forcing a render every second.

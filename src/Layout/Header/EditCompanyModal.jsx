@@ -162,7 +162,7 @@ const EditCompanyModal = ({
 
         <ModalFooter>
           <Button
-            color="secondary"
+            color="red"
             type="button"
             onClick={onClose}
             disabled={isSubmitting || isRemovingImage}
