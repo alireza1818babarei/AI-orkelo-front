@@ -75,13 +75,11 @@ const isChecklistItemChecked = (item) => {
 const countChecklistItems = (items = []) =>
   (Array.isArray(items) ? items : []).reduce(
     (summary, item) => {
-      const childrenSummary = countChecklistItems(item?.children || []);
       return {
-        total: summary.total + 1 + childrenSummary.total,
+        total: summary.total + 1,
         completed:
           summary.completed +
-          (isChecklistItemChecked(item) ? 1 : 0) +
-          childrenSummary.completed,
+          (isChecklistItemChecked(item) ? 1 : 0),
       };
     },
     { total: 0, completed: 0 },
@@ -106,7 +104,7 @@ const getTaskChecklistProgress = (task) => {
     };
   }
 
-  // Count nested checklist items when the task was sourced from a detail payload.
+  // Only top-level checklist items contribute to card progress.
   return countChecklistItems(task?.checklist_items || task?.checklistItems || []);
 };
 

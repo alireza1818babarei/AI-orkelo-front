@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Badge, Button, Card, Col, Form, Row, Table } from 'react-bootstrap';
 import { useSelector } from 'react-redux';
 import api from '../../api/axios';
-import { toastError, toastSuccess } from '../../utils/sweetAlert';
+import { alertConfirm, toastError, toastSuccess } from '../../utils/sweetAlert';
 
 const managerRoles = new Set(['company_owner', 'company_supervisor']);
 const REQUESTS_PER_PAGE = 10;
 
 const employeeTabs = [
+  { key: 'pending', label: 'Pending', params: () => ({ status: 'pending' }) },
   { key: 'upcoming', label: 'Upcoming', params: () => ({ status: 'approved', temporal_scope: 'upcoming' }) },
   { key: 'active', label: 'Active', params: () => ({ status: 'approved', temporal_scope: 'active' }) },
   { key: 'history', label: 'History', params: () => ({ status: 'approved', temporal_scope: 'history' }) },
@@ -196,12 +197,15 @@ function Requests({ variant = 'auto' }) {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [statusChangingId, setStatusChangingId] = useState(null);
+  const [cancelingId, setCancelingId] = useState(null);
   const [form, setForm] = useState(() => buildDefaultForm(user?.id));
 
   const activeTabConfig = useMemo(
     () => tabs.find((tab) => tab.key === activeTab) ?? tabs[0],
     [activeTab, tabs],
   );
+  const showCancelColumn = !isManagementView && activeTab === 'pending';
+  const tableColumnCount = (isManagementView ? 8 : 6) + (showCancelColumn ? 1 : 0);
 
   useEffect(() => {
     setActiveTab(tabs[0].key);
@@ -213,7 +217,7 @@ function Requests({ variant = 'auto' }) {
     setSummary(normalizeSummaryPayload(res?.data));
   }, [isManagementView]);
 
-  const loadRequests = useCallback(async () => {
+  const loadRequests = useCallback(async (tabConfig = activeTabConfig) => {
     setLoading(true);
     setError(null);
 
@@ -224,7 +228,7 @@ function Requests({ variant = 'auto' }) {
       const params = {
         page: 1,
         per_page: REQUESTS_PER_PAGE,
-        ...activeTabConfig.params(),
+        ...tabConfig.params(),
       };
       const res = await api.get(endpoint, { params });
       const normalized = normalizeCollection(res?.data);
@@ -351,6 +355,14 @@ function Requests({ variant = 'auto' }) {
       await api.post('/leave-requests', payload);
       toastSuccess('Request submitted');
       setForm(buildDefaultForm(isManagementView ? form.user_id : user?.id));
+
+      if (!isManagementView) {
+        const pendingTab = tabs.find((tab) => tab.key === 'pending') ?? tabs[0];
+        setActiveTab(pendingTab.key);
+        await Promise.all([loadRequests(pendingTab), loadSummary()]);
+        return;
+      }
+
       await Promise.all([loadRequests(), loadSummary()]);
     } catch (err) {
       toastError(getErrorMessage(err, 'Failed to submit request'));
@@ -370,6 +382,28 @@ function Requests({ variant = 'auto' }) {
       toastError(getErrorMessage(err, 'Failed to update request'));
     } finally {
       setStatusChangingId(null);
+    }
+  };
+
+  const cancelRequest = async (requestId) => {
+    const result = await alertConfirm({
+      title: 'Cancel request?',
+      text: 'This pending leave request will be removed.',
+      confirmText: 'Delete',
+    });
+
+    if (!result.isConfirmed) return;
+
+    setCancelingId(requestId);
+
+    try {
+      await api.delete(`/leave-requests/${requestId}`);
+      toastSuccess('Request cancelled');
+      await Promise.all([loadRequests(), loadSummary()]);
+    } catch (err) {
+      toastError(getErrorMessage(err, 'Failed to cancel request'));
+    } finally {
+      setCancelingId(null);
     }
   };
 
@@ -447,13 +481,14 @@ function Requests({ variant = 'auto' }) {
                         <th>Reason</th>
                         <th>Status</th>
                         {isManagementView ? <th>Actions</th> : null}
+                        {showCancelColumn ? <th>Actions</th> : null}
                       </tr>
                     </thead>
                     <tbody>
                       {loading ? (
                         <tr>
                           <td
-                            colSpan={isManagementView ? 8 : 6}
+                            colSpan={tableColumnCount}
                             className='requests-page__empty'
                           >
                             Loading requests...
@@ -527,12 +562,38 @@ function Requests({ variant = 'auto' }) {
                                 </div>
                               </td>
                             ) : null}
+                            {showCancelColumn ? (
+                              <td>
+                                <div className='requests-page__row-actions'>
+                                  <Button
+                                    type='button'
+                                    variant='danger'
+                                    size='sm'
+                                    aria-label='Delete pending request'
+                                    disabled={
+                                      request.status !== 'pending' ||
+                                      cancelingId === request.id
+                                    }
+                                    onClick={() => cancelRequest(request.id)}
+                                  >
+                                    {cancelingId === request.id ? (
+                                      <span
+                                        className='spinner-border spinner-border-sm'
+                                        aria-hidden='true'
+                                      ></span>
+                                    ) : (
+                                      <i className='ph ph-trash'></i>
+                                    )}
+                                  </Button>
+                                </div>
+                              </td>
+                            ) : null}
                           </tr>
                         ))
                       ) : (
                         <tr>
                           <td
-                            colSpan={isManagementView ? 8 : 6}
+                            colSpan={tableColumnCount}
                             className='requests-page__empty'
                           >
                             No requests found.

@@ -148,13 +148,11 @@ const formatHoursMinutes = (totalSeconds) => {
 const countChecklistProgress = (items = []) =>
   (Array.isArray(items) ? items : []).reduce(
     (summary, item) => {
-      const childrenSummary = countChecklistProgress(item?.children || []);
       return {
-        total: summary.total + 1 + childrenSummary.total,
+        total: summary.total + 1,
         completed:
           summary.completed +
-          (item?.is_completed ? 1 : 0) +
-          childrenSummary.completed,
+          (item?.is_completed ? 1 : 0),
       };
     },
     { total: 0, completed: 0 },
