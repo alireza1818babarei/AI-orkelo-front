@@ -1,6 +1,6 @@
 {
     "app": "orkelo",
-    "back-commit": " feat(tasks): add checklist item attachments",
-    "front-commit": "feat(tasks): add checklist item attachments",
+    "back-commit": " fix(tasks): count only main checklist items in progress",
+    "front-commit": "fix(tasks): count only main checklist items in progress",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }
