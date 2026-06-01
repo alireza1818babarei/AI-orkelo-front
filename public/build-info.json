@@ -1,6 +1,6 @@
 {
     "app": "orkelo",
-    "back-commit": " fix(tasks): count only main checklist items in progress",
-    "front-commit": "fix(tasks): count only main checklist items in progress",
+    "back-commit": "feat(warnings): add user warning management and performance reporting",
+    "front-commit": "add company warning management and reporting",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }
