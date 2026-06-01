@@ -236,6 +236,12 @@ export default function Sidebar({ sidebarOpen, setIsSidebarOpen }) {
           iconClass: 'ph-duotone ph-timer',
           className: 'sidebar-icon-submenu-item',
         },
+        {
+          name: 'Warning Users',
+          path: '/warning-users',
+          iconClass: 'ph-duotone ph-warning',
+          className: 'sidebar-icon-submenu-item',
+        },
       ];
 
       if (canSeeFinanceCenter) {

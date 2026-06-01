@@ -5,6 +5,7 @@ import ScrollArrow from "./Footer/ScrollArrow";
 import { useEffect, useState } from "react";
 import Customizer from "./Customizer";
 import AppUpdateModal from "../Components/AppUpdateModal";
+import WarningAcknowledgeModal from "../Components/Warnings/WarningAcknowledgeModal";
 
 const SIDEBAR_COMPACT_QUERY = "(max-width: 1199px)";
 
@@ -109,6 +110,7 @@ const Layout = () => {
       </div>
 
       <AppUpdateModal />
+      <WarningAcknowledgeModal />
 
       {/*-- tap on top --*/}
       <ScrollArrow />

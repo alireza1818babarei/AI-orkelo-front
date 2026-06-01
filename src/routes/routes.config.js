@@ -16,6 +16,7 @@ import RequireAuth from './auth/RequireAuth';
 import RequireGuest from './auth/RequireGeust';
 import UserReports from '../Pages/ManageProjects/Project/UserReports';
 import UserPerformanceAnalyze from '../Pages/UserPerformanceAnalyze';
+import WarningUsers from '../Pages/WarningUsers';
 
 export const routesConfig = [
   {
@@ -36,6 +37,7 @@ export const routesConfig = [
           { path: '/requests-management', element: <Requests variant='management' /> },
           { path: '/user-performance-analyze', element: <UserPerformanceAnalyze /> },
           { path: '/active-trackers', element: <ActiveTrackers /> },
+          { path: '/warning-users', element: <WarningUsers /> },
           { path: '/workspace/active-trackers', element: <ActiveTrackers scope='project_manager' /> },
           { path: '/manage-projects', element: <ManageProjects/> },
           { path: '/manage-finance', element: <ManageFinance /> },

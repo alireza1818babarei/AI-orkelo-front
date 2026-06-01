@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Col, Form, ProgressBar, Row, Table } from 'react-bootstrap';
+import { Alert, Button, Card, Col, Form, Modal, ProgressBar, Row, Table } from 'react-bootstrap';
 import Flatpickr from 'react-flatpickr';
 import { useSelector } from 'react-redux';
 import api from '../../api/axios';
@@ -53,6 +53,7 @@ const defaultAnalysis = {
   top_time_tasks: [],
   overdue_tasks: [],
   user_performance: [],
+  user_warnings: [],
   rating_distribution: [],
 };
 
@@ -186,6 +187,19 @@ function formatDate(value) {
   }).format(date);
 }
 
+function formatDateTime(value) {
+  const date = new Date(value ?? '');
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 function formatDateFilterValue(value) {
   if (!value) return '';
 
@@ -222,6 +236,7 @@ function normalizeAnalysisPayload(payload) {
     top_time_tasks: normalizeArray(root.top_time_tasks),
     overdue_tasks: normalizeArray(root.overdue_tasks),
     user_performance: normalizeArray(root.user_performance),
+    user_warnings: normalizeArray(root.user_warnings),
     rating_distribution: normalizeArray(root.rating_distribution),
   };
 }
@@ -438,6 +453,150 @@ function UserPerformanceTable({ rows }) {
   );
 }
 
+function warningLevelLabel(warning) {
+  if (warning?.level_label) return warning.level_label;
+
+  switch (String(warning?.level ?? '').toLowerCase()) {
+    case 'high':
+      return 'High Priority Warning';
+    case 'medium':
+      return 'Medium Warning';
+    case 'low':
+      return 'Low Warning';
+    default:
+      return '-';
+  }
+}
+
+function warningLevelTone(warning) {
+  const level = String(warning?.level ?? warning?.level_color ?? '').toLowerCase();
+
+  if (level === 'high' || level === 'red') return 'high';
+  if (level === 'medium' || level === 'orange') return 'medium';
+  return 'low';
+}
+
+function WarningLevelBadge({ warning }) {
+  const tone = warningLevelTone(warning);
+
+  return (
+    <span className={`user-performance-analyze__warning-level is-${tone}`}>
+      {warningLevelLabel(warning)}
+    </span>
+  );
+}
+
+function UserWarningsTable({ warnings, onView }) {
+  return (
+    <Card className='user-performance-analyze__panel border-0 shadow-sm'>
+      <Card.Body>
+        <div className='user-performance-analyze__panel-header'>
+          <h5>User Warnings</h5>
+        </div>
+
+        <div className='user-performance-analyze__table-wrap'>
+          <Table responsive className='align-middle mb-0'>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Warning Title</th>
+                <th>Description</th>
+                <th>Level</th>
+                <th>View</th>
+              </tr>
+            </thead>
+            <tbody>
+              {warnings.length > 0 ? (
+                warnings.map((warning) => (
+                  <tr key={warning.id}>
+                    <td>
+                      <span className='user-performance-analyze__person'>
+                        <UserAvatar user={warning.user} />
+                        <span>
+                          <strong>{warning.user?.name || 'User'}</strong>
+                          <small>{warning.user?.email || '-'}</small>
+                        </span>
+                      </span>
+                    </td>
+                    <td>{warning.title || '-'}</td>
+                    <td>
+                      <span className='user-performance-analyze__warning-description'>
+                        {warning.description || '-'}
+                      </span>
+                    </td>
+                    <td>
+                      <WarningLevelBadge warning={warning} />
+                    </td>
+                    <td>
+                      <Button
+                        type='button'
+                        variant='outline-secondary'
+                        size='sm'
+                        className='user-performance-analyze__icon-button'
+                        onClick={() => onView(warning)}
+                      >
+                        <i className='ph ph-eye'></i>
+                        <span>View</span>
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className='user-performance-analyze__empty'>
+                    No warning records found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+function WarningDetailsModal({ warning, onHide }) {
+  const show = Boolean(warning);
+
+  return (
+    <Modal show={show} onHide={onHide} centered className='user-performance-warning-modal'>
+      <Modal.Header closeButton>
+        <Modal.Title>Warning Details</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className='user-performance-warning-modal__user'>
+          <UserAvatar user={warning?.user} />
+          <span>
+            <strong>{warning?.user?.name || 'User'}</strong>
+            <small>{warning?.user?.email || '-'}</small>
+          </span>
+        </div>
+
+        <WarningLevelBadge warning={warning} />
+
+        <h5>{warning?.title || '-'}</h5>
+        <p>{warning?.description || '-'}</p>
+
+        <dl className='user-performance-warning-modal__meta'>
+          <div>
+            <dt>Issued At</dt>
+            <dd>{formatDateTime(warning?.created_at)}</dd>
+          </div>
+          <div>
+            <dt>Issued By</dt>
+            <dd>{warning?.issuer?.name || '-'}</dd>
+          </div>
+          <div>
+            <dt>Acknowledged At</dt>
+            <dd>{formatDateTime(warning?.acknowledged_at)}</dd>
+          </div>
+        </dl>
+      </Modal.Body>
+    </Modal>
+  );
+}
+
 export default function UserPerformanceAnalyze() {
   const user = useSelector((state) => state.auth?.user ?? null);
   const activeCompanyRole = useSelector(
@@ -452,6 +611,7 @@ export default function UserPerformanceAnalyze() {
   const [refreshIndex, setRefreshIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedWarning, setSelectedWarning] = useState(null);
   const companyRole = String(activeCompanyRole ?? user?.company_role ?? user?.user_type ?? '')
     .trim()
     .toLowerCase();
@@ -598,7 +758,18 @@ export default function UserPerformanceAnalyze() {
         <Col xs={12}>
           <UserPerformanceTable rows={analysis.user_performance} />
         </Col>
+        <Col xs={12}>
+          <UserWarningsTable
+            warnings={analysis.user_warnings}
+            onView={setSelectedWarning}
+          />
+        </Col>
       </Row>
+
+      <WarningDetailsModal
+        warning={selectedWarning}
+        onHide={() => setSelectedWarning(null)}
+      />
     </section>
   );
 }
