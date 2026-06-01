@@ -317,7 +317,7 @@ const ApiTableData = () => {
                 </Card>
             </Col>
 
-            <Modal isOpen={showModal} toggle={() => setShowModal(false)} backdrop="static">
+            <Modal isOpen={showModal} toggle={() => setShowModal(false)}>
                 <ModalHeader toggle={() => setShowModal(false)}>Create API</ModalHeader>
                 <ModalBody>
                     <Form className="app-form">
@@ -356,7 +356,7 @@ const ApiTableData = () => {
             </Modal>
 
             {/* Delete Confirmation Modal */}
-            <Modal isOpen={deleteModal} toggle={() => setDeleteModal(false)} backdrop="static">
+            <Modal isOpen={deleteModal} toggle={() => setDeleteModal(false)}>
                 <ModalBody className="text-center">
                     <img src="/assets/images/icons/delete-icon.png" alt="" className="img-fluid"/>
                     <h4 className="text-danger">Are You Sure?</h4>

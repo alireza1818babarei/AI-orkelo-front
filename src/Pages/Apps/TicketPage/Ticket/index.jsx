@@ -311,7 +311,7 @@ const Ticket = () => {
                         </Card>
                     </Col>
                 </Row>
-                <Modal isOpen={showModal} toggle={() => setShowModal(!showModal)} backdrop="static" keyboard={false}>
+                <Modal isOpen={showModal} toggle={() => setShowModal(!showModal)}>
                     <ModalHeader toggle={() => setShowModal(!showModal)}>Edit Ticket</ModalHeader>
                     <ModalBody>
                         <Form>

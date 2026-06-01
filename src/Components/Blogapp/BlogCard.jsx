@@ -395,7 +395,7 @@ const BlogCard = () => {
             </Row>
 
             {selectedBlog && (
-                <Modal isOpen={modalOpen} toggle={toggleModal} backdrop="static" keyboard={false}>
+                <Modal isOpen={modalOpen} toggle={toggleModal}>
                     <ModalHeader toggle={toggleModal}>Edit Blog</ModalHeader>
                     <ModalBody>
 

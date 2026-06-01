@@ -44,7 +44,6 @@ const Layout = () => {
         className="modal"
         tabIndex="-1"
         id="welcomeCard"
-        data-bs-backdrop="static"
       >
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content welcome-card">

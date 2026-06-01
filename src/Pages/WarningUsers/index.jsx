@@ -179,7 +179,6 @@ function WarningUsers() {
 
   const switchModalTab = (tab) => {
     setActiveModalTab(tab);
-    if (tab === 'create') resetFormState();
   };
 
   const updateForm = (event) => {
@@ -547,7 +546,6 @@ function WarningUsers() {
         show={Boolean(selectedUser)}
         onHide={closeWarningModal}
         centered
-        backdrop='static'
         className='warning-create-modal'
       >
         <Modal.Header closeButton={!submitting && !deletingId}>

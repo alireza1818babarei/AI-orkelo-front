@@ -485,7 +485,10 @@ nav.dark-sidebar ~ .app-content .user-performance-analyze__table-wrap th {
   color: var(--upa-muted);
   line-height: 1.7;
   margin-bottom: 1rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .user-performance-warning-modal__meta {

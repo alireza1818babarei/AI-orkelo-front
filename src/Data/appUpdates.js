@@ -5,7 +5,7 @@ export const APP_UPDATES = [
     releasedAt: "2026-05-31",
     title: "Orkelo Product Update",
     summary:
-      "This update improves leave requests, task management, trackers, user performance analysis, file handling, and Finance Center so daily work is clearer for admins, project managers, and regular users.",
+      "This update improves leave requests, user warnings, task management, trackers, performance analysis, file handling, and Finance Center so daily work is clearer for admins, project managers, and regular users.",
     newFeatures: [
       {
         title: "Leave Requests For Regular Users",
@@ -30,6 +30,12 @@ export const APP_UPDATES = [
         description:
           "Company owners and supervisors can review tracked time, working days, leave days, task totals, overdue tasks, and ratings.",
         icon: "ph-duotone ph-chart-line-up",
+      },
+      {
+        title: "User Warning Management",
+        description:
+          "Managers can issue low, medium, or high warnings, review warning history, and users must acknowledge pending warnings before continuing.",
+        icon: "ph-duotone ph-warning-octagon",
       },
       {
         title: "Improved Task Controls",

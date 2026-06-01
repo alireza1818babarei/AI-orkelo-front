@@ -91,11 +91,10 @@ const AppUpdateModal = () => {
   return (
     <Modal
       isOpen={open}
+      toggle={closeForNow}
       centered
       size="xl"
       scrollable
-      backdrop="static"
-      keyboard={false}
       contentClassName="app-update-modal"
     >
       <ModalBody className="p-0">
@@ -346,6 +345,5 @@ const AppUpdateModal = () => {
 };
 
 export default AppUpdateModal;
-
 
 

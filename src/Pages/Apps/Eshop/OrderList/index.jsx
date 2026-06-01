@@ -129,7 +129,7 @@ const EShopOrderList = () => {
                         </CardBody>
                     </Card>
                 </Row>
-                <Modal isOpen={modal} toggle={toggle} backdrop="static" keyboard={false}>
+                <Modal isOpen={modal} toggle={toggle}>
                     <ModalHeader toggle={toggle}>Edit Order</ModalHeader>
                     <ModalBody>
                         <Form className="app-form">
