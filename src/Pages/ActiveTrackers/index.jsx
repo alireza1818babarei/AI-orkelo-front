@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import AppPagination from '../../Components/Common/AppPagination';
 import api from '../../api/axios';
 import { formatMonthDayTime } from '../../utils/date';
+import { TODO_BOARD_TYPE } from '../../store/projects/projectTodoListSlice';
 
 const TRACKERS_PER_PAGE = 10;
 const SEARCH_DEBOUNCE_MS = 800;
@@ -47,6 +48,7 @@ const normalizeTracker = (tracker) => ({
   id: tracker?.id,
   userId: tracker?.user_id,
   taskId: tracker?.task_id,
+  taskBoardType: String(tracker?.task_board_type ?? '').trim().toLowerCase(),
   projectId: tracker?.project_id,
   projectName: String(tracker?.project_name ?? '').trim() || 'Project',
   userName: String(tracker?.user_name ?? '').trim() || 'Unknown user',
@@ -77,6 +79,13 @@ const normalizeTrackersResponse = (payload) => {
     trackers: data.map(normalizeTracker),
     meta: normalizeMeta(root?.meta, data.length),
   };
+};
+
+const buildTaskPath = (tracker) => {
+  const basePath = `/projects/${tracker.projectId}/task/${tracker.taskId}`;
+  return tracker.taskBoardType === TODO_BOARD_TYPE
+    ? `${basePath}?view=todo-list`
+    : basePath;
 };
 
 export default function ActiveTrackers({ scope = 'company' }) {
@@ -256,7 +265,7 @@ export default function ActiveTrackers({ scope = 'company' }) {
                         {tracker.projectId && tracker.taskId ? (
                           <Button
                             as={Link}
-                            to={`/projects/${tracker.projectId}/task/${tracker.taskId}`}
+                            to={buildTaskPath(tracker)}
                             variant='outline-primary'
                             size='sm'
                           >

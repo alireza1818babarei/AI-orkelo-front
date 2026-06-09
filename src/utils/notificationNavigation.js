@@ -10,6 +10,32 @@ const pickId = (...values) => {
 };
 
 const encodePathId = (value) => encodeURIComponent(String(value));
+const TODO_BOARD_TYPE = "todo_list";
+
+const normalizeBoardType = (value) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+const pickBoardType = (...values) => {
+  for (const value of values) {
+    const normalized = normalizeBoardType(value);
+    if (normalized) return normalized;
+  }
+
+  return "";
+};
+
+const appendTodoListView = (path, boardType) => {
+  if (normalizeBoardType(boardType) !== TODO_BOARD_TYPE) return path;
+
+  const [pathWithSearch, hash = ""] = String(path).split("#");
+  const [pathname, search = ""] = pathWithSearch.split("?");
+  const params = new URLSearchParams(search);
+  params.set("view", "todo-list");
+
+  return `${pathname}?${params.toString()}${hash ? `#${hash}` : ""}`;
+};
 
 export const resolveNotificationTarget = (notification) => {
   const properties =
@@ -24,10 +50,21 @@ export const resolveNotificationTarget = (notification) => {
     !Array.isArray(properties.activity_properties)
       ? properties.activity_properties
       : {};
+  const boardType = pickBoardType(
+    notification?.task?.column?.board_type,
+    notification?.task_board_type,
+    notification?.board_type,
+    properties?.task_board_type,
+    properties?.board_type,
+    properties?.column_board_type,
+    activityProperties?.task_board_type,
+    activityProperties?.board_type,
+    activityProperties?.column_board_type,
+  );
 
   if (typeof properties?.path === "string" && properties.path.trim()) {
     return {
-      path: properties.path,
+      path: appendTodoListView(properties.path, boardType),
       label: "Open",
     };
   }
@@ -48,7 +85,10 @@ export const resolveNotificationTarget = (notification) => {
 
   if (projectId && taskId) {
     return {
-      path: `/projects/${encodePathId(projectId)}/task/${encodePathId(taskId)}`,
+      path: appendTodoListView(
+        `/projects/${encodePathId(projectId)}/task/${encodePathId(taskId)}`,
+        boardType,
+      ),
       label: "Open task",
     };
   }

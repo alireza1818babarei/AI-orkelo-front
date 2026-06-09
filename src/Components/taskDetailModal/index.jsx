@@ -61,6 +61,8 @@ import {
   TASK_REVIEW_STATUS,
 } from "../../utils/taskReviewStatus";
 
+const TODO_BOARD_TYPE = "todo_list";
+
 const getChecklistOrder = (item) => {
   const value = Number(item?.position ?? 0);
   return Number.isFinite(value) ? value : 0;
@@ -189,7 +191,16 @@ const getAssigneeDisplayName = (assignee) => {
   return name || "Assigned user";
 };
 
-const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectMembers = [] }) => {
+const TaskDetailModal = ({
+  isOpen,
+  onClose,
+  task,
+  projectId,
+  onDeleted,
+  projectMembers = [],
+  isTodoListTask = false,
+  onTaskUpdated,
+}) => {
   const propTask = task || {};
 
   const taskDetailState = useSelector((s) => s.taskDetail);
@@ -212,9 +223,27 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     t?.project_id ??
     projectId ??
     null;
+  const taskBoardType = String(
+    detailTask?.column?.board_type ?? t?.column?.board_type ?? t?.board_type ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  const usesTodoCompletion =
+    isTodoListTask || taskBoardType === TODO_BOARD_TYPE;
+  const isDirectCompletionDone = (obj) => {
+    const status = String(obj?.status ?? "").trim().toLowerCase();
+    return (
+      status === "done" ||
+      status === "completed" ||
+      obj?.is_completed === true ||
+      obj?.is_completed === 1
+    );
+  };
   const deriveReviewStatus = (obj) => getTaskReviewStatus(obj);
   const deriveCompleted = (obj) =>
-    deriveReviewStatus(obj) === TASK_REVIEW_STATUS.APPROVED;
+    usesTodoCompletion
+      ? isDirectCompletionDone(obj)
+      : deriveReviewStatus(obj) === TASK_REVIEW_STATUS.APPROVED;
   const deriveDueAt = (obj) => obj?.due_at ?? null;
   const deriveCompletedAt = (obj) => obj?.completed_at ?? null;
   const formatDateTime = (value) => {
@@ -320,9 +349,14 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
   const isTaskRejected = taskReviewStatus === TASK_REVIEW_STATUS.REJECTED;
   const isTaskApproved = taskReviewStatus === TASK_REVIEW_STATUS.APPROVED;
   const canSubmitForReview =
-    !isTaskPendingReview && !isTaskApproved && !taskCompleting;
+    !usesTodoCompletion &&
+    !isTaskPendingReview &&
+    !isTaskApproved &&
+    !taskCompleting;
   const canRestoreTask =
-    (isTaskPendingReview || isTaskApproved) && !taskCompleting;
+    !usesTodoCompletion &&
+    (isTaskPendingReview || isTaskApproved) &&
+    !taskCompleting;
   const taskTrackers = useMemo(() => {
     const list = detailTask?.time_trackers ?? t?.time_trackers;
     return Array.isArray(list) ? list : [];
@@ -401,21 +435,30 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
       }),
     );
   };
+  const syncTaskCardPatch = useCallback(
+    (patch, columnId = resolvedColumnId ?? taskColumnId) => {
+      if (!taskId || !columnId || !patch) return;
+
+      dispatch(
+        updateTaskInColumn({
+          columnId,
+          taskId,
+          patch,
+        }),
+      );
+      onTaskUpdated?.({ taskId, columnId, patch });
+    },
+    [dispatch, onTaskUpdated, resolvedColumnId, taskColumnId, taskId],
+  );
   const updateTaskCardChecklistProgress = (items) => {
     if (!taskId) return;
 
     const progress = countChecklistProgress(items);
 
-    dispatch(
-      updateTaskInColumn({
-        columnId: resolvedColumnId ?? taskColumnId,
-        taskId,
-        patch: {
-          checklist_items_total: progress.total,
-          checklist_items_completed_count: progress.completed,
-        },
-      }),
-    );
+    syncTaskCardPatch({
+      checklist_items_total: progress.total,
+      checklist_items_completed_count: progress.completed,
+    });
   };
 
   const handleAttachmentChanged = () => {
@@ -559,7 +602,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     setTaskReviewReviewerName(getTaskReviewReviewerName(t));
     setRejectReasonOpen(false);
     setRejectReason("");
-    setTaskCompleted(nextReviewStatus === TASK_REVIEW_STATUS.APPROVED);
+    setTaskCompleted(deriveCompleted(t));
     setTaskCompletedAt(deriveCompletedAt(t));
     const nextDueAt = deriveDueAt(t);
     setDueAt(nextDueAt);
@@ -611,6 +654,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     t.priority,
     t.rating,
     t.id,
+    taskBoardType,
+    usesTodoCompletion,
   ]);
 
   useEffect(() => {
@@ -655,6 +700,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
       const columnIdForStore = resolvedColumnId ?? taskColumnId;
       if (!effectiveProjectId || !columnIdForStore) return;
 
+      if (usesTodoCompletion) {
+        syncTaskCardPatch({ type: payload?.type ?? null }, columnIdForStore);
+        return;
+      }
+
       dispatch(
         getColumnTasksThunk({
           projectId: effectiveProjectId,
@@ -663,7 +713,14 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         }),
       );
     },
-    [dispatch, effectiveProjectId, resolvedColumnId, taskColumnId],
+    [
+      dispatch,
+      effectiveProjectId,
+      resolvedColumnId,
+      syncTaskCardPatch,
+      taskColumnId,
+      usesTodoCompletion,
+    ],
   );
 
   const isDueAtOverdue = useMemo(() => {
@@ -781,13 +838,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     if (current === trimmed) return;
     try {
       await updateTask({ description: text });
-      dispatch(
-        updateTaskInColumn({
-          columnId: resolvedColumnId,
-          taskId,
-          patch: { description: text },
-        }),
-      );
+      syncTaskCardPatch({ description: text }, resolvedColumnId);
       refreshDetail();
       setSavedDescription(text);
     } catch (err) {
@@ -814,13 +865,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     if (current === trimmed) return;
     try {
       await updateTask({ text: trimmed });
-      dispatch(
-        updateTaskInColumn({
-          columnId: resolvedColumnId,
-          taskId,
-          patch: { text: trimmed },
-        }),
-      );
+      syncTaskCardPatch({ text: trimmed }, resolvedColumnId);
       refreshDetail();
       setSavedTaskText(trimmed);
       setTaskText(trimmed);
@@ -888,13 +933,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
           due_at: dueAtForApi,
         });
       }
-      dispatch(
-        updateTaskInColumn({
-          columnId: taskColumnId,
-          taskId,
-          patch: { due_at: isoValue },
-        }),
-      );
+      syncTaskCardPatch({ due_at: isoValue }, taskColumnId);
       refreshDetail();
       setSavedDueAt(isoValue);
       setDueAt(isoValue);
@@ -934,13 +973,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
         updated?.priority ?? nextPriority,
       );
 
-      dispatch(
-        updateTaskInColumn({
-          columnId: resolvedColumnId ?? taskColumnId,
-          taskId,
-          patch: { priority: persistedPriority },
-        }),
-      );
+      syncTaskCardPatch({ priority: persistedPriority });
       setPriority(persistedPriority);
       setSavedPriority(persistedPriority);
       refreshDetail();
@@ -985,13 +1018,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
       const updated = res?.data?.data ?? res?.data ?? {};
       const persistedRating = normalizeTaskRating(updated?.rating ?? nextRating);
 
-      dispatch(
-        updateTaskInColumn({
-          columnId: resolvedColumnId ?? taskColumnId,
-          taskId,
-          patch: { rating: persistedRating },
-        }),
-      );
+      syncTaskCardPatch({ rating: persistedRating });
       setRating(persistedRating);
       setSavedRating(persistedRating);
       refreshDetail();
@@ -1171,13 +1198,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     const nextSubmittedAt = getTaskReviewSubmittedAt(reviewPatch);
     const nextReviewedAt = getTaskReviewReviewedAt(reviewPatch);
 
-    dispatch(
-      updateTaskInColumn({
-        columnId: resolvedColumnId ?? taskColumnId,
-        taskId,
-        patch: reviewPatch,
-      }),
-    );
+    syncTaskCardPatch(reviewPatch);
     dispatch(patchTaskDetail(reviewPatch));
     persistTaskReviewState(taskId, reviewPatch);
 
@@ -1258,7 +1279,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
   };
 
   const handleApproveTask = async () => {
-    if (!canReviewTask || !isTaskPendingReview || taskReviewing) return;
+    if (usesTodoCompletion || !canReviewTask || !isTaskPendingReview || taskReviewing) return;
     if (!effectiveProjectId || !taskId) return;
 
     try {
@@ -1315,7 +1336,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
   };
 
   const handleRejectTask = async () => {
-    if (!canReviewTask || !isTaskPendingReview || taskReviewing) return;
+    if (usesTodoCompletion || !canReviewTask || !isTaskPendingReview || taskReviewing) return;
     if (!effectiveProjectId || !taskId) return;
 
     const note = rejectReason.trim();
@@ -1470,35 +1491,37 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
     toastSuccess("Link Copied");
   }
 
-  const reviewStatusView = {
-    [TASK_REVIEW_STATUS.PENDING]: {
-      label: "Pending Approval",
-      className: "task-review-status-pill--pending",
-      icon: "ti ti-clock",
-      meta: taskReviewSubmittedByName
-        ? `Submitted by ${taskReviewSubmittedByName}`
-        : "Submitted for review",
-      date: taskReviewSubmittedAt,
-    },
-    [TASK_REVIEW_STATUS.APPROVED]: {
-      label: "Approved",
-      className: "task-review-status-pill--approved",
-      icon: "ti ti-circle-check",
-      meta: taskReviewReviewerName
-        ? `Approved by ${taskReviewReviewerName}`
-        : "Approved",
-      date: taskReviewReviewedAt ?? taskCompletedAt,
-    },
-    [TASK_REVIEW_STATUS.REJECTED]: {
-      label: "Changes Requested",
-      className: "task-review-status-pill--rejected",
-      icon: "ti ti-circle-x",
-      meta: taskReviewReviewerName
-        ? `Rejected by ${taskReviewReviewerName}`
-        : "Rejected",
-      date: taskReviewReviewedAt,
-    },
-  }[taskReviewStatus] ?? null;
+  const reviewStatusView = usesTodoCompletion
+    ? null
+    : {
+        [TASK_REVIEW_STATUS.PENDING]: {
+          label: "Pending Approval",
+          className: "task-review-status-pill--pending",
+          icon: "ti ti-clock",
+          meta: taskReviewSubmittedByName
+            ? `Submitted by ${taskReviewSubmittedByName}`
+            : "Submitted for review",
+          date: taskReviewSubmittedAt,
+        },
+        [TASK_REVIEW_STATUS.APPROVED]: {
+          label: "Approved",
+          className: "task-review-status-pill--approved",
+          icon: "ti ti-circle-check",
+          meta: taskReviewReviewerName
+            ? `Approved by ${taskReviewReviewerName}`
+            : "Approved",
+          date: taskReviewReviewedAt ?? taskCompletedAt,
+        },
+        [TASK_REVIEW_STATUS.REJECTED]: {
+          label: "Changes Requested",
+          className: "task-review-status-pill--rejected",
+          icon: "ti ti-circle-x",
+          meta: taskReviewReviewerName
+            ? `Rejected by ${taskReviewReviewerName}`
+            : "Rejected",
+          date: taskReviewReviewedAt,
+        },
+      }[taskReviewStatus] ?? null;
   const approvalRatingAssigneeName = getAssigneeDisplayName(
     approvalRatingAssignee,
   );
@@ -1580,7 +1603,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
               </button>
             ) : null}
 
-            {isTaskPendingReview && canReviewTask ? (
+            {!usesTodoCompletion && isTaskPendingReview && canReviewTask ? (
               <div className="d-flex align-items-center gap-2">
                 <button
                   type="button"
@@ -2029,12 +2052,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, projectId, onDeleted, projectM
                       }
                       onChanged={(tags) => {
                         if (!taskId) return;
-                        dispatch(
-                          updateTaskInColumn({
-                            columnId: taskColumnId,
-                            taskId,
-                            patch: { tags: Array.isArray(tags) ? tags : [] },
-                          }),
+                        syncTaskCardPatch(
+                          { tags: Array.isArray(tags) ? tags : [] },
+                          taskColumnId,
                         );
                         refreshDetail();
                       }}

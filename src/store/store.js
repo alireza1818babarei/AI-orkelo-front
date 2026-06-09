@@ -3,6 +3,7 @@ import authReducer from "./auth/authSlice";
 import projectsReducer from "./projects/projectsSlice";
 import projectDetailsReducer from "./projects/projectDetailsSlice";
 import projectColumnsReducer from "./projects/projectColumnsSlice";
+import projectTodoListReducer from "./projects/projectTodoListSlice";
 import projectMembersReducer from "./projects/projectMembersSlice";
 import companyMembersReducer from "./company/companyMembersSlice";
 import companyContextReducer from "./company/companyContextSlice";
@@ -32,6 +33,7 @@ export const store = configureStore({
     projects: projectsReducer,
     projectDetails: projectDetailsReducer,
     projectColumns: projectColumnsReducer,
+    projectTodoList: projectTodoListReducer,
     projectMembers: projectMembersReducer,
     companyMembers: companyMembersReducer,
     companyContext: companyContextReducer,

@@ -5,6 +5,7 @@ import {
   clearInitialState,
   getTrackingTasks,
 } from "../../../store/tasks/trackingTasksSlice";
+import { TODO_BOARD_TYPE } from "../../../store/projects/projectTodoListSlice";
 import { formatMonthDayTime } from "../../../utils/date";
 
 const DEFAULT_TRACKER_COLUMNS = 4;
@@ -43,6 +44,23 @@ const getFallbackColumnsPerRow = () => {
   if (window.innerWidth <= 1400) return 3;
 
   return DEFAULT_TRACKER_COLUMNS;
+};
+
+const normalizeBoardType = (value) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+const buildTrackingTaskUrl = (baseUrl, task) => {
+  const normalizedBase = String(baseUrl || "/");
+  const safeBase = normalizedBase.endsWith("/")
+    ? normalizedBase
+    : `${normalizedBase}/`;
+  const path = `projects/${encodeURIComponent(task.project_id)}/task/${encodeURIComponent(task.task_id)}`;
+
+  return normalizeBoardType(task?.task_board_type) === TODO_BOARD_TYPE
+    ? `${safeBase}${path}?view=todo-list`
+    : `${safeBase}${path}`;
 };
 
 const TrackingTasks = () => {
@@ -168,7 +186,7 @@ const TrackingTasks = () => {
           >
             {visibleTasks.map((task) => (
               <Link
-                to={`${taskModalUrl}projects/${task.project_id}/task/${task.task_id}`}
+                to={buildTrackingTaskUrl(taskModalUrl, task)}
                 key={task.id}
                 className="tracker__homeLink"
               >

@@ -6,18 +6,51 @@ import {
 } from "reactstrap";
 import HeaderMenu from "../../Layout/Header/HeaderMenu.jsx";
 import ActionDropdown from "../../Components/ActionDropdown/index.jsx";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Header = () => {
     const headerMenuRef = useRef(null);
     const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate();
+    const projectPathMatch = location.pathname.match(/^\/projects\/(\d+)(?:\/task\/(\d+))?\/?$/);
+    const canSwitchProjectView = Boolean(projectPathMatch);
+
+    const switchProjectView = (view) => {
+        if (!projectPathMatch) return;
+
+        const projectId = projectPathMatch[1];
+        const taskId = projectPathMatch[2];
+        const params = new URLSearchParams(location.search);
+
+        if (view === "todo-list") {
+            params.set("view", "todo-list");
+        } else {
+            params.delete("view");
+        }
+
+        const search = params.toString();
+        navigate(`/projects/${projectId}${taskId ? `/task/${taskId}` : ""}${search ? `?${search}` : ""}`);
+    };
 
     const headerQuickActions = useMemo(
       () => [
-        { key: "task-manager", label: "Task Manager", icon: "ti-list-details", onClick: () => {} },
-        { key: "todo-list", label: "Todo list", icon: "ti-checklist", onClick: () => {} },
-        { key: "file-manager", label: "File manager", icon: "ti-folder", onClick: () => {} },
+        {
+          key: "task-manager",
+          label: "Task Manager",
+          icon: "ti-list-details",
+          disabled: !canSwitchProjectView,
+          onClick: () => switchProjectView("task-manager"),
+        },
+        {
+          key: "todo-list",
+          label: "Todo list",
+          icon: "ti-checklist",
+          disabled: !canSwitchProjectView,
+          onClick: () => switchProjectView("todo-list"),
+        },
       ],
-      [],
+      [canSwitchProjectView, location.search, navigate, projectPathMatch],
     );
 
     return (

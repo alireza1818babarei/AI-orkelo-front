@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container } from "reactstrap";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
@@ -22,6 +22,19 @@ import {
   updateProjectColumnThunk,
   archiveCompletedColumnTasksThunk,
 } from "../../../store/projects/projectColumnsSlice";
+import {
+  TODO_BOARD_TYPE,
+  createTodoListColumnThunk,
+  createTodoListTaskThunk,
+  deleteTodoListColumnThunk,
+  getTodoListColumnTasksThunk,
+  getTodoListColumnsThunk,
+  patchTodoTask,
+  removeTodoTask,
+  reorderTodoListTaskThunk,
+  toggleTodoListTaskCompletionThunk,
+  updateTodoListColumnThunk,
+} from "../../../store/projects/projectTodoListSlice";
 import { getArchivedTasks } from "../../../store/projects/projectArchivedTasksSlice";
 import {
   addProjectMemberThunk,
@@ -44,6 +57,7 @@ import { resolvePublicMediaUrl } from "../../../utils/mediaUrl";
 import ProjectBoardHeader from "./partials/ProjectBoardHeader";
 import ProjectEditModal from "./partials/ProjectEditModal";
 import ProjectBoardColumns from "./partials/ProjectBoardColumns";
+import ProjectTodoList from "./partials/ProjectTodoList";
 import ProjectColumnModal from "./partials/ProjectColumnModal";
 import ProjectMembers from "./partials/ProjectMembers";
 import ProjectAddMemberModal from "./partials/ProjectAddMemberModal";
@@ -58,6 +72,7 @@ import ProjectTaskManager from "./partials/ProjectTaskManager";
 
 const PROJECT_STATUS = ["active", "deactive"];
 const COMPANY_MANAGEMENT_ROLES = new Set(["company_owner", "company_supervisor"]);
+const TODO_LIST_VIEW_QUERY = "todo-list";
 
 const normalizeRole = (role) =>
   String(role ?? "")
@@ -114,13 +129,19 @@ const ProjectBoard = () => {
   const { id, taskId } = useParams();
   const dispatch = useDispatch();
   const navigat = useNavigate();
+  const location = useLocation();
   const tasksForcedProjectRef = useRef(null);
+  const todoTasksForcedProjectRef = useRef(null);
   const lastRouteProjectIdRef = useRef(id);
   const routeSwitched =
     lastRouteProjectIdRef.current != null &&
     id != null &&
     String(lastRouteProjectIdRef.current) !== String(id);
   lastRouteProjectIdRef.current = id;
+  const requestedProjectView = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return String(params.get("view") ?? "").trim().toLowerCase();
+  }, [location.search]);
 
   const [infoOpen, setInfoOpen] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -150,6 +171,13 @@ const ProjectBoard = () => {
     tasksLoadingByColumnId,
     archivingCompletedByColumnId,
   } = useSelector((s) => s.projectColumns);
+  const {
+    items: todoColumns,
+    status: todoColumnsStatus,
+    tasksLoadingByColumnId: todoTasksLoadingByColumnId,
+    completingByTaskId: todoCompletingByTaskId,
+  } = useSelector((s) => s.projectTodoList);
+  const taskDetailState = useSelector((s) => s.taskDetail);
   const {
     items: projectMembers,
     projectId: membersProjectId,
@@ -239,12 +267,89 @@ const ProjectBoard = () => {
     );
   }, [columnsFromSlice, baseColumns, removedTaskIds]);
 
+  const routeTaskDetail = useMemo(() => {
+    if (!taskId || !taskDetailState?.task) return null;
+    const sameProject =
+      taskDetailState?.projectId != null &&
+      id != null &&
+      String(taskDetailState.projectId) === String(id);
+    const sameTask =
+      taskDetailState?.taskId != null &&
+      String(taskDetailState.taskId) === String(taskId);
+
+    return sameProject && sameTask ? taskDetailState.task : null;
+  }, [
+    id,
+    taskDetailState?.projectId,
+    taskDetailState?.task,
+    taskDetailState?.taskId,
+    taskId,
+  ]);
+
+  const routeActiveTask = useMemo(() => {
+    if (!taskId || String(activeTask?.id ?? "") !== String(taskId)) return null;
+    return activeTask;
+  }, [activeTask, taskId]);
+
+  const routeTaskBoardType = useMemo(() => {
+    const values = [
+      routeActiveTask?.column?.board_type,
+      routeActiveTask?.task_board_type,
+      routeActiveTask?.board_type,
+      routeTaskDetail?.column?.board_type,
+      routeTaskDetail?.task_board_type,
+      routeTaskDetail?.board_type,
+    ];
+
+    for (const value of values) {
+      const normalized = String(value ?? "").trim().toLowerCase();
+      if (normalized) return normalized;
+    }
+
+    return "";
+  }, [
+    routeActiveTask?.board_type,
+    routeActiveTask?.column?.board_type,
+    routeActiveTask?.task_board_type,
+    routeTaskDetail?.board_type,
+    routeTaskDetail?.column?.board_type,
+    routeTaskDetail?.task_board_type,
+  ]);
+
+  const isRouteTodoTask = routeTaskBoardType === TODO_BOARD_TYPE;
+  const isTodoListView =
+    requestedProjectView === TODO_LIST_VIEW_QUERY || isRouteTodoTask;
+  const activeViewColumns = isTodoListView ? todoColumns : columns;
+
+  useEffect(() => {
+    if (!id || !taskId || !isRouteTodoTask) return;
+    if (requestedProjectView === TODO_LIST_VIEW_QUERY) return;
+
+    const params = new URLSearchParams(location.search);
+    params.set("view", TODO_LIST_VIEW_QUERY);
+    navigat(`/projects/${id}/task/${taskId}?${params.toString()}`, {
+      replace: true,
+    });
+  }, [
+    id,
+    isRouteTodoTask,
+    location.search,
+    navigat,
+    requestedProjectView,
+    taskId,
+  ]);
+
   useEffect(() => {
     if (!id) return;
     dispatch(getProjectDetailsThunk(id));
     dispatch(getProjectColumnsThunk(id));
     dispatch(getProjectMembersThunk(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!id || !isTodoListView) return;
+    dispatch(getTodoListColumnsThunk({ projectId: id }));
+  }, [dispatch, id, isTodoListView]);
 
   useEffect(() => {
     setInfoOpen(false);
@@ -293,7 +398,7 @@ const ProjectBoard = () => {
     const targetTaskId = String(taskId);
     let matchedTask = null;
 
-    for (const column of columns || []) {
+    for (const column of activeViewColumns || []) {
       const tasks = Array.isArray(column?.tasks) ? column.tasks : [];
       const found = tasks.find(
         (taskItem) => String(taskItem?.id ?? "") === targetTaskId,
@@ -316,7 +421,7 @@ const ProjectBoard = () => {
       if (String(prev?.id ?? "") === targetTaskId) return prev;
       return { id: taskId };
     });
-  }, [columns, taskId]);
+  }, [activeViewColumns, taskId]);
 
   const columnIdsKey = useMemo(() => {
     if (!columnsProjectId || String(columnsProjectId) !== String(id)) return "";
@@ -342,6 +447,30 @@ const ProjectBoard = () => {
     });
     if (shouldForce) tasksForcedProjectRef.current = String(id);
   }, [dispatch, id, columnsProjectId, columnIdsKey]);
+
+  const todoColumnIdsKey = useMemo(() => {
+    if (!id || !isTodoListView) return "";
+    return (todoColumns || [])
+      .map((column) => column?.id)
+      .filter((value) => value != null)
+      .map(String)
+      .sort()
+      .join("|");
+  }, [id, isTodoListView, todoColumns]);
+
+  useEffect(() => {
+    if (!id || !isTodoListView || !todoColumnIdsKey) return;
+
+    const shouldForce = String(todoTasksForcedProjectRef.current) !== String(id);
+    todoColumnIdsKey
+      .split("|")
+      .filter(Boolean)
+      .forEach((columnId) => {
+        dispatch(getTodoListColumnTasksThunk({ projectId: id, columnId, force: shouldForce }));
+      });
+
+    if (shouldForce) todoTasksForcedProjectRef.current = String(id);
+  }, [dispatch, id, isTodoListView, todoColumnIdsKey]);
 
   const columnsReadyForActiveProject =
     columnsProjectId != null &&
@@ -444,6 +573,7 @@ const ProjectBoard = () => {
     resetColumn({
       title: "",
       color: "#3B82F6",
+      icon: isTodoListView ? "ph-duotone ph-sparkle" : "list",
     });
     setColumnModalOpen(true);
   };
@@ -518,11 +648,29 @@ const ProjectBoard = () => {
   const onColumnSubmit = async (values) => {
     if (!project?.id) return;
     try {
-      if (editingColumn?.id) {
+      const isTodoColumn =
+        isTodoListView || editingColumn?.board_type === TODO_BOARD_TYPE;
+
+      if (editingColumn?.id && isTodoColumn) {
+        await dispatch(
+          updateTodoListColumnThunk({
+            projectId: project.id,
+            columnId: editingColumn.id,
+            payload: values,
+          }),
+        ).unwrap();
+      } else if (editingColumn?.id) {
         await dispatch(
           updateProjectColumnThunk({
             projectId: project.id,
             columnId: editingColumn.id,
+            payload: values,
+          }),
+        ).unwrap();
+      } else if (isTodoColumn) {
+        await dispatch(
+          createTodoListColumnThunk({
+            projectId: project.id,
             payload: values,
           }),
         ).unwrap();
@@ -534,7 +682,7 @@ const ProjectBoard = () => {
           }),
         ).unwrap();
       }
-      toastSuccess("Column Created");
+      toastSuccess(editingColumn?.id ? "Column updated" : "Column Created");
       closeColumnModal();
     } catch (err) {
       const msg = err?.message || err?.data?.message || "Column save failed";
@@ -553,12 +701,21 @@ const ProjectBoard = () => {
     if (!isConfirmed) return;
 
     try {
-      await dispatch(
-        deleteProjectColumnThunk({
-          projectId: project.id,
-          columnId: column.id,
-        }),
-      ).unwrap();
+      if (isTodoListView || column?.board_type === TODO_BOARD_TYPE) {
+        await dispatch(
+          deleteTodoListColumnThunk({
+            projectId: project.id,
+            columnId: column.id,
+          }),
+        ).unwrap();
+      } else {
+        await dispatch(
+          deleteProjectColumnThunk({
+            projectId: project.id,
+            columnId: column.id,
+          }),
+        ).unwrap();
+      }
       toastSuccess("Column Deleted");
     } catch (err) {
       const msg = err?.message || err?.data?.message || "Delete failed";
@@ -635,16 +792,88 @@ const ProjectBoard = () => {
     }
   };
 
+  const handleAddTodoTask = async (column, text) => {
+    if (!project?.id || !column?.id || !text?.trim()) return;
+    try {
+      await dispatch(
+        createTodoListTaskThunk({
+          projectId: project.id,
+          columnId: column.id,
+          payload: {
+            text: text.trim(),
+            column_id: column.id,
+          },
+        }),
+      ).unwrap();
+    } catch (err) {
+      const msg = err?.message || err?.data?.message || "Todo create failed";
+      toastError(msg);
+    }
+  };
+
+  const handleToggleTodoTask = async (task, columnId, isCompleted) => {
+    const projectId = project?.id ?? id;
+    const taskIdValue = task?.id;
+
+    if (!projectId || !columnId || !taskIdValue) return;
+
+    try {
+      await dispatch(
+        toggleTodoListTaskCompletionThunk({
+          projectId,
+          columnId,
+          taskId: taskIdValue,
+          isCompleted,
+        }),
+      ).unwrap();
+    } catch (err) {
+      const msg = err?.message || err?.data?.message || "Todo update failed";
+      toastError(msg);
+    }
+  };
+
+  const handleReorderTodoTask = async ({
+    taskId,
+    sourceColumnId,
+    destinationColumnId,
+    sourceTaskIds,
+    destinationTaskIds,
+  }) => {
+    const projectId = Number(project?.id ?? id);
+
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      toastError("Project id not found");
+      throw new Error("Project id not found");
+    }
+
+    try {
+      await dispatch(
+        reorderTodoListTaskThunk({
+          projectId,
+          taskId,
+          sourceColumnId,
+          destinationColumnId,
+          sourceTaskIds,
+          destinationTaskIds,
+        }),
+      ).unwrap();
+    } catch (err) {
+      const msg = err?.message || err?.data?.message || "Todo reorder failed";
+      toastError(msg);
+      throw err;
+    }
+  };
+
   const handleTaskClick = (task) => {
     const nextTaskId = task?.id;
     if (!id || nextTaskId == null) return;
     setActiveTask(task);
-    navigat(`/projects/${id}/task/${nextTaskId}`);
+    navigat(`/projects/${id}/task/${nextTaskId}${location.search || ""}`);
   };
 
   const closeTaskModal = () => {
     if (!id) return;
-    navigat(`/projects/${id}`);
+    navigat(`/projects/${id}${location.search || ""}`);
   };
 
   const handleProjectDelete = async () => {
@@ -886,6 +1115,10 @@ const ProjectBoard = () => {
   const membersPanelCollapsed = membersMobileViewport
     ? !mobileMembersPanelOpen
     : desktopMembersPanelCollapsed;
+  const showMembersPanel = !isTodoListView;
+  const effectiveMembersPanelCollapsed = showMembersPanel
+    ? membersPanelCollapsed
+    : true;
 
   const toggleMembersPanel = () => {
     if (membersMobileViewport) {
@@ -899,7 +1132,7 @@ const ProjectBoard = () => {
   return (
     <section
       className={`project-board-layout ${
-        membersPanelCollapsed ? "members-collapsed" : ""
+        effectiveMembersPanelCollapsed ? "members-collapsed" : ""
       } ${membersMobileViewport ? "members-mobile" : ""}`}
     >
       <div className="project-board-main">
@@ -918,55 +1151,79 @@ const ProjectBoard = () => {
           />
 
           <div className="project-board-main__content">
-            <div className="project-board-main__scroll app-scroll">
-              <ProjectBoardColumns
-                key={String(project.id)}
-                projectId={project.id}
-                columns={columns}
-                status={columnsStatus}
-                tasksLoading={tasksLoading}
-                onEditColumn={openEditColumnModal}
-                onDeleteColumn={handleColumnDelete}
-                onArchiveCompletedTasks={handleArchiveCompletedColumnTasks}
-                archivingCompletedByColumnId={archivingCompletedByColumnId}
-                onAddTask={handleAddTask}
-                onTaskClick={handleTaskClick}
-                onReorderColumns={handleReorderColumns}
-                onReorderTask={handleReorderTask}
-              />
+            <div
+              className={`project-board-main__scroll app-scroll ${
+                isTodoListView ? "project-board-main__scroll--todo" : ""
+              }`}
+            >
+              {isTodoListView ? (
+                <ProjectTodoList
+                  key={`todo-${String(project.id)}`}
+                  columns={todoColumns}
+                  status={todoColumnsStatus}
+                  tasksLoadingByColumnId={todoTasksLoadingByColumnId}
+                  completingByTaskId={todoCompletingByTaskId}
+                  onAddTask={handleAddTodoTask}
+                  onToggleTask={handleToggleTodoTask}
+                  onOpenTask={handleTaskClick}
+                  onEditColumn={openEditColumnModal}
+                  onDeleteColumn={handleColumnDelete}
+                  onReorderTask={handleReorderTodoTask}
+                />
+              ) : (
+                <ProjectBoardColumns
+                  key={String(project.id)}
+                  projectId={project.id}
+                  columns={columns}
+                  status={columnsStatus}
+                  tasksLoading={tasksLoading}
+                  onEditColumn={openEditColumnModal}
+                  onDeleteColumn={handleColumnDelete}
+                  onArchiveCompletedTasks={handleArchiveCompletedColumnTasks}
+                  archivingCompletedByColumnId={archivingCompletedByColumnId}
+                  onAddTask={handleAddTask}
+                  onTaskClick={handleTaskClick}
+                  onReorderColumns={handleReorderColumns}
+                  onReorderTask={handleReorderTask}
+                />
+              )}
             </div>
           </div>
         </Container>
       </div>
-      <button
-        type="button"
-        className="project-members-fab"
-        onClick={toggleMembersPanel}
-        aria-expanded={!membersPanelCollapsed}
-        aria-label={
-          membersPanelCollapsed
-            ? "Show project members"
-            : "Hide project members"
-        }
-      >
-        <i
-          className={`ph ${
-            membersPanelCollapsed ? "ph-users-three" : "ph-caret-right"
-          }`}
-        />
-        <span>{membersPanelCollapsed ? "Members" : "Hide"}</span>
-      </button>
+      {showMembersPanel ? (
+        <>
+          <button
+            type="button"
+            className="project-members-fab"
+            onClick={toggleMembersPanel}
+            aria-expanded={!membersPanelCollapsed}
+            aria-label={
+              membersPanelCollapsed
+                ? "Show project members"
+                : "Hide project members"
+            }
+          >
+            <i
+              className={`ph ${
+                membersPanelCollapsed ? "ph-users-three" : "ph-caret-right"
+              }`}
+            />
+            <span>{membersPanelCollapsed ? "Members" : "Hide"}</span>
+          </button>
 
-      <ProjectMembers
-        members={members}
-        loading={membersLoading}
-        onAddMember={openAddMemberModal}
-        onDeleteMember={handleDeleteProjectMember}
-        removingByMemberId={projectMemberRemovingByMemberId}
-        onUpdateMemberRole={handleUpdateProjectMemberRole}
-        roleUpdatingByMemberId={projectMemberRoleUpdatingByMemberId}
-        collapsed={membersPanelCollapsed}
-      />
+          <ProjectMembers
+            members={members}
+            loading={membersLoading}
+            onAddMember={openAddMemberModal}
+            onDeleteMember={handleDeleteProjectMember}
+            removingByMemberId={projectMemberRemovingByMemberId}
+            onUpdateMemberRole={handleUpdateProjectMemberRole}
+            roleUpdatingByMemberId={projectMemberRoleUpdatingByMemberId}
+            collapsed={membersPanelCollapsed}
+          />
+        </>
+      ) : null}
 
       <ProjectEditModal
         isOpen={editModal}
@@ -1002,13 +1259,14 @@ const ProjectBoard = () => {
         project={project}
         setInfoOpen={setInfoOpen}
         members={members}
-        columns={columns}
+        columns={activeViewColumns}
       />
 
       <TaskDetailModal
         isOpen={Boolean(taskId)}
         onClose={closeTaskModal}
         projectMembers={members}
+        isTodoListTask={isTodoListView}
         task={
           taskId
             ? String(activeTask?.id ?? "") === String(taskId)
@@ -1021,14 +1279,32 @@ const ProjectBoard = () => {
         }
         onDeleted={({ taskId, columnId }) => {
           if (taskId && columnId) {
-            dispatch(removeTaskFromColumn({ taskId, columnId }));
+            if (isTodoListView) {
+              dispatch(removeTodoTask({ taskId, columnId }));
+            } else {
+              dispatch(removeTaskFromColumn({ taskId, columnId }));
+            }
             setRemovedTaskIds((prev) =>
               prev.includes(taskId) ? prev : [...prev, taskId],
             );
           }
           if (project?.id) {
-            dispatch(getProjectColumnsThunk(project.id));
+            if (isTodoListView) {
+              dispatch(getTodoListColumnsThunk({ projectId: project.id }));
+            } else {
+              dispatch(getProjectColumnsThunk(project.id));
+            }
           }
+        }}
+        onTaskUpdated={({ taskId, columnId, patch }) => {
+          if (!isTodoListView || !taskId || !columnId || !patch) return;
+          dispatch(
+            patchTodoTask({
+              taskId,
+              columnId,
+              patch,
+            }),
+          );
         }}
       />
 
