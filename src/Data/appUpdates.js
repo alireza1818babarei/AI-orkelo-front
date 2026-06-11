@@ -20,6 +20,18 @@ export const APP_UPDATES = [
         icon: "ph-duotone ph-paperclip",
       },
       {
+        title: "Project Todo List",
+        description:
+          "Projects now include a separate Todo List view with its own columns and tasks, direct checkbox completion, drag-and-drop ordering, and task detail access.",
+        icon: "ph-duotone ph-check-square-offset",
+      },
+      {
+        title: "Multi-File Attachments",
+        description:
+          "Task and checklist attachments now support selecting, dragging, pasting, and uploading multiple files at the same time.",
+        icon: "ph-duotone ph-files",
+      },
+      {
         title: "Better Project Manager Access",
         description:
           "Project managers can access active trackers and available project members only within their permitted project scope.",

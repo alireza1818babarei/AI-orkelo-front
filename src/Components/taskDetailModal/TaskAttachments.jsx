@@ -278,6 +278,13 @@ const getDataTransferFiles = (dataTransfer) =>
     (file) => file && (typeof File === "undefined" || file instanceof File),
   );
 
+const normalizeResponseAttachments = (payload) => {
+  const root = payload?.data ?? payload ?? null;
+  if (Array.isArray(root)) return root;
+  if (root && typeof root === "object") return [root];
+  return [];
+};
+
 export default function TaskAttachments({
   projectId,
   taskId,
@@ -292,6 +299,7 @@ export default function TaskAttachments({
   const [attachments, setAttachments] = useState([]);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [attachmentUploadingCount, setAttachmentUploadingCount] = useState(0);
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -487,39 +495,24 @@ export default function TaskAttachments({
     fetchAttachments();
   }, [fetchAttachments]);
 
-  const uploadAttachment = useCallback(async (file) => {
-    if (!projectId || !taskId || !file) return;
+  const uploadAttachments = useCallback(async (files) => {
+    const selectedFiles = Array.from(files || []).filter(Boolean);
+    if (!projectId || !taskId || !selectedFiles.length) return;
     try {
       setAttachmentUploading(true);
+      setAttachmentUploadingCount(selectedFiles.length);
       const url = `/projects/${projectId}/tasks/${taskId}/attachments`;
-      const fieldCandidates = [
-        "file",
-        "attachment",
-        "attachments[]",
-        "attachments",
-        "files[]",
-        "files",
-      ];
 
-      let res = null;
-      let lastErr = null;
-      for (const fieldName of fieldCandidates) {
-        try {
-          const fd = new FormData();
-          fd.append(fieldName, file);
-          res = await api.post(url, fd);
-          lastErr = null;
-          break;
-        } catch (err) {
-          lastErr = err;
-          const msg = String(err?.message || "");
-          const isValidation = err?.status === 422 || /validation/i.test(msg);
-          if (!isValidation) throw err;
-        }
-      }
-      if (!res && lastErr) throw lastErr;
+      const fd = new FormData();
+      selectedFiles.forEach((file) => {
+        fd.append("files[]", file);
+      });
 
-      toastSuccess("File attached");
+      const res = await api.post(url, fd);
+      const uploaded = normalizeResponseAttachments(res?.data);
+      const uploadedCount = uploaded.length || selectedFiles.length;
+
+      toastSuccess(uploadedCount > 1 ? "Files attached" : "File attached");
       await fetchAttachments();
       onChanged?.();
     } catch (err) {
@@ -531,6 +524,7 @@ export default function TaskAttachments({
       toastError(msg);
     } finally {
       setAttachmentUploading(false);
+      setAttachmentUploadingCount(0);
     }
   }, [fetchAttachments, onChanged, projectId, taskId]);
 
@@ -587,11 +581,10 @@ export default function TaskAttachments({
     if (attachmentUploading) return;
 
     const files = getDataTransferFiles(event.dataTransfer);
-    const file = files[0] || null;
-    if (!file) return;
+    if (!files.length) return;
 
-    await uploadAttachment(file);
-  }, [attachmentUploading, uploadAttachment]);
+    await uploadAttachments(files);
+  }, [attachmentUploading, uploadAttachments]);
 
   useEffect(() => {
     if (!projectId || !taskId) return undefined;
@@ -614,13 +607,12 @@ export default function TaskAttachments({
       e.preventDefault();
       e.stopPropagation();
 
-      // Upload the first pasted file (common use-case: screenshot / single file copy).
-      uploadAttachment(files[0]);
+      uploadAttachments(files);
     };
 
     document.addEventListener("paste", onPaste, true);
     return () => document.removeEventListener("paste", onPaste, true);
-  }, [projectId, taskId, uploadAttachment]);
+  }, [projectId, taskId, uploadAttachments]);
 
   const deleteAttachment = async (attachment) => {
     const attachmentId = attachment?.id ?? attachment?.attachment_id ?? null;
@@ -677,22 +669,27 @@ export default function TaskAttachments({
         </span>
         <span className="task-attachment-dropzone__text">
           <span className="task-attachment-dropzone__title">
-            {attachmentUploading ? "Uploading..." : "Add attachment"}
+            {attachmentUploading
+              ? attachmentUploadingCount > 1
+                ? `Uploading ${attachmentUploadingCount} files...`
+                : "Uploading..."
+              : "Add attachment"}
           </span>
           <span className="task-attachment-dropzone__hint">
-            Drag a file, choos
+            Drag files, choose files
           </span>
         </span>
         <input
           type="file"
-          name="file"
+          name="files[]"
           id="task-attachment-file"
           className="d-none"
+          multiple
           onChange={async (e) => {
             const input = e.currentTarget;
-            const file = input.files?.[0] || null;
-            if (!file) return;
-            await uploadAttachment(file);
+            const files = Array.from(input.files || []);
+            if (!files.length) return;
+            await uploadAttachments(files);
             if (input) {
               input.value = "";
             }

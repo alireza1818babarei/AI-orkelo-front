@@ -208,24 +208,24 @@ export default function ChecklistItemAttachments({
       try {
         setUploadingCount(selectedFiles.length);
 
-        for (const file of selectedFiles) {
-          const fd = new FormData();
-          fd.append("file", file);
+        const fd = new FormData();
+        selectedFiles.forEach((file) => {
+          fd.append("files[]", file);
+        });
 
-          const res = await api.post(
-            buildChecklistAttachmentUrl({
-              projectId,
-              taskId,
-              checklistItemId,
-            }),
-            fd,
-          );
+        const res = await api.post(
+          buildChecklistAttachmentUrl({
+            projectId,
+            taskId,
+            checklistItemId,
+          }),
+          fd,
+        );
 
-          const uploaded = normalizeResponseAttachments(res?.data);
-          if (uploaded.length) {
-            uploadedCount += uploaded.length;
-            setAttachments((prev) => [...uploaded, ...(prev || [])]);
-          }
+        const uploaded = normalizeResponseAttachments(res?.data);
+        if (uploaded.length) {
+          uploadedCount = uploaded.length;
+          setAttachments((prev) => [...uploaded, ...(prev || [])]);
         }
 
         if (uploadedCount) {
