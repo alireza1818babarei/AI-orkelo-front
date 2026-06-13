@@ -4,6 +4,8 @@ import ActionDropdown from "../../../../Components/ActionDropdown";
 import { getTextDirectionProps } from "../../../../utils/textDirection";
 
 const TODO_COMPLETED_STATUSES = new Set(["done", "completed"]);
+const TODO_COLUMN_DND_TYPE = "TODO_COLUMN";
+const TODO_TASK_DND_TYPE = "TODO_TASK";
 
 const isTodoTaskCompleted = (task) => {
   const status = String(task?.status ?? "").trim().toLowerCase();
@@ -148,6 +150,8 @@ const TodoColumn = memo(function TodoColumn({
   onEditColumn,
   onDeleteColumn,
   isBoardDragging,
+  columnDragHandleProps,
+  isColumnDragging,
 }) {
   const rootRef = useRef(null);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -157,6 +161,8 @@ const TodoColumn = memo(function TodoColumn({
   const columnColor = column?.color || "#0ea5e9";
   const iconClass = normalizeIconClass(column?.icon);
   const taskCount = taskIds.length || Number(column?.tasks_count ?? 0) || 0;
+  const hasVisibleTaskArea =
+    isAdding || taskIds.length || tasksLoading || isBoardDragging;
 
   const actions = useMemo(
     () => [
@@ -180,7 +186,11 @@ const TodoColumn = memo(function TodoColumn({
 
   return (
     <section
-      className="project-todo-list__column"
+      className={`project-todo-list__column ${
+        actionsOpen ? "is-actions-open" : ""
+      } ${isColumnDragging ? "is-column-dragging" : ""} ${
+        taskIds.length ? "" : "is-empty"
+      }`}
       style={{ "--project-todo-list-column-color": columnColor }}
     >
       <div className="project-todo-list__column-header">
@@ -188,6 +198,12 @@ const TodoColumn = memo(function TodoColumn({
           <i className={iconClass} aria-hidden="true"></i>
           <span>{column?.title || "Next"}</span>
         </div>
+
+        <div
+          className="project-todo-list__column-drag-space project-todo-list__column-drag-handle"
+          {...columnDragHandleProps}
+          aria-label="Drag todo column"
+        />
 
         <div className="project-todo-list__column-actions">
           {taskCount > 0 ? (
@@ -197,7 +213,7 @@ const TodoColumn = memo(function TodoColumn({
           <div ref={rootRef} className="position-relative">
             <button
               type="button"
-              className="project-todo-list__header-icon"
+              className="project-todo-list__header-icon project-todo-list__header-icon--settings"
               onClick={() => setActionsOpen((value) => !value)}
               aria-label="Column actions"
             >
@@ -213,7 +229,7 @@ const TodoColumn = memo(function TodoColumn({
 
           <button
             type="button"
-            className="project-todo-list__header-icon"
+            className="project-todo-list__header-icon project-todo-list__header-icon--add"
             onClick={() => onStartAddTask?.(column)}
             aria-label="Add todo"
           >
@@ -222,8 +238,8 @@ const TodoColumn = memo(function TodoColumn({
         </div>
       </div>
 
-      {isAdding || taskIds.length || tasksLoading || isBoardDragging ? (
-        <Droppable droppableId={`todo-col-${columnId}`} type="TODO_TASK">
+      {hasVisibleTaskArea ? (
+        <Droppable droppableId={`todo-col-${columnId}`} type={TODO_TASK_DND_TYPE}>
           {(dropProvided) => (
             <div
               ref={dropProvided.innerRef}
@@ -313,6 +329,7 @@ const ProjectTodoList = ({
   onEditColumn,
   onDeleteColumn,
   onReorderTask,
+  onReorderColumn,
 }) => {
   const [board, setBoard] = useState(() => normalizeTodoBoard(columns));
   const snapshotRef = useRef(null);
@@ -348,9 +365,9 @@ const ProjectTodoList = ({
     cancelAddTask();
   };
 
-  const onDragStart = () => {
+  const onDragStart = (start) => {
     isDraggingRef.current = true;
-    setIsBoardDragging(true);
+    setIsBoardDragging(start?.type === TODO_TASK_DND_TYPE);
     snapshotRef.current = {
       columns: (board.columns || []).map((column) => ({
         ...column,
@@ -369,6 +386,53 @@ const ProjectTodoList = ({
     if (!destination) {
       setBoard(baseBoard);
       snapshotRef.current = null;
+      return;
+    }
+
+    if (result?.type === TODO_COLUMN_DND_TYPE) {
+      if (!draggableId?.startsWith("todo-column-")) {
+        snapshotRef.current = null;
+        return;
+      }
+
+      if (source?.index === destination?.index) {
+        snapshotRef.current = null;
+        return;
+      }
+
+      const nextColumns = [...(baseBoard.columns || [])];
+      const [movedColumn] = nextColumns.splice(source.index, 1);
+      if (!movedColumn) {
+        setBoard(baseBoard);
+        snapshotRef.current = null;
+        return;
+      }
+
+      nextColumns.splice(destination.index, 0, movedColumn);
+      const nextBoard = {
+        ...baseBoard,
+        columns: nextColumns.map((column, index) => ({
+          ...column,
+          position: index + 1,
+        })),
+      };
+      setBoard(nextBoard);
+      snapshotRef.current = null;
+
+      const orderedIds = nextBoard.columns.map((column) => column.id);
+
+      try {
+        const maybePromise = onReorderColumn?.({ orderedIds });
+
+        if (maybePromise && typeof maybePromise.then === "function") {
+          maybePromise.catch(() => {
+            setBoard(baseBoard);
+          });
+        }
+      } catch {
+        setBoard(baseBoard);
+      }
+
       return;
     }
 
@@ -499,28 +563,51 @@ const ProjectTodoList = ({
 
   return (
     <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className="project-todo-list">
-        {board.columns.map((column) => (
-          <TodoColumn
-            key={column?.id}
-            column={column}
-            tasksById={board.tasksById}
-            tasksLoading={Boolean(tasksLoadingByColumnId?.[String(column?.id)])}
-            completingByTaskId={completingByTaskId}
-            addingColumnId={addingColumnId}
-            addTaskText={addTaskText}
-            setAddTaskText={setAddTaskText}
-            onStartAddTask={startAddTask}
-            onCancelAddTask={cancelAddTask}
-            onSubmitAddTask={submitAddTask}
-            onToggleTask={onToggleTask}
-            onOpenTask={onOpenTask}
-            onEditColumn={onEditColumn}
-            onDeleteColumn={onDeleteColumn}
-            isBoardDragging={isBoardDragging}
-          />
-        ))}
-      </div>
+      <Droppable droppableId="todo-columns" type={TODO_COLUMN_DND_TYPE}>
+        {(dropProvided) => (
+          <div
+            ref={dropProvided.innerRef}
+            {...dropProvided.droppableProps}
+            className="project-todo-list"
+          >
+            {board.columns.map((column, index) => (
+              <Draggable
+                key={String(column?.id)}
+                draggableId={`todo-column-${column?.id}`}
+                index={index}
+              >
+                {(dragProvided, dragSnapshot) => (
+                  <div
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                  >
+                    <TodoColumn
+                      column={column}
+                      tasksById={board.tasksById}
+                      tasksLoading={Boolean(tasksLoadingByColumnId?.[String(column?.id)])}
+                      completingByTaskId={completingByTaskId}
+                      addingColumnId={addingColumnId}
+                      addTaskText={addTaskText}
+                      setAddTaskText={setAddTaskText}
+                      onStartAddTask={startAddTask}
+                      onCancelAddTask={cancelAddTask}
+                      onSubmitAddTask={submitAddTask}
+                      onToggleTask={onToggleTask}
+                      onOpenTask={onOpenTask}
+                      onEditColumn={onEditColumn}
+                      onDeleteColumn={onDeleteColumn}
+                      isBoardDragging={isBoardDragging}
+                      columnDragHandleProps={dragProvided.dragHandleProps}
+                      isColumnDragging={dragSnapshot.isDragging}
+                    />
+                  </div>
+                )}
+              </Draggable>
+            ))}
+            {dropProvided.placeholder}
+          </div>
+        )}
+      </Droppable>
     </DragDropContext>
   );
 };

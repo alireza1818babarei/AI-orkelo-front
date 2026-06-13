@@ -1,10 +1,10 @@
 // ProjectBoardHeader.jsx (updated)
 import { Button, Col, Row } from 'reactstrap';
-import ActionDropdown from '../../../../Components/ActionDropdown';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 
 const ProjectBoardHeader = ({
   projectName,
+  viewLabel,
   onAddColumn,
   onDelete,
   onEdit,
@@ -16,6 +16,8 @@ const ProjectBoardHeader = ({
   disableArchives,
   showDelete = true,
 }) => {
+  const title = [projectName, viewLabel].filter(Boolean).join(" / ");
+
   useEffect(() => {
     $(function () {
       var tooltip_init = {
@@ -31,7 +33,7 @@ const ProjectBoardHeader = ({
     <Row className='project-board-header m-1 gx-2 align-items-center'>
       <Col lg={7} md={6} xs={12} className='mt-1'>
         <div className='project-board-header__meta'>
-          <h4 className='main-title mb-1 text-primary'>{projectName || ''}</h4>
+          <h4 className='main-title mb-1 text-primary'>{title}</h4>
         </div>
       </Col>
 

@@ -31,6 +31,7 @@ import {
   getTodoListColumnsThunk,
   patchTodoTask,
   removeTodoTask,
+  reorderTodoListColumnsThunk,
   reorderTodoListTaskThunk,
   toggleTodoListTaskCompletionThunk,
   updateTodoListColumnThunk,
@@ -864,6 +865,28 @@ const ProjectBoard = () => {
     }
   };
 
+  const handleReorderTodoColumn = async ({ orderedIds }) => {
+    const projectId = Number(project?.id ?? id);
+
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      toastError("Project id not found");
+      throw new Error("Project id not found");
+    }
+
+    try {
+      await dispatch(
+        reorderTodoListColumnsThunk({
+          projectId,
+          orderedIds,
+        }),
+      ).unwrap();
+    } catch (err) {
+      const msg = err?.message || err?.data?.message || "Todo column reorder failed";
+      toastError(msg);
+      throw err;
+    }
+  };
+
   const handleTaskClick = (task) => {
     const nextTaskId = task?.id;
     if (!id || nextTaskId == null) return;
@@ -1139,6 +1162,7 @@ const ProjectBoard = () => {
         <Container fluid className="project-board-main__container">
           <ProjectBoardHeader
             projectName={project.name}
+            viewLabel={isTodoListView ? "Todo List" : "Task Manager"}
             onAddColumn={openCreateColumnModal}
             onDelete={handleProjectDelete}
             onEdit={openEditModal}
@@ -1169,6 +1193,7 @@ const ProjectBoard = () => {
                   onEditColumn={openEditColumnModal}
                   onDeleteColumn={handleColumnDelete}
                   onReorderTask={handleReorderTodoTask}
+                  onReorderColumn={handleReorderTodoColumn}
                 />
               ) : (
                 <ProjectBoardColumns

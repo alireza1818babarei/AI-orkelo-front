@@ -888,10 +888,16 @@ nav.dark-sidebar
 
 .project-todo-list__column {
   --project-todo-list-column-max-height: 22rem;
-  overflow: hidden;
+  position: relative;
+  overflow: visible;
   border-radius: 8px;
   background: rgba(202, 202, 202, 0.62);
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+
+  &.is-actions-open,
+  &.is-column-dragging {
+    z-index: 20;
+  }
 }
 
 .project-todo-list__column-header {
@@ -901,8 +907,13 @@ nav.dark-sidebar
   justify-content: space-between;
   gap: 1rem;
   padding: 0.9rem 1.35rem;
+  border-radius: 8px 8px 0 0;
   background: var(--project-todo-list-column-color, #0ea5e9);
   color: var(--white);
+}
+
+.project-todo-list__column.is-empty .project-todo-list__column-header {
+  border-radius: 8px;
 }
 
 .project-todo-list__column-title,
@@ -930,19 +941,35 @@ nav.dark-sidebar
   }
 }
 
+.project-todo-list__column-drag-space {
+  align-self: stretch;
+  flex: 1 1 auto;
+  min-width: 1rem;
+}
+
+.project-todo-list__column-drag-handle {
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
 .project-todo-list__column-actions {
   gap: 0.7rem;
   flex: 0 0 auto;
 }
 
 .project-todo-list__count {
-  min-width: 2.5rem;
-  min-height: 2rem;
+  width: 2.35rem;
+  height: 2.35rem;
+  min-width: 2.35rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem 0.7rem;
-  border-radius: 999px;
+  padding: 0;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.18);
   color: var(--white);
   font-weight: 800;
@@ -969,6 +996,10 @@ nav.dark-sidebar
     background: rgba(255, 255, 255, 0.18);
     transform: translateY(-1px);
   }
+}
+
+.project-todo-list__header-icon--settings {
+  border-color: transparent;
 }
 
 .project-todo-list__tasks {
@@ -1018,6 +1049,7 @@ nav.dark-sidebar
   gap: 0.75rem;
   min-height: 3.35rem;
   padding: 0.65rem 0.9rem;
+  border: 1px solid transparent;
   border-radius: 8px;
   background: var(--white);
   box-shadow: 0 5px 14px rgba(15, 23, 42, 0.04);
@@ -1026,6 +1058,11 @@ nav.dark-sidebar
 .project-todo-list__task {
   position: relative;
   color: rgba(var(--dark), 0.74);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
 
   &.is-dragging {
     box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
@@ -1045,6 +1082,9 @@ nav.dark-sidebar
   color: rgba(var(--success), 1);
   font-size: 0.9rem;
   line-height: 1;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease;
 
   &:disabled {
     opacity: 0.6;
@@ -1079,6 +1119,9 @@ nav.dark-sidebar
   font-size: 0.98rem;
   font-weight: 500;
   white-space: nowrap;
+  transition:
+    color 180ms ease,
+    text-decoration-color 180ms ease;
 }
 
 .project-todo-list__task-description {
@@ -1086,9 +1129,20 @@ nav.dark-sidebar
   color: rgba(var(--dark), 0.48);
   font-size: 0.82rem;
   white-space: nowrap;
+  transition:
+    color 180ms ease,
+    text-decoration-color 180ms ease;
 }
 
 .project-todo-list__task.is-completed {
+  border-color: rgba(var(--success), 0.5);
+  background:
+    linear-gradient(90deg, rgba(var(--success), 0.11), rgba(255, 255, 255, 0) 32%),
+    var(--white);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--success), 0.68),
+    0 6px 16px rgba(var(--success), 0.12);
+
   .project-todo-list__check {
     border-color: rgba(var(--success), 0.72);
   }
@@ -1207,6 +1261,13 @@ nav.dark-sidebar ~ .app-content .project-todo-list__task-description {
   color: rgba(255, 255, 255, 0.48);
 }
 
+body.dark .project-todo-list__task.is-completed,
+nav.dark-sidebar ~ .app-content .project-todo-list__task.is-completed {
+  background:
+    linear-gradient(90deg, rgba(var(--success), 0.18), rgba(17, 24, 39, 0) 34%),
+    #111827;
+}
+
 @media (max-width: 575.98px) {
   .project-board-main__scroll--todo {
     padding-right: 0.25rem;
@@ -1243,9 +1304,9 @@ nav.dark-sidebar ~ .app-content .project-todo-list__task-description {
   }
 
   .project-todo-list__count {
-    min-width: 2rem;
-    min-height: 1.6rem;
-    padding: 0.2rem 0.48rem;
+    width: 1.9rem;
+    height: 1.9rem;
+    min-width: 1.9rem;
     font-size: 0.82rem;
   }
 

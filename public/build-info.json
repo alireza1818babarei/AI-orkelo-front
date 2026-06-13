@@ -1,6 +1,6 @@
 {
     "app": "orkelo",
-    "back-commit": "feat(warnings): add user warning management and performance reporting",
-    "front-commit": "add company warning management and reporting",
+    "back-commit": "feat(tasks): support multi-file attachment uploads",
+    "front-commit": "feat(tasks): support multi-file attachment uploads",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }

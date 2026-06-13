@@ -662,6 +662,17 @@ nav.dark-sidebar {
   }
 }
 
+body.dark header.header-main .header-left .header-toggle,
+body.dark header.header-main .header-left .header-toggle i,
+body.dark header.header-main .header-left .header-toggle i::before,
+body.dark header.header-main .header-left .header-toggle i::after,
+nav.dark-sidebar ~ .app-content header.header-main .header-left .header-toggle,
+nav.dark-sidebar ~ .app-content header.header-main .header-left .header-toggle i,
+nav.dark-sidebar ~ .app-content header.header-main .header-left .header-toggle i::before,
+nav.dark-sidebar ~ .app-content header.header-main .header-left .header-toggle i::after {
+  color: #fff !important;
+}
+
 .company-members-modal__state {
   min-height: 150px;
   display: flex;
