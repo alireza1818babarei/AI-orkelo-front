@@ -1812,6 +1812,7 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
 
 .task-detail-modal-dialog .task-attachment-dropzone__text {
   min-width: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
@@ -1826,6 +1827,32 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
 .task-detail-modal-dialog .task-attachment-dropzone__hint {
   font-size: 0.78rem;
   color: var(--td-muted);
+}
+
+.task-detail-modal-dialog .task-attachment-dropzone__cancel,
+.checklist-item-attachments__cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 30px;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid rgba(var(--danger), 0.45);
+  border-radius: 6px;
+  background: rgba(var(--danger), 0.1);
+  color: rgba(var(--danger), 1);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.task-detail-modal-dialog .task-attachment-dropzone__cancel:hover,
+.task-detail-modal-dialog .task-attachment-dropzone__cancel:focus-visible,
+.checklist-item-attachments__cancel:hover,
+.checklist-item-attachments__cancel:focus-visible {
+  background: rgba(var(--danger), 0.16);
+  border-color: rgba(var(--danger), 0.7);
 }
 
 .task-attachment-preview-modal {
@@ -2321,6 +2348,7 @@ nav.dark-sidebar ~ .app-content .task-approval-rating-modal__close {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  flex-wrap: wrap;
   margin-top: 0.35rem;
   color: rgba(var(--secondary), 1);
   font-size: 0.76rem;

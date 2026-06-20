@@ -1,10 +1,13 @@
 import axios from "axios";
 import { getToken } from "../utils/tokenStorage";
 
+const DEFAULT_API_TIMEOUT_MS = 15000;
+const FORM_DATA_API_TIMEOUT_MS = 300000;
+
 // NOTE : API configuration for project.
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 15000,
+  timeout: DEFAULT_API_TIMEOUT_MS,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -20,12 +23,22 @@ api.interceptors.request.use(
     }
     const isFormData =
       typeof FormData !== "undefined" && config?.data instanceof FormData;
-    if (isFormData && config.headers) {
-      if (typeof config.headers.set === "function") {
-        config.headers.set("Content-Type", undefined);
-      } else {
-        delete config.headers["Content-Type"];
-        delete config.headers["content-type"];
+    if (isFormData) {
+      // File uploads need more time than regular JSON requests, especially on slower upload links.
+      if (
+        config.timeout === undefined ||
+        config.timeout === DEFAULT_API_TIMEOUT_MS
+      ) {
+        config.timeout = FORM_DATA_API_TIMEOUT_MS;
+      }
+
+      if (config.headers) {
+        if (typeof config.headers.set === "function") {
+          config.headers.set("Content-Type", undefined);
+        } else {
+          delete config.headers["Content-Type"];
+          delete config.headers["content-type"];
+        }
       }
     }
     return config;

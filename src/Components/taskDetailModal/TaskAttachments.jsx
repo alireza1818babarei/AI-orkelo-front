@@ -12,7 +12,12 @@ import {
 } from "reactstrap";
 import api from "../../api/axios";
 import { getBackendOrigin, resolvePublicMediaUrl } from "../../utils/mediaUrl";
-import { alertConfirm, toastError, toastSuccess } from "../../utils/sweetAlert";
+import {
+  alertConfirm,
+  toastError,
+  toastInfo,
+  toastSuccess,
+} from "../../utils/sweetAlert";
 import { updateTaskInColumn } from "../../store/projects/projectColumnsSlice";
 
 export const toPublicAsset = (relPath) => {
@@ -308,6 +313,8 @@ export default function TaskAttachments({
   const [attachmentDragActive, setAttachmentDragActive] = useState(false);
   const seededRef = useRef(false);
   const attachmentDragDepthRef = useRef(0);
+  const uploadAbortControllerRef = useRef(null);
+  const uploadCancelReasonRef = useRef(null);
 
   const previewAttachmentCount = attachments.length;
   const normalizedPreviewIndex = previewAttachmentCount
@@ -345,6 +352,19 @@ export default function TaskAttachments({
       return (currentIndex + 1) % previewAttachmentCount;
     });
   }, [previewAttachmentCount]);
+
+  const cancelAttachmentUpload = useCallback((event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    uploadCancelReasonRef.current = "manual";
+    uploadAbortControllerRef.current?.abort();
+  }, []);
+
+  useEffect(() => () => {
+    uploadCancelReasonRef.current = "unmount";
+    uploadAbortControllerRef.current?.abort();
+  }, []);
 
   const safeFormatDateTime = (value) => {
     if (typeof formatDateTime === "function") return formatDateTime(value);
@@ -497,18 +517,22 @@ export default function TaskAttachments({
 
   const uploadAttachments = useCallback(async (files) => {
     const selectedFiles = Array.from(files || []).filter(Boolean);
-    if (!projectId || !taskId || !selectedFiles.length) return;
+    if (!projectId || !taskId || !selectedFiles.length || attachmentUploading) return;
+    let controller = null;
     try {
       setAttachmentUploading(true);
       setAttachmentUploadingCount(selectedFiles.length);
       const url = `/projects/${projectId}/tasks/${taskId}/attachments`;
+      controller = new AbortController();
+      uploadAbortControllerRef.current = controller;
+      uploadCancelReasonRef.current = null;
 
       const fd = new FormData();
       selectedFiles.forEach((file) => {
         fd.append("files[]", file);
       });
 
-      const res = await api.post(url, fd);
+      const res = await api.post(url, fd, { signal: controller.signal });
       const uploaded = normalizeResponseAttachments(res?.data);
       const uploadedCount = uploaded.length || selectedFiles.length;
 
@@ -516,6 +540,16 @@ export default function TaskAttachments({
       await fetchAttachments();
       onChanged?.();
     } catch (err) {
+      if (
+        uploadCancelReasonRef.current === "manual" ||
+        err?.message === "canceled"
+      ) {
+        if (uploadCancelReasonRef.current === "manual") {
+          toastInfo("Upload canceled");
+        }
+        return;
+      }
+
       const msg =
         err?.message ||
         err?.response?.data?.message ||
@@ -523,10 +557,15 @@ export default function TaskAttachments({
         "Upload attachment failed";
       toastError(msg);
     } finally {
+      if (uploadAbortControllerRef.current === controller) {
+        uploadAbortControllerRef.current = null;
+        uploadCancelReasonRef.current = null;
+      }
+
       setAttachmentUploading(false);
       setAttachmentUploadingCount(0);
     }
-  }, [fetchAttachments, onChanged, projectId, taskId]);
+  }, [attachmentUploading, fetchAttachments, onChanged, projectId, taskId]);
 
   const handleAttachmentDragEnter = useCallback((event) => {
     if (!isFileDragEvent(event)) return;
@@ -679,6 +718,18 @@ export default function TaskAttachments({
             Drag files, choose files
           </span>
         </span>
+        {attachmentUploading ? (
+          <button
+            type="button"
+            className="task-attachment-dropzone__cancel"
+            onClick={cancelAttachmentUpload}
+            title="Cancel upload"
+            aria-label="Cancel upload"
+          >
+            <i className="ti ti-x" aria-hidden="true"></i>
+            <span>Cancel</span>
+          </button>
+        ) : null}
         <input
           type="file"
           name="files[]"

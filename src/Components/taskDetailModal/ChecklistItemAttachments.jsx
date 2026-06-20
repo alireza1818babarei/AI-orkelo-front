@@ -10,7 +10,12 @@ import {
   Spinner,
 } from "reactstrap";
 import api from "../../api/axios";
-import { alertConfirm, toastError, toastSuccess } from "../../utils/sweetAlert";
+import {
+  alertConfirm,
+  toastError,
+  toastInfo,
+  toastSuccess,
+} from "../../utils/sweetAlert";
 import {
   AttachmentImage,
   formatBytes,
@@ -106,10 +111,22 @@ export default function ChecklistItemAttachments({
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewDownloading, setPreviewDownloading] = useState(false);
   const inputRef = useRef(null);
+  const uploadAbortControllerRef = useRef(null);
+  const uploadCancelReasonRef = useRef(null);
 
   const isUploading = uploadingCount > 0;
   const isDisabled =
     disabled || !projectId || !taskId || !checklistItemId || isUploading;
+
+  const cancelUpload = useCallback(() => {
+    uploadCancelReasonRef.current = "manual";
+    uploadAbortControllerRef.current?.abort();
+  }, []);
+
+  useEffect(() => () => {
+    uploadCancelReasonRef.current = "unmount";
+    uploadAbortControllerRef.current?.abort();
+  }, []);
 
   const previewAttachmentCount = attachments.length;
   const normalizedPreviewIndex = previewAttachmentCount
@@ -205,8 +222,12 @@ export default function ChecklistItemAttachments({
       if (!selectedFiles.length || isDisabled) return;
 
       let uploadedCount = 0;
+      let controller = null;
       try {
         setUploadingCount(selectedFiles.length);
+        controller = new AbortController();
+        uploadAbortControllerRef.current = controller;
+        uploadCancelReasonRef.current = null;
 
         const fd = new FormData();
         selectedFiles.forEach((file) => {
@@ -220,6 +241,7 @@ export default function ChecklistItemAttachments({
             checklistItemId,
           }),
           fd,
+          { signal: controller.signal },
         );
 
         const uploaded = normalizeResponseAttachments(res?.data);
@@ -233,8 +255,23 @@ export default function ChecklistItemAttachments({
           onChanged?.();
         }
       } catch (err) {
+        if (
+          uploadCancelReasonRef.current === "manual" ||
+          err?.message === "canceled"
+        ) {
+          if (uploadCancelReasonRef.current === "manual") {
+            toastInfo("Upload canceled");
+          }
+          return;
+        }
+
         toastError(err?.message || "Upload checklist attachment failed");
       } finally {
+        if (uploadAbortControllerRef.current === controller) {
+          uploadAbortControllerRef.current = null;
+          uploadCancelReasonRef.current = null;
+        }
+
         setUploadingCount(0);
       }
     },
@@ -368,6 +405,16 @@ export default function ChecklistItemAttachments({
           <span>
             Uploading {uploadingCount > 1 ? `${uploadingCount} files` : "file"}...
           </span>
+          <button
+            type="button"
+            className="checklist-item-attachments__cancel"
+            onClick={cancelUpload}
+            title="Cancel upload"
+            aria-label="Cancel upload"
+          >
+            <i className="ti ti-x" aria-hidden="true"></i>
+            <span>Cancel</span>
+          </button>
         </div>
       ) : null}
 
