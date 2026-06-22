@@ -1,6 +1,6 @@
 {
     "app": "orkelo",
-    "back-commit": "feat(tasks): support multi-file attachment uploads",
-    "front-commit": "chore(assets): remove unused public images",
+    "back-commit": "feat(tasks-auth): add checklist copy and remember me expiry",
+    "front-commit": "feat(tasks-auth): add checklist copy and remember me expiry",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }
