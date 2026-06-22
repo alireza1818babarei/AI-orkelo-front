@@ -2239,6 +2239,94 @@ nav.dark-sidebar ~ .app-content .task-approval-rating-modal__close {
   color: rgba(190, 198, 211, 0.82);
 }
 
+.task-checklist-copy-modal-dialog .modal-content {
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(var(--dark), 0.18);
+}
+
+.task-checklist-copy-modal {
+  padding: 1.1rem;
+}
+
+.task-checklist-copy-modal__header,
+.task-checklist-copy-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.task-checklist-copy-modal__title {
+  color: rgba(var(--dark), 0.92);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.task-checklist-copy-modal__meta {
+  margin-top: 0.18rem;
+  color: rgba(var(--secondary), 0.9);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.task-checklist-copy-modal__close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(var(--secondary), 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(var(--secondary), 0.1);
+    color: rgba(var(--dark), 0.95);
+  }
+}
+
+.task-checklist-copy-modal__preview {
+  min-height: 240px;
+  margin: 1rem 0;
+  resize: vertical;
+  white-space: pre;
+  font-family:
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.task-checklist-copy-modal__actions {
+  justify-content: flex-end;
+}
+
+body.dark .task-checklist-copy-modal-dialog .modal-content,
+nav.dark-sidebar ~ .app-content .task-checklist-copy-modal-dialog .modal-content {
+  background: #171b24;
+  color: rgba(243, 246, 251, 0.95);
+}
+
+body.dark .task-checklist-copy-modal__title,
+nav.dark-sidebar ~ .app-content .task-checklist-copy-modal__title {
+  color: rgba(243, 246, 251, 0.95);
+}
+
+body.dark .task-checklist-copy-modal__close,
+nav.dark-sidebar ~ .app-content .task-checklist-copy-modal__close {
+  color: rgba(190, 198, 211, 0.82);
+}
+
 .checklist-item-checkbox-wrap {
   position: relative;
   display: inline-flex;

@@ -168,6 +168,48 @@ const countChecklistAttachments = (items = []) =>
     return total + itemAttachments + countChecklistAttachments(item?.children || []);
   }, 0);
 
+const countChecklistTreeItems = (items = []) =>
+  (Array.isArray(items) ? items : []).reduce(
+    (total, item) => total + 1 + countChecklistTreeItems(item?.children || []),
+    0,
+  );
+
+const formatChecklistItemsForCopy = (items = [], depth = 0) =>
+  (Array.isArray(items) ? items : [])
+    .map((item, index) => {
+      const prefix = `${"  ".repeat(depth)}${index + 1}.`;
+      const text = String(item?.text ?? "").trim() || "Untitled checklist item";
+      const childrenText = formatChecklistItemsForCopy(
+        item?.children || [],
+        depth + 1,
+      );
+
+      return [`${prefix} ${text}`, childrenText]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n");
+
+const copyTextToClipboard = async (text) => {
+  if (!text) return false;
+
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return copied;
+};
+
 const markChecklistTreeCompleted = (items = []) =>
   (Array.isArray(items) ? items : []).map((item) => ({
     ...item,
@@ -332,10 +374,20 @@ const TaskDetailModal = ({
   const skipRootBlurRef = useRef(false);
   const skipSubBlurByIdRef = useRef({});
   const [hoveredChecklistId, setHoveredChecklistId] = useState(null);
+  const [checklistCopyModalOpen, setChecklistCopyModalOpen] = useState(false);
   const checklistAttachmentCount = useMemo(
     () => countChecklistAttachments(checklistItems),
     [checklistItems],
   );
+  const checklistCopyText = useMemo(
+    () => formatChecklistItemsForCopy(checklistItems),
+    [checklistItems],
+  );
+  const checklistCopyCount = useMemo(
+    () => countChecklistTreeItems(checklistItems),
+    [checklistItems],
+  );
+  const hasCopyableChecklist = checklistCopyText.trim().length > 0;
   const dispatch = useDispatch();
   const [actionOpen, setActionOpen] = useState(false);
   const actionRef = useRef(null);
@@ -1491,6 +1543,18 @@ const TaskDetailModal = ({
     toastSuccess("Link Copied");
   }
 
+  const handleCopyChecklistText = async () => {
+    if (!hasCopyableChecklist) return;
+
+    try {
+      const copied = await copyTextToClipboard(checklistCopyText);
+      if (!copied) throw new Error("Copy command was not completed");
+      toastSuccess("Checklist copied");
+    } catch (err) {
+      toastError(err?.message || "Copy checklist failed");
+    }
+  };
+
   const reviewStatusView = usesTodoCompletion
     ? null
     : {
@@ -1671,6 +1735,14 @@ const TaskDetailModal = ({
                       icon: "ti-link",
                       destructive: false,
                       onClick: copyTaskLink,
+                    },
+                    {
+                      key: "copyChecklist",
+                      label: "Copy checklist",
+                      icon: "ti-copy",
+                      destructive: false,
+                      disabled: !hasCopyableChecklist,
+                      onClick: () => setChecklistCopyModalOpen(true),
                     },
                     {
                       key: "archive",
@@ -2157,6 +2229,58 @@ const TaskDetailModal = ({
               </div>
             </div>
           )}
+        </ModalBody>
+      </Modal>
+      <Modal
+        isOpen={checklistCopyModalOpen}
+        toggle={() => setChecklistCopyModalOpen(false)}
+        centered
+        size="md"
+        className="task-checklist-copy-modal-dialog byekan-font"
+      >
+        <ModalBody className="task-checklist-copy-modal">
+          <div className="task-checklist-copy-modal__header">
+            <div>
+              <div className="task-checklist-copy-modal__title">
+                Copy checklist
+              </div>
+              <div className="task-checklist-copy-modal__meta">
+                {checklistCopyCount} item{checklistCopyCount === 1 ? "" : "s"} ready
+              </div>
+            </div>
+            <button
+              type="button"
+              className="task-checklist-copy-modal__close"
+              aria-label="Close"
+              onClick={() => setChecklistCopyModalOpen(false)}
+            >
+              <i className="ti ti-x"></i>
+            </button>
+          </div>
+          <textarea
+            className="form-control task-checklist-copy-modal__preview"
+            value={checklistCopyText}
+            readOnly
+            rows="10"
+          />
+          <div className="task-checklist-copy-modal__actions">
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => setChecklistCopyModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary d-inline-flex align-items-center gap-2"
+              onClick={handleCopyChecklistText}
+              disabled={!hasCopyableChecklist}
+            >
+              <i className="ti ti-copy"></i>
+              Copy all
+            </button>
+          </div>
         </ModalBody>
       </Modal>
       <Modal

@@ -85,6 +85,17 @@ const normalizeProfileFromPayload = (payload) => {
   return profile;
 };
 
+const normalizeTokenExpiresAtFromPayload = (payload) => {
+  const root = isRecord(payload?.data) ? payload.data : payload ?? {};
+  return (
+    root?.token_expires_at ??
+    root?.tokenExpiresAt ??
+    payload?.token_expires_at ??
+    payload?.tokenExpiresAt ??
+    null
+  );
+};
+
 const pickFields = (payload, fields) => {
   const src = payload && typeof payload === "object" ? payload : {};
   const out = {};
@@ -340,9 +351,10 @@ const authSlice = createSlice({
       const user = normalizeUserFromPayload(a.payload);
       const profile = normalizeProfileFromPayload(a.payload) ?? user?.profile ?? null;
       const rememberMe = !!a.meta?.arg?.rememberMe;
+      const tokenExpiresAt = normalizeTokenExpiresAtFromPayload(a.payload);
       if (token) {
         s.accessToken = token;
-        setToken(token, rememberMe);
+        setToken(token, rememberMe, tokenExpiresAt);
       }
 
       s.user = user;
@@ -364,10 +376,11 @@ const authSlice = createSlice({
       const profile = normalizeProfileFromPayload(a.payload) ?? user?.profile ?? null;
 
       const rememberMe = !!a.meta?.arg?.rememberMe;
+      const tokenExpiresAt = normalizeTokenExpiresAtFromPayload(a.payload);
 
       if (token) {
         s.accessToken = token;
-        setToken(token, rememberMe);
+        setToken(token, rememberMe, tokenExpiresAt);
       }
 
       s.user = user;
