@@ -358,12 +358,6 @@ nav.dark-sidebar
   border: 2px solid rgba(var(--success));
 }
 
-.board-item.task-review-pending .board-item-content {
-  --board-item-status-accent: rgba(var(--warning), 1);
-  border: 2px solid rgba(var(--warning), 0.95);
-  box-shadow: 0 10px 22px rgba(var(--warning), 0.12);
-}
-
 .board-item.task-review-rejected .board-item-content {
   --board-item-status-accent: rgba(var(--danger), 1);
   border: 2px solid rgba(var(--danger), 0.95);
@@ -371,7 +365,6 @@ nav.dark-sidebar
 }
 
 .board-item.task-completed .board-item-content::before,
-.board-item.task-review-pending .board-item-content::before,
 .board-item.task-review-rejected .board-item-content::before,
 .board-item.task-has-due:not(.task-completed):not(.task-review-pending):not(.task-review-rejected)
   .board-item-content::before,
