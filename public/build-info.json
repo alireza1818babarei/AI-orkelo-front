@@ -1,6 +1,6 @@
 {
     "app": "orkelo",
     "back-commit": "fix(tasks): support multi-user tracking and waiting card state",
-    "front-commit": "fix(tasks): support multi-user tracking and waiting card state",
+    "front-commit": "Moving tasks in scroll",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }
