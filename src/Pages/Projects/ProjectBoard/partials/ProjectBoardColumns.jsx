@@ -24,6 +24,230 @@ const arrayMove = (arr, from, to) => {
   return next;
 };
 
+const EDGE_AUTO_SCROLL_THRESHOLD = 96;
+const EDGE_AUTO_SCROLL_MAX_SPEED = 28;
+
+const getDragPointerClientPoint = (event) => {
+  const touch = event?.touches?.[0] || event?.changedTouches?.[0];
+  const clientX = touch?.clientX ?? event?.clientX;
+  const clientY = touch?.clientY ?? event?.clientY;
+
+  return typeof clientX === "number" && typeof clientY === "number"
+    ? { x: clientX, y: clientY }
+    : null;
+};
+
+const getHorizontalScrollContainer = (node) => {
+  if (typeof window === "undefined" || !node) return null;
+
+  let current = node.parentElement;
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    const canScrollX =
+      /(auto|scroll|overlay)/.test(style.overflowX || "") &&
+      current.scrollWidth > current.clientWidth;
+
+    if (canScrollX) return current;
+    current = current.parentElement;
+  }
+
+  return null;
+};
+
+const getHorizontalEdgeScrollSpeed = (clientX, rect) => {
+  const leftDistance = clientX - rect.left;
+  const rightDistance = rect.right - clientX;
+
+  if (leftDistance < EDGE_AUTO_SCROLL_THRESHOLD) {
+    const ratio =
+      (EDGE_AUTO_SCROLL_THRESHOLD - Math.max(leftDistance, 0)) /
+      EDGE_AUTO_SCROLL_THRESHOLD;
+    return -Math.max(1, Math.round(EDGE_AUTO_SCROLL_MAX_SPEED * ratio));
+  }
+
+  if (rightDistance < EDGE_AUTO_SCROLL_THRESHOLD) {
+    const ratio =
+      (EDGE_AUTO_SCROLL_THRESHOLD - Math.max(rightDistance, 0)) /
+      EDGE_AUTO_SCROLL_THRESHOLD;
+    return Math.max(1, Math.round(EDGE_AUTO_SCROLL_MAX_SPEED * ratio));
+  }
+
+  return 0;
+};
+
+const getColumnContentFromPoint = (point) => {
+  if (typeof document === "undefined" || !point) return null;
+  const elements = document.elementsFromPoint(point.x, point.y);
+
+  for (const element of elements) {
+    const content = element.closest?.("[data-board-column-id]");
+    if (content) return content;
+
+    const column = element.closest?.("[data-board-column-shell-id]");
+    const columnContent = column?.querySelector?.("[data-board-column-id]");
+    if (columnContent) return columnContent;
+  }
+
+  return null;
+};
+
+const getTaskDestinationFromPoint = ({ point, draggedTaskId }) => {
+  const columnContent = getColumnContentFromPoint(point);
+  const destinationColumnId = columnContent?.dataset?.boardColumnId;
+
+  if (!destinationColumnId) return null;
+
+  const taskElements = [
+    ...columnContent.querySelectorAll("[data-board-task-id]"),
+  ].filter(
+    (element) =>
+      String(element?.dataset?.boardTaskId ?? "") !== String(draggedTaskId),
+  );
+
+  const index = taskElements.findIndex((element) => {
+    const rect = element.getBoundingClientRect();
+    return point.y < rect.top + rect.height / 2;
+  });
+
+  return {
+    droppableId: `col-${destinationColumnId}`,
+    index: index === -1 ? taskElements.length : index,
+  };
+};
+
+const renderDropPlaceholder = (placeholder, shouldSuppress) => {
+  if (!shouldSuppress || !React.isValidElement(placeholder)) return placeholder;
+
+  return React.cloneElement(placeholder, {
+    style: {
+      ...(placeholder.props?.style || {}),
+      display: "none",
+      height: 0,
+      margin: 0,
+      padding: 0,
+      border: 0,
+      opacity: 0,
+      overflow: "hidden",
+      pointerEvents: "none",
+    },
+  });
+};
+
+// Keeps the horizontal board wrapper moving while a dragged card reaches an edge.
+const useHorizontalDragAutoScroll = (onDragFrame) => {
+  const boardRef = useRef(null);
+  const frameRef = useRef(null);
+  const pointerRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const activeRef = useRef(false);
+  const hasAutoScrolledRef = useRef(false);
+  const onDragFrameRef = useRef(onDragFrame);
+
+  useEffect(() => {
+    onDragFrameRef.current = onDragFrame;
+  }, [onDragFrame]);
+
+  const updatePointerX = useCallback((event) => {
+    const point = getDragPointerClientPoint(event);
+    if (point) pointerRef.current = point;
+  }, []);
+
+  const stopHorizontalDragAutoScroll = useCallback(() => {
+    activeRef.current = false;
+    scrollContainerRef.current = null;
+
+    if (typeof window !== "undefined") {
+      window.removeEventListener("pointermove", updatePointerX);
+      window.removeEventListener("mousemove", updatePointerX);
+      window.removeEventListener("touchmove", updatePointerX);
+
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+    }
+
+    frameRef.current = null;
+  }, [updatePointerX]);
+
+  const clearDragPointer = useCallback(() => {
+    pointerRef.current = null;
+    hasAutoScrolledRef.current = false;
+  }, []);
+
+  const getLatestDragPointer = useCallback(() => pointerRef.current, []);
+
+  const tickHorizontalDragAutoScroll = useCallback(function tick() {
+    if (!activeRef.current || typeof window === "undefined") return;
+
+    const scrollContainer = scrollContainerRef.current;
+    const pointer = pointerRef.current;
+
+    if (scrollContainer && typeof pointer?.x === "number") {
+      const rect = scrollContainer.getBoundingClientRect();
+      const speed = getHorizontalEdgeScrollSpeed(pointer.x, rect);
+      const maxScrollLeft =
+        scrollContainer.scrollWidth - scrollContainer.clientWidth;
+
+      if (speed !== 0 && maxScrollLeft > 0) {
+        const currentScrollLeft = scrollContainer.scrollLeft;
+        const nextScrollLeft = Math.min(
+          maxScrollLeft,
+          Math.max(0, currentScrollLeft + speed),
+        );
+        scrollContainer.scrollLeft = nextScrollLeft;
+        if (nextScrollLeft !== currentScrollLeft) {
+          hasAutoScrolledRef.current = true;
+        }
+      }
+    }
+
+    if (pointer) {
+      onDragFrameRef.current?.(pointer, hasAutoScrolledRef.current);
+    }
+
+    frameRef.current = window.requestAnimationFrame(tick);
+  }, []);
+
+  const startHorizontalDragAutoScroll = useCallback(
+    (node) => {
+      if (typeof window === "undefined") return;
+
+      stopHorizontalDragAutoScroll();
+      clearDragPointer();
+
+      const scrollContainer = getHorizontalScrollContainer(node);
+      if (!scrollContainer) return;
+
+      scrollContainerRef.current = scrollContainer;
+      activeRef.current = true;
+
+      window.addEventListener("pointermove", updatePointerX, { passive: true });
+      window.addEventListener("mousemove", updatePointerX, { passive: true });
+      window.addEventListener("touchmove", updatePointerX, { passive: true });
+
+      frameRef.current = window.requestAnimationFrame(
+        tickHorizontalDragAutoScroll,
+      );
+    },
+    [
+      clearDragPointer,
+      stopHorizontalDragAutoScroll,
+      tickHorizontalDragAutoScroll,
+      updatePointerX,
+    ],
+  );
+
+  useEffect(() => stopHorizontalDragAutoScroll, [stopHorizontalDragAutoScroll]);
+
+  return {
+    boardRef,
+    clearDragPointer,
+    getLatestDragPointer,
+    startHorizontalDragAutoScroll,
+    stopHorizontalDragAutoScroll,
+  };
+};
+
 const getTaskAttachmentCount = (task) => {
   const candidates = [
     task?.total_attachment,
@@ -310,6 +534,7 @@ const TaskCard = memo(function TaskCard({
     >
       <BoardItem
         {...taskDragHandleProps}
+        data-board-task-id={String(task.id)}
         className={`${isDragging ? "is-dragging" : ""} ${
           completed ? "task-completed" : ""
         } ${
@@ -361,9 +586,22 @@ const TaskCard = memo(function TaskCard({
 
 const portalEl = typeof document !== "undefined" ? document.body : null;
 
-const PortalDraggable = ({ provided, snapshot, className = "", children }) => {
+const PortalDraggable = ({
+  provided,
+  snapshot,
+  className = "",
+  disableDropDisplacement = false,
+  children,
+}) => {
+  const baseStyle = provided.draggableProps.style || {};
   const style = snapshot.isDragging
     ? { ...(provided.draggableProps.style || {}), zIndex: 999999 }
+    : disableDropDisplacement
+      ? {
+          ...baseStyle,
+          transform: "none",
+          transition: "transform 180ms ease",
+        }
     : provided.draggableProps.style;
 
   const node = (
@@ -403,9 +641,50 @@ const Column = memo(function Column({
 
   flashCompletedTaskIds,
   enterTaskIds,
+  manualTaskDropPreview,
+  isManualTaskDropActive = false,
 }) {
   const taskIds = column.taskIds || [];
   const columnTaskCount = getColumnTaskCount(column);
+  const manualPreviewColumnId = String(
+    manualTaskDropPreview?.droppableId || "",
+  ).replace(/^col-/, "");
+  const manualPreviewTaskId =
+    manualTaskDropPreview?.taskId != null
+      ? String(manualTaskDropPreview.taskId)
+      : "";
+  const isManualDropTarget =
+    Boolean(manualTaskDropPreview) &&
+    String(column.id) === manualPreviewColumnId;
+  const manualPreviewTaskIds = taskIds.filter(
+    (taskId) => String(taskId) !== manualPreviewTaskId,
+  );
+  const manualPreviewIndex = isManualDropTarget
+    ? Math.min(
+        Math.max(Number(manualTaskDropPreview?.index ?? 0), 0),
+        manualPreviewTaskIds.length,
+      )
+    : -1;
+  const manualPreviewBeforeTaskId =
+    manualPreviewIndex >= 0 && manualPreviewIndex < manualPreviewTaskIds.length
+      ? String(manualPreviewTaskIds[manualPreviewIndex])
+      : "";
+  const shouldShowManualPreviewAtEnd =
+    isManualDropTarget && manualPreviewIndex >= manualPreviewTaskIds.length;
+  const manualPreviewHeight = Math.max(
+    Number(manualTaskDropPreview?.height ?? 0),
+    72,
+  );
+  const manualDropPreviewNode = isManualDropTarget ? (
+    <div
+      key={`manual-preview-${manualTaskDropPreview?.droppableId || ""}-${manualPreviewIndex}`}
+      className="board-item-drop-preview"
+      style={{
+        "--board-drop-preview-height": `${manualPreviewHeight}px`,
+      }}
+      aria-hidden="true"
+    />
+  ) : null;
   const setColumnContentRef = useCallback(
     (node) => {
       if (typeof contentRef === "function") {
@@ -470,24 +749,35 @@ const Column = memo(function Column({
 
   return (
     <Droppable droppableId={`col-${column.id}`} type="TASK">
-      {(dropProvided, dropSnapshot) => (
+      {(dropProvided, dropSnapshot) => {
+        const suppressPackageDropState = isManualTaskDropActive;
+        const isPackageDraggingOver =
+          !suppressPackageDropState && dropSnapshot.isDraggingOver;
+
+        return (
         <BoardColumn
           innerRef={innerRef}
           headerRef={null}
           dragHandleProps={dragHandleProps}
           color={column.color}
           className={`${isDragging ? "is-dragging" : ""} ${
-            dropSnapshot.isDraggingOver ? "is-over" : ""
+            isPackageDraggingOver ? "is-over" : ""
           }`}
           columnTitle={column.title || column.name || "Column"}
           columnIcon={column.icon ?? column.iconClass ?? column.icon_code ?? null}
           taskCount={columnTaskCount}
           actions={column.actions}
           contentRef={setColumnContentRef}
-          contentClassName={dropSnapshot.isDraggingOver ? "is-over" : ""}
+          contentClassName={`${isPackageDraggingOver ? "is-over" : ""} ${
+            isManualDropTarget ? "is-manual-drop-target" : ""
+          }`}
           footer={footer}
           contentInnerRef={dropProvided.innerRef}
-          contentProps={dropProvided.droppableProps}
+          contentProps={{
+            ...dropProvided.droppableProps,
+            "data-board-column-id": String(column.id),
+          }}
+          data-board-column-shell-id={String(column.id)}
           {...(draggableProps || {})}
         >
           {column.tasksUndefined ? (
@@ -496,7 +786,7 @@ const Column = memo(function Column({
                 <iconify-icon icon="line-md:loading-loop" />
               </div>
             ) : null
-          ) : taskIds.length === 0 ? (
+          ) : taskIds.length === 0 && !isManualDropTarget ? (
             <div className="d-flex align-items-center justify-content-center py-3 text-muted">
               No tasks yet
             </div>
@@ -504,33 +794,44 @@ const Column = memo(function Column({
             taskIds.map((taskId, index) => {
               const t = tasksById[String(taskId)];
               return (
-                <Draggable key={String(taskId)} draggableId={`task-${taskId}`} index={index}>
-                  {(dragProvided, dragSnapshot) => (
-                    <PortalDraggable
-                      provided={dragProvided}
-                      snapshot={dragSnapshot}
-                      className={dragSnapshot.isDragging ? "board-drag-portal" : ""}
-                    >
-                      <TaskCard
-                        task={t}
-                        columnId={column.id}
-                        onTaskClick={onTaskClick}
-                        dragHandleProps={dragProvided.dragHandleProps}
-                        isDragging={dragSnapshot.isDragging}
-                        flashCompleted={flashCompletedTaskIds?.has?.(String(taskId))}
-                        enter={enterTaskIds?.has?.(String(taskId))}
-                        enterIndex={index}
-                      />
-                    </PortalDraggable>
-                  )}
-                </Draggable>
+                <React.Fragment key={String(taskId)}>
+                  {manualPreviewBeforeTaskId === String(taskId)
+                    ? manualDropPreviewNode
+                    : null}
+                  <Draggable draggableId={`task-${taskId}`} index={index}>
+                    {(dragProvided, dragSnapshot) => (
+                      <PortalDraggable
+                        provided={dragProvided}
+                        snapshot={dragSnapshot}
+                        className={dragSnapshot.isDragging ? "board-drag-portal" : ""}
+                        disableDropDisplacement={isManualTaskDropActive}
+                      >
+                        <TaskCard
+                          task={t}
+                          columnId={column.id}
+                          onTaskClick={onTaskClick}
+                          dragHandleProps={dragProvided.dragHandleProps}
+                          isDragging={dragSnapshot.isDragging}
+                          flashCompleted={flashCompletedTaskIds?.has?.(String(taskId))}
+                          enter={enterTaskIds?.has?.(String(taskId))}
+                          enterIndex={index}
+                        />
+                      </PortalDraggable>
+                    )}
+                  </Draggable>
+                </React.Fragment>
               );
             })
           )}
 
-          {dropProvided.placeholder}
+          {shouldShowManualPreviewAtEnd ? manualDropPreviewNode : null}
+          {renderDropPlaceholder(
+            dropProvided.placeholder,
+            isManualTaskDropActive,
+          )}
         </BoardColumn>
-      )}
+        );
+      }}
     </Droppable>
   );
 });
@@ -562,6 +863,77 @@ const ProjectBoardColumns = ({
   const [enterTaskIds, setEnterTaskIds] = useState(() => new Set());
   const seenTaskIdsRef = useRef(new Set());
   const enterTimeoutsRef = useRef({});
+  const draggedTaskIdRef = useRef(null);
+  const draggedTaskHeightRef = useRef(0);
+  const isTaskDragActiveRef = useRef(false);
+  const manualTaskDropPreviewRef = useRef(null);
+  const [manualTaskDropPreview, setManualTaskDropPreview] = useState(null);
+  const [isManualTaskDropActive, setIsManualTaskDropActive] = useState(false);
+
+  const updateManualTaskDropPreview = useCallback((nextPreview) => {
+    const current = manualTaskDropPreviewRef.current;
+    const samePreview =
+      current?.taskId === nextPreview?.taskId &&
+      current?.droppableId === nextPreview?.droppableId &&
+      current?.index === nextPreview?.index &&
+      current?.height === nextPreview?.height;
+
+    if (samePreview) return;
+
+    manualTaskDropPreviewRef.current = nextPreview;
+    setManualTaskDropPreview(nextPreview);
+  }, []);
+
+  const syncManualTaskDropPreview = useCallback(
+    (point) => {
+      const draggedTaskId = draggedTaskIdRef.current;
+      if (!draggedTaskId || !point) {
+        updateManualTaskDropPreview(null);
+        return;
+      }
+
+      const destination = getTaskDestinationFromPoint({
+        point,
+        draggedTaskId,
+      });
+
+      updateManualTaskDropPreview(
+        destination
+          ? {
+              taskId: draggedTaskId,
+              droppableId: destination.droppableId,
+              index: destination.index,
+              height: draggedTaskHeightRef.current,
+            }
+          : null,
+      );
+    },
+    [updateManualTaskDropPreview],
+  );
+
+  const {
+    boardRef,
+    clearDragPointer,
+    getLatestDragPointer,
+    startHorizontalDragAutoScroll,
+    stopHorizontalDragAutoScroll,
+  } = useHorizontalDragAutoScroll(syncManualTaskDropPreview);
+
+  const setManualTaskDropMode = useCallback(
+    (isActive) => {
+      isTaskDragActiveRef.current = isActive;
+      setIsManualTaskDropActive(isActive);
+      boardRef.current?.classList?.toggle(
+        "is-manual-task-drop-active",
+        isActive,
+      );
+
+      if (!isActive) {
+        updateManualTaskDropPreview(null);
+      }
+    },
+    [boardRef, updateManualTaskDropPreview],
+  );
 
   useEffect(() => {
     if (isDraggingRef.current) return;
@@ -670,8 +1042,40 @@ const ProjectBoardColumns = ({
     [onTaskClick],
   );
 
-  const onDragStart = () => {
+  const onBeforeCapture = useCallback(
+    (before) => {
+      const isTaskDrag = String(before?.draggableId || "").startsWith("task-");
+      setManualTaskDropMode(isTaskDrag);
+      updateManualTaskDropPreview(null);
+    },
+    [setManualTaskDropMode, updateManualTaskDropPreview],
+  );
+
+  const onDragStart = (start) => {
     isDraggingRef.current = true;
+    if (start?.type === "TASK") {
+      const draggedTaskId = String(start?.draggableId || "").replace(/^task-/, "");
+      const draggedTaskElement =
+        typeof document !== "undefined"
+          ? [...document.querySelectorAll("[data-board-task-id]")].find(
+              (element) =>
+                String(element?.dataset?.boardTaskId ?? "") === draggedTaskId,
+            )
+          : null;
+
+      setManualTaskDropMode(true);
+      draggedTaskIdRef.current = draggedTaskId;
+      draggedTaskHeightRef.current =
+        draggedTaskElement?.getBoundingClientRect?.().height || 0;
+      updateManualTaskDropPreview(null);
+      startHorizontalDragAutoScroll(boardRef.current);
+    } else {
+      setManualTaskDropMode(false);
+      draggedTaskIdRef.current = null;
+      draggedTaskHeightRef.current = 0;
+      updateManualTaskDropPreview(null);
+      clearDragPointer();
+    }
     snapshotRef.current = {
       ...board,
       columns: (board.columns || []).map((c) => ({ ...c, taskIds: [...(c.taskIds || [])] })),
@@ -680,24 +1084,48 @@ const ProjectBoardColumns = ({
   };
 
   const onDragEnd = (result) => {
+    const dragPointer = getLatestDragPointer();
+    const shouldUsePointerDestination = Boolean(
+      isTaskDragActiveRef.current && manualTaskDropPreviewRef.current,
+    );
+    stopHorizontalDragAutoScroll();
+    clearDragPointer();
+    setManualTaskDropMode(false);
+    draggedTaskIdRef.current = null;
+    draggedTaskHeightRef.current = 0;
+    updateManualTaskDropPreview(null);
     isDraggingRef.current = false;
     const { destination, source, draggableId, type } = result || {};
+    const pointerDestination =
+      shouldUsePointerDestination &&
+      type === "TASK" &&
+      draggableId?.startsWith("task-")
+        ? getTaskDestinationFromPoint({
+            point: dragPointer,
+            draggedTaskId: draggableId.slice(5),
+          })
+        : null;
+    const effectiveDestination = pointerDestination || destination;
 
-    if (!destination) {
+    if (!effectiveDestination) {
       if (snapshotRef.current) setBoard(snapshotRef.current);
       snapshotRef.current = null;
       return;
     }
 
     if (type === "COLUMN") {
-      if (source.index === destination.index) {
+      if (source.index === effectiveDestination.index) {
         snapshotRef.current = null;
         return;
       }
 
       const baseBoard = snapshotRef.current || board;
       const previousOrderedIds = (baseBoard.columns || []).map((col) => String(col.id));
-      const nextColumns = arrayMove(baseBoard.columns || [], source.index, destination.index);
+      const nextColumns = arrayMove(
+        baseBoard.columns || [],
+        source.index,
+        effectiveDestination.index,
+      );
       const orderedIds = nextColumns.map((col) => String(col.id));
 
       setBoard((prev) => ({ ...prev, columns: nextColumns }));
@@ -719,8 +1147,8 @@ const ProjectBoardColumns = ({
     if (!draggableId?.startsWith("task-")) return;
     const taskId = draggableId.slice(5);
     const sourceColId = String(source.droppableId || "").replace(/^col-/, "");
-    const destColId = String(destination.droppableId || "").replace(/^col-/, "");
-    if (sourceColId === destColId && source.index === destination.index) {
+    const destColId = String(effectiveDestination.droppableId || "").replace(/^col-/, "");
+    if (sourceColId === destColId && source.index === effectiveDestination.index) {
       snapshotRef.current = null;
       return;
     }
@@ -745,7 +1173,7 @@ const ProjectBoardColumns = ({
     const destTasks = nextColumns[destIndex].taskIds;
 
     sourceTasks.splice(source.index, 1);
-    destTasks.splice(destination.index, 0, taskId);
+    destTasks.splice(effectiveDestination.index, 0, taskId);
 
     const sourceTaskIds = [...(nextColumns[sourceIndex]?.taskIds || [])];
     const destinationTaskIds =
@@ -802,10 +1230,23 @@ const ProjectBoardColumns = ({
   }
 
   return (
-    <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DragDropContext
+      onBeforeCapture={onBeforeCapture}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
       <Droppable droppableId="board" direction="horizontal" type="COLUMN">
         {(boardDropProvided) => (
-          <div ref={boardDropProvided.innerRef} {...boardDropProvided.droppableProps} className="board">
+          <div
+            ref={(node) => {
+              boardRef.current = node;
+              boardDropProvided.innerRef(node);
+            }}
+            {...boardDropProvided.droppableProps}
+            className={`board ${
+              isManualTaskDropActive ? "is-manual-task-drop-active" : ""
+            }`}
+          >
             {(board.columns || []).map((col, index) => (
               <Draggable key={String(col.id)} draggableId={`col-${col.id}`} index={index}>
                 {(colDragProvided, colDragSnapshot) => (
@@ -858,6 +1299,8 @@ const ProjectBoardColumns = ({
                       onSubmitAddTask={submitAddTask}
                       flashCompletedTaskIds={flashCompletedTaskIds}
                       enterTaskIds={enterTaskIds}
+                      manualTaskDropPreview={manualTaskDropPreview}
+                      isManualTaskDropActive={isManualTaskDropActive}
                     />
                   </PortalDraggable>
                 )}
