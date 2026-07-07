@@ -384,11 +384,13 @@ const normalizeColumnTaskCount = (value) => {
 
 const getColumnTaskCount = (column) => {
   if (!column) return null;
-  if (!column.tasksUndefined) return Array.isArray(column.taskIds) ? column.taskIds.length : 0;
-
-  return normalizeColumnTaskCount(
+  const totalFromColumn = normalizeColumnTaskCount(
     column.tasks_count ?? column.tasksCount ?? column.task_count ?? column.taskCount,
   );
+  if (totalFromColumn != null) return totalFromColumn;
+  if (!column.tasksUndefined) return Array.isArray(column.taskIds) ? column.taskIds.length : 0;
+
+  return null;
 };
 
 const isTaskCompleted = (task) => isTaskApproved(task);
@@ -624,6 +626,8 @@ const Column = memo(function Column({
   tasksById,
   status,
   tasksLoading,
+  taskPagination,
+  onLoadMoreTasks,
   onAddTask,
   onTaskClick,
   innerRef,
@@ -646,6 +650,9 @@ const Column = memo(function Column({
 }) {
   const taskIds = column.taskIds || [];
   const columnTaskCount = getColumnTaskCount(column);
+  const [contentNode, setContentNode] = useState(null);
+  const loadMoreTriggerRef = useRef(null);
+  const loadMoreRequestedPageRef = useRef(null);
   const manualPreviewColumnId = String(
     manualTaskDropPreview?.droppableId || "",
   ).replace(/^col-/, "");
@@ -687,6 +694,7 @@ const Column = memo(function Column({
   ) : null;
   const setColumnContentRef = useCallback(
     (node) => {
+      setContentNode(node);
       if (typeof contentRef === "function") {
         contentRef(node);
       } else if (contentRef && typeof contentRef === "object") {
@@ -695,6 +703,54 @@ const Column = memo(function Column({
     },
     [contentRef],
   );
+  const nextTaskPage = Number(taskPagination?.currentPage || 1) + 1;
+  const canLoadMoreTasks =
+    Boolean(taskPagination?.hasMore) &&
+    !tasksLoading &&
+    status !== "loading" &&
+    !isDragging &&
+    !isManualTaskDropActive;
+
+  const requestMoreTasks = useCallback(() => {
+    if (!canLoadMoreTasks) return;
+    if (loadMoreRequestedPageRef.current === nextTaskPage) return;
+
+    loadMoreRequestedPageRef.current = nextTaskPage;
+    onLoadMoreTasks?.(column);
+  }, [canLoadMoreTasks, column, nextTaskPage, onLoadMoreTasks]);
+
+  useEffect(() => {
+    if (!tasksLoading) {
+      loadMoreRequestedPageRef.current = null;
+    }
+  }, [tasksLoading, taskIds.length]);
+
+  useEffect(() => {
+    if (!contentNode || !loadMoreTriggerRef.current || !canLoadMoreTasks) return;
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          requestMoreTasks();
+        }
+      },
+      {
+        root: contentNode,
+        rootMargin: "140px 0px",
+        threshold: 0.01,
+      },
+    );
+
+    observer.observe(loadMoreTriggerRef.current);
+
+    return () => observer.disconnect();
+  }, [
+    canLoadMoreTasks,
+    contentNode,
+    requestMoreTasks,
+    taskIds.length,
+  ]);
 
   const footer = useMemo(() => {
     if (addTaskColumnId === String(column.id)) {
@@ -824,6 +880,28 @@ const Column = memo(function Column({
             })
           )}
 
+          {!column.tasksUndefined && taskPagination?.hasMore ? (
+            <div
+              ref={loadMoreTriggerRef}
+              className="board-column-load-more"
+            >
+              {tasksLoading ? (
+                <span className="board-column-load-more__status">
+                  <iconify-icon icon="line-md:loading-loop" />
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="board-column-load-more__button"
+                  onClick={requestMoreTasks}
+                  disabled={!canLoadMoreTasks}
+                >
+                  Load more
+                </button>
+              )}
+            </div>
+          ) : null}
+
           {shouldShowManualPreviewAtEnd ? manualDropPreviewNode : null}
           {renderDropPlaceholder(
             dropProvided.placeholder,
@@ -840,6 +918,9 @@ const ProjectBoardColumns = ({
   columns: columnsProp,
   status,
   tasksLoading = false,
+  tasksLoadingByColumnId = {},
+  taskPaginationByColumnId = {},
+  onLoadMoreTasks,
   onEditColumn,
   onDeleteColumn,
   onArchiveCompletedTasks,
@@ -1284,7 +1365,12 @@ const ProjectBoardColumns = ({
                       }}
                       tasksById={board.tasksById}
                       status={status}
-                      tasksLoading={tasksLoading}
+                      tasksLoading={
+                        tasksLoading ||
+                        Boolean(tasksLoadingByColumnId?.[String(col.id)])
+                      }
+                      taskPagination={taskPaginationByColumnId?.[String(col.id)]}
+                      onLoadMoreTasks={onLoadMoreTasks}
                       onAddTask={onAddTask}
                       onTaskClick={safeOnTaskClick}
                       innerRef={null}

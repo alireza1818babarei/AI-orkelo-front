@@ -2,6 +2,8 @@ import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
 import api from "../../api/axios";
 import {getErrorMessage} from "../../utils/getError";
 
+export const PROJECT_COLUMN_TASK_PAGE_SIZE = 5;
+
 const normalizeOrderedIds = (orderedIds) =>
   (Array.isArray(orderedIds) ? orderedIds : [])
     .map((id) => Number(id))
@@ -32,6 +34,43 @@ const normalizeTaskIds = (taskIds) =>
   (Array.isArray(taskIds) ? taskIds : [])
     .map((id) => String(id ?? "").trim())
     .filter(Boolean);
+
+const normalizePositiveInt = (value, fallback) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
+};
+
+const normalizeTaskPaginationMeta = ({meta, tasks, page, perPage}) => {
+  const currentPage = normalizePositiveInt(meta?.current_page, page);
+  const normalizedPerPage = normalizePositiveInt(meta?.per_page, perPage);
+  const total = normalizePositiveInt(meta?.total, Array.isArray(tasks) ? tasks.length : 0);
+  const lastPage = normalizePositiveInt(
+    meta?.last_page,
+    normalizedPerPage > 0 ? Math.max(1, Math.ceil(total / normalizedPerPage)) : 1,
+  );
+
+  return {
+    currentPage,
+    perPage: normalizedPerPage,
+    lastPage,
+    total,
+    hasMore: currentPage < lastPage,
+  };
+};
+
+const mergeUniqueTasks = (currentTasks, nextTasks) => {
+  const merged = [];
+  const seen = new Set();
+
+  [...(Array.isArray(currentTasks) ? currentTasks : []), ...(Array.isArray(nextTasks) ? nextTasks : [])].forEach((task) => {
+    const key = toTaskIdKey(task);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push(task);
+  });
+
+  return merged;
+};
 
 const normalizeColumnIdValue = (columnId) => {
   const n = Number(columnId);
@@ -399,15 +438,45 @@ export const reorderProjectTaskThunk = createAsyncThunk(
 
 export const getColumnTasksThunk = createAsyncThunk(
   "projectColumns/getColumnTasks",
-  async ({projectId, columnId}, {rejectWithValue}) => {
+  async (
+    {
+      projectId,
+      columnId,
+      page = 1,
+      perPage = PROJECT_COLUMN_TASK_PAGE_SIZE,
+      append = false,
+    },
+    {rejectWithValue},
+  ) => {
     try {
+      const normalizedPage = normalizePositiveInt(page, 1);
+      const normalizedPerPage = normalizePositiveInt(
+        perPage,
+        PROJECT_COLUMN_TASK_PAGE_SIZE,
+      );
       const res = await api.get(
         `/projects/${projectId}/columns/${columnId}/tasks`,
+        {
+          params: {
+            page: normalizedPage,
+            per_page: normalizedPerPage,
+          },
+        },
       );
-      const payload = res.data?.data ?? res.data ?? [];
+      const root = res.data ?? {};
+      const payload = root?.data ?? [];
+      const meta = normalizeTaskPaginationMeta({
+        meta: root?.meta,
+        tasks: payload,
+        page: normalizedPage,
+        perPage: normalizedPerPage,
+      });
+
       return {
         projectId,
         columnId,
+        append,
+        meta,
         tasks: Array.isArray(payload) ? payload : [],
       };
     } catch (err) {
@@ -415,7 +484,7 @@ export const getColumnTasksThunk = createAsyncThunk(
     }
   },
   {
-    condition: ({projectId, columnId, force}, {getState}) => {
+    condition: ({projectId, columnId, force, page = 1}, {getState}) => {
       if (force) return true;
 
       const state = getState();
@@ -431,6 +500,11 @@ export const getColumnTasksThunk = createAsyncThunk(
 
       const col = (slice.items || []).find((c) => String(c?.id) === key);
       if (!col) return true;
+
+      const normalizedPage = normalizePositiveInt(page, 1);
+      if (normalizedPage > 1) {
+        return slice.taskPaginationByColumnId?.[key]?.hasMore !== false;
+      }
 
       if (Array.isArray(col.tasks)) return false;
 
@@ -469,6 +543,7 @@ const initialState = {
   error: null,
   tasksLoadingByColumnId: {},
   tasksErrorByColumnId: {},
+  taskPaginationByColumnId: {},
   archivingCompletedByColumnId: {},
 };
 
@@ -482,6 +557,7 @@ const projectColumnsSlice = createSlice({
       state.items = sortColumnsByPosition(action.payload?.columns || []);
       state.tasksLoadingByColumnId = {};
       state.tasksErrorByColumnId = {};
+      state.taskPaginationByColumnId = {};
       state.archivingCompletedByColumnId = {};
     },
     reorderProjectColumnsLocal: (state, action) => {
@@ -543,16 +619,34 @@ const projectColumnsSlice = createSlice({
     removeTaskFromColumn: (state, action) => {
       const {columnId, taskId} = action.payload || {};
       if (!columnId || !taskId) return;
+      const key = String(columnId);
       state.items = (state.items || []).map((c) => {
-        if (String(c.id) !== String(columnId)) return c;
+        if (String(c.id) !== key) return c;
         const nextTasks = Array.isArray(c.tasks) ? c.tasks : [];
+        const currentCount = normalizePositiveInt(
+          c.tasks_count ?? c.tasksCount ?? c.task_count ?? c.taskCount,
+          nextTasks.length,
+        );
         return {
           ...c,
           tasks: nextTasks.filter(
             (t) => String(t.id) !== String(taskId),
           ),
+          tasks_count: Math.max(0, currentCount - 1),
         };
       });
+
+      const currentMeta = state.taskPaginationByColumnId?.[key];
+      if (currentMeta) {
+        const total = Math.max(0, normalizePositiveInt(currentMeta.total, 0) - 1);
+        const lastPage = Math.max(1, Math.ceil(total / currentMeta.perPage));
+        state.taskPaginationByColumnId[key] = {
+          ...currentMeta,
+          total,
+          lastPage,
+          hasMore: currentMeta.currentPage < lastPage,
+        };
+      }
     },
   },
   extraReducers: (builder) => {
@@ -561,6 +655,7 @@ const projectColumnsSlice = createSlice({
       state.error = null;
       state.tasksLoadingByColumnId = {};
       state.tasksErrorByColumnId = {};
+      state.taskPaginationByColumnId = {};
     });
     builder.addCase(getProjectColumnsThunk.fulfilled, (state, action) => {
       state.status = "succeeded";
@@ -591,6 +686,7 @@ const projectColumnsSlice = createSlice({
       state.items = [];
       state.tasksLoadingByColumnId = {};
       state.tasksErrorByColumnId = {};
+      state.taskPaginationByColumnId = {};
     });
 
     builder.addCase(createProjectColumnThunk.fulfilled, (state, action) => {
@@ -616,6 +712,7 @@ const projectColumnsSlice = createSlice({
       const key = String(columnId);
       delete state.tasksLoadingByColumnId?.[key];
       delete state.tasksErrorByColumnId?.[key];
+      delete state.taskPaginationByColumnId?.[key];
       state.items = (state.items || []).filter(
         (c) => String(c.id) !== String(columnId),
       );
@@ -635,13 +732,31 @@ const projectColumnsSlice = createSlice({
     builder.addCase(createProjectTaskThunk.fulfilled, (state, action) => {
       const {projectId, columnId, task} = action.payload || {};
       if (!task || !columnId) return;
+      const key = String(columnId);
       state.projectId = projectId ?? state.projectId;
       state.items = (state.items || []).map((c) => {
-        if (String(c.id) !== String(columnId)) return c;
+        if (String(c.id) !== key) return c;
         const nextTasks = Array.isArray(c.tasks) ? [...c.tasks] : [];
         nextTasks.push(task);
-        return {...c, tasks: nextTasks};
+        const currentCount = normalizePositiveInt(
+          c.tasks_count ?? c.tasksCount ?? c.task_count ?? c.taskCount,
+          nextTasks.length - 1,
+        );
+        return {...c, tasks: nextTasks, tasks_count: currentCount + 1};
       });
+      const currentMeta = state.taskPaginationByColumnId?.[key];
+      if (currentMeta) {
+        const total = normalizePositiveInt(currentMeta.total, 0) + 1;
+        state.taskPaginationByColumnId[key] = {
+          ...currentMeta,
+          total,
+          lastPage: Math.max(
+            currentMeta.lastPage,
+            Math.ceil(total / currentMeta.perPage),
+          ),
+          hasMore: currentMeta.currentPage < Math.ceil(total / currentMeta.perPage),
+        };
+      }
     });
 
     builder.addCase(getColumnTasksThunk.pending, (state, action) => {
@@ -653,12 +768,13 @@ const projectColumnsSlice = createSlice({
       delete state.tasksErrorByColumnId[key];
     });
     builder.addCase(getColumnTasksThunk.fulfilled, (state, action) => {
-      const {projectId, columnId, tasks} = action.payload || {};
+      const {projectId, columnId, tasks, meta, append} = action.payload || {};
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
       delete state.tasksLoadingByColumnId[key];
       delete state.tasksErrorByColumnId[key];
+      state.taskPaginationByColumnId[key] = meta;
 
       const sorted = Array.isArray(tasks)
         ? [...tasks].sort((a, b) => (a?.position ?? 0) - (b?.position ?? 0))
@@ -666,17 +782,24 @@ const projectColumnsSlice = createSlice({
 
       state.items = (state.items || []).map((c) => {
         if (String(c?.id) !== key) return c;
-        return {...c, tasks: sorted};
+        const nextTasks = append ? mergeUniqueTasks(c.tasks, sorted) : sorted;
+        return {
+          ...c,
+          tasks: nextTasks,
+          tasks_count: meta?.total ?? c?.tasks_count ?? nextTasks.length,
+        };
       });
     });
     builder.addCase(getColumnTasksThunk.rejected, (state, action) => {
-      const {projectId, columnId} = action.meta?.arg ?? {};
+      const {projectId, columnId, page = 1} = action.meta?.arg ?? {};
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
       delete state.tasksLoadingByColumnId[key];
       state.tasksErrorByColumnId[key] =
         action.payload || {message: "Somthing went wrong"};
+
+      if (normalizePositiveInt(page, 1) > 1) return;
 
       state.items = (state.items || []).map((c) => {
         if (String(c?.id) !== key) return c;
@@ -708,13 +831,35 @@ const projectColumnsSlice = createSlice({
         if (String(column?.id) !== key) return column;
         if (!Array.isArray(column.tasks) || archivedTaskIds.size === 0) return column;
 
+        const nextTasks = column.tasks.filter(
+          (task) => !archivedTaskIds.has(String(task?.id)),
+        );
+        const currentCount = normalizePositiveInt(
+          column.tasks_count ??
+            column.tasksCount ??
+            column.task_count ??
+            column.taskCount,
+          column.tasks.length,
+        );
+
         return {
           ...column,
-          tasks: column.tasks.filter(
-            (task) => !archivedTaskIds.has(String(task?.id)),
-          ),
+          tasks: nextTasks,
+          tasks_count: Math.max(0, currentCount - archivedTaskIds.size),
         };
       });
+
+      const currentMeta = state.taskPaginationByColumnId?.[key];
+      if (currentMeta && archivedTaskIds.size > 0) {
+        const total = Math.max(0, normalizePositiveInt(currentMeta.total, 0) - archivedTaskIds.size);
+        const lastPage = Math.max(1, Math.ceil(total / currentMeta.perPage));
+        state.taskPaginationByColumnId[key] = {
+          ...currentMeta,
+          total,
+          lastPage,
+          hasMore: currentMeta.currentPage < lastPage,
+        };
+      }
     });
 
     builder.addCase(archiveCompletedColumnTasksThunk.rejected, (state, action) => {

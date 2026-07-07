@@ -206,6 +206,7 @@ const ProjectColumnModal = ({
 
         <ModalFooter>
           <Button
+            className="project-board-modal-cancel-btn"
             color="secondary"
             type="button"
             onClick={onClose}
@@ -317,7 +318,12 @@ const ProjectColumnModal = ({
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button type="button" color="secondary" onClick={() => setPickerOpen(false)}>
+          <Button
+            className="project-board-modal-cancel-btn"
+            type="button"
+            color="secondary"
+            onClick={() => setPickerOpen(false)}
+          >
             Close
           </Button>
         </ModalFooter>

@@ -8,7 +8,10 @@ import {
   getDeletedTasksThunk,
   restoreDeletedTaskThunk,
 } from "../../../../store/projects/projectDeletedTasksSlice";
-import { getColumnTasksThunk } from "../../../../store/projects/projectColumnsSlice";
+import {
+  getColumnTasksThunk,
+  PROJECT_COLUMN_TASK_PAGE_SIZE,
+} from "../../../../store/projects/projectColumnsSlice";
 import { toastError, toastSuccess } from "../../../../utils/sweetAlert";
 import { Button } from "reactstrap";
 import { getTaskDetailThunk } from "../../../../store/tasks/taskDetailSlice";
@@ -44,7 +47,13 @@ const ProjectTaskManager = ({ type, projectId, title, onRestored }) => {
       try {
         await dispatch(restoreArchivedTasks({ projectId, columnId, taskId })).unwrap();
         await dispatch(
-          getColumnTasksThunk({ projectId, columnId, force: true }),
+          getColumnTasksThunk({
+            projectId,
+            columnId,
+            page: 1,
+            perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
+            force: true,
+          }),
         ).unwrap();
         onRestored?.({ taskId, columnId });
         toastSuccess("Task restored");
@@ -57,7 +66,13 @@ const ProjectTaskManager = ({ type, projectId, title, onRestored }) => {
       try {
         await dispatch(restoreDeletedTaskThunk({ projectId, columnId, taskId })).unwrap();
         await dispatch(
-          getColumnTasksThunk({ projectId, columnId, force: true }),
+          getColumnTasksThunk({
+            projectId,
+            columnId,
+            page: 1,
+            perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
+            force: true,
+          }),
         ).unwrap();
         onRestored?.({ taskId, columnId });
         toastSuccess("Task restored");

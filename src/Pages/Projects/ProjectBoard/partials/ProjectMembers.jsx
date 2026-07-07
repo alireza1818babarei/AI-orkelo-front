@@ -317,7 +317,12 @@ const ProjectMembers = ({
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button color='light' onClick={closeRoleModal} disabled={roleModalUpdating}>
+          <Button
+            className='project-board-modal-cancel-btn'
+            color='light'
+            onClick={closeRoleModal}
+            disabled={roleModalUpdating}
+          >
             Cancel
           </Button>
           <Button

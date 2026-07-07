@@ -23,6 +23,7 @@ import ActionDropdown from "../ActionDropdown";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getColumnTasksThunk,
+  PROJECT_COLUMN_TASK_PAGE_SIZE,
   updateTaskInColumn,
 } from "../../store/projects/projectColumnsSlice";
 import {
@@ -483,6 +484,8 @@ const TaskDetailModal = ({
       getColumnTasksThunk({
         projectId: effectiveProjectId,
         columnId: columnIdForStore,
+        page: 1,
+        perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
         force: true,
       }),
     );
@@ -761,6 +764,8 @@ const TaskDetailModal = ({
         getColumnTasksThunk({
           projectId: effectiveProjectId,
           columnId: columnIdForStore,
+          page: 1,
+          perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
           force: true,
         }),
       );

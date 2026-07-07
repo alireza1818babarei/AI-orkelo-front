@@ -134,6 +134,7 @@ const ProjectAddMemberModal = ({
                   </div>
                   <div className="project-add-member-row__action">
                     <Button
+                      className="project-add-member-row__action-btn"
                       type="button"
                       size="sm"
                       color={isAdded ? "secondary" : "primary"}
@@ -154,7 +155,12 @@ const ProjectAddMemberModal = ({
         ) : null}
       </ModalBody>
       <ModalFooter>
-        <Button color="secondary" type="button" onClick={onClose}>
+        <Button
+          className="project-board-modal-cancel-btn"
+          color="secondary"
+          type="button"
+          onClick={onClose}
+        >
           Close
         </Button>
       </ModalFooter>

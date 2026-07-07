@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Container } from "reactstrap";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -21,6 +21,7 @@ import {
   removeTaskFromColumn,
   updateProjectColumnThunk,
   archiveCompletedColumnTasksThunk,
+  PROJECT_COLUMN_TASK_PAGE_SIZE,
 } from "../../../store/projects/projectColumnsSlice";
 import {
   TODO_BOARD_TYPE,
@@ -170,6 +171,7 @@ const ProjectBoard = () => {
     status: columnsStatus,
     projectId: columnsProjectId,
     tasksLoadingByColumnId,
+    taskPaginationByColumnId,
     archivingCompletedByColumnId,
   } = useSelector((s) => s.projectColumns);
   const {
@@ -443,7 +445,13 @@ const ProjectBoard = () => {
     const shouldForce = String(tasksForcedProjectRef.current) !== String(id);
     ids.forEach((columnId) => {
       dispatch(
-        getColumnTasksThunk({ projectId: id, columnId, force: shouldForce }),
+        getColumnTasksThunk({
+          projectId: id,
+          columnId,
+          page: 1,
+          perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
+          force: shouldForce,
+        }),
       );
     });
     if (shouldForce) tasksForcedProjectRef.current = String(id);
@@ -477,14 +485,35 @@ const ProjectBoard = () => {
     columnsProjectId != null &&
     id != null &&
     String(columnsProjectId) === String(id);
-  const tasksPending =
-    tasksLoadingByColumnId && Object.keys(tasksLoadingByColumnId).length > 0;
   const tasksNeedLoad =
     columnsReadyForActiveProject
       ? (projectColumns || []).some((c) => c?.tasks == null)
       : true;
   const tasksLoading =
-    !columnsReadyForActiveProject || tasksPending || tasksNeedLoad;
+    !columnsReadyForActiveProject || tasksNeedLoad;
+
+  const handleLoadMoreColumnTasks = useCallback(
+    (column) => {
+      const projectId = Number(id);
+      const columnId = Number(column?.id);
+      if (!Number.isInteger(projectId) || !Number.isInteger(columnId)) return;
+
+      const key = String(columnId);
+      const pagination = taskPaginationByColumnId?.[key];
+      if (!pagination?.hasMore || tasksLoadingByColumnId?.[key]) return;
+
+      dispatch(
+        getColumnTasksThunk({
+          projectId,
+          columnId,
+          page: Number(pagination.currentPage || 1) + 1,
+          perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
+          append: true,
+        }),
+      );
+    },
+    [dispatch, id, taskPaginationByColumnId, tasksLoadingByColumnId],
+  );
 
   const {
     handleSubmit,
@@ -751,7 +780,15 @@ const ProjectBoard = () => {
         archiveCompletedColumnTasksThunk({ projectId, columnId }),
       ).unwrap();
 
-      dispatch(getColumnTasksThunk({ projectId, columnId, force: true }));
+      dispatch(
+        getColumnTasksThunk({
+          projectId,
+          columnId,
+          page: 1,
+          perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
+          force: true,
+        }),
+      );
       dispatch(getArchivedTasks({ projectId }));
 
       const count = Number(result?.archivedCount ?? 0);
@@ -1202,6 +1239,9 @@ const ProjectBoard = () => {
                   columns={columns}
                   status={columnsStatus}
                   tasksLoading={tasksLoading}
+                  tasksLoadingByColumnId={tasksLoadingByColumnId}
+                  taskPaginationByColumnId={taskPaginationByColumnId}
+                  onLoadMoreTasks={handleLoadMoreColumnTasks}
                   onEditColumn={openEditColumnModal}
                   onDeleteColumn={handleColumnDelete}
                   onArchiveCompletedTasks={handleArchiveCompletedColumnTasks}

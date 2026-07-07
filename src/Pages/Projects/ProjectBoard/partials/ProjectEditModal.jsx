@@ -193,6 +193,7 @@ const ProjectEditModal = ({
 
         <ModalFooter>
           <Button
+            className="project-board-modal-cancel-btn"
             color="secondary"
             type="button"
             onClick={onClose}
