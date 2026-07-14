@@ -512,6 +512,13 @@ header {
 
             .message-content-box {
               margin-left: 45px;
+              min-width: 0;
+              max-width: 100%;
+
+              p {
+                overflow-wrap: anywhere;
+                word-break: break-word;
+              }
 
               a {
                 overflow: hidden;
