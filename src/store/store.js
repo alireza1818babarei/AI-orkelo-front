@@ -26,6 +26,7 @@ import projectReportsReducer from "./FileManager/Reports/projectReports.slice.js
 import fileManagementAccessReducer from "./FileManager/access/access.slice.js";
 import financialOperationsReducer from "./FileManager/operations/operations.slice.js";
 import financialCounterpartiesReducer from "./FileManager/counterparties/counterparties.slice.js";
+import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
 
 export const store = configureStore({
   reducer: {
@@ -56,5 +57,7 @@ export const store = configureStore({
     fileManagementAccess: fileManagementAccessReducer,
     financialOperations: financialOperationsReducer,
     financialCounterparties: financialCounterpartiesReducer
-  }
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(taskReorderConsistencyMiddleware),
 })
