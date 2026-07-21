@@ -423,9 +423,28 @@ const findRenderedDestinationNode = (current) => {
   };
 };
 
-const completeHandoff = (current, rendered) => {
+const fadeOverlayOut = (current) => {
+  if (!current.overlay?.isConnected) return Promise.resolve();
+  if (!current.motionDuration || typeof current.overlay.animate !== "function") {
+    current.overlay.remove();
+    return Promise.resolve();
+  }
+
+  return current.overlay
+    .animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: DROP_DURATION,
+      easing: "ease-out",
+      fill: "forwards",
+    })
+    .finished.catch(() => null)
+    .finally(() => current.overlay?.remove());
+};
+
+const completeHandoff = async (current, rendered) => {
   if (current.handoffComplete) return;
   current.handoffComplete = true;
+  current.observer?.disconnect();
+  if (current.handoffTimeout) window.clearTimeout(current.handoffTimeout);
 
   const node = rendered.node;
   const destinationStyle = captureInlineStyle(node);
@@ -442,9 +461,10 @@ const completeHandoff = (current, rendered) => {
     pointerEvents: "none",
   });
 
+  await (current.dropAnimationPromise || Promise.resolve());
+
   window.requestAnimationFrame(() => {
     current.placeholder?.remove();
-    current.overlay?.remove();
     restoreInlineStyle(node, destinationStyle);
 
     if (node === current.sourceLayoutNode) {
@@ -452,40 +472,42 @@ const completeHandoff = (current, rendered) => {
     }
 
     node.style.opacity = "0";
-    node.style.transform = "translate3d(0, 5px, 0) scale(0.995)";
+    node.style.transform = "translate3d(0, 4px, 0) scale(0.997)";
     node.style.transition = "none";
     node.style.visibility = "visible";
 
-    if (typeof node.animate === "function" && current.motionDuration) {
-      node
-        .animate(
-          [
-            { opacity: 0, transform: "translate3d(0, 5px, 0) scale(0.995)" },
-            { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
-          ],
-          {
-            duration: DROP_DURATION,
-            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-          },
-        )
-        .finished.catch(() => null)
-        .finally(() => restoreInlineStyle(node, destinationStyle));
-    } else {
-      restoreInlineStyle(node, destinationStyle);
-    }
+    const revealPromise =
+      typeof node.animate === "function" && current.motionDuration
+        ? node
+            .animate(
+              [
+                { opacity: 0, transform: "translate3d(0, 4px, 0) scale(0.997)" },
+                { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+              ],
+              {
+                duration: DROP_DURATION,
+                easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+              },
+            )
+            .finished.catch(() => null)
+        : Promise.resolve();
 
-    if (current.sourceLayoutNode !== node && current.sourceLayoutNode?.isConnected) {
-      current.sourceLayoutNode.style.display = "none";
-    }
+    const overlayPromise = fadeOverlayOut(current);
 
-    cleanupBase(current);
+    Promise.all([revealPromise, overlayPromise]).finally(() => {
+      if (node.isConnected) restoreInlineStyle(node, destinationStyle);
+      if (current.sourceLayoutNode !== node && current.sourceLayoutNode?.isConnected) {
+        current.sourceLayoutNode.style.display = "none";
+      }
+      cleanupBase(current);
+    });
   });
 };
 
 const waitForHandoff = (current) => {
   const tryComplete = () => {
     const rendered = findRenderedDestinationNode(current);
-    if (rendered) completeHandoff(current, rendered);
+    if (rendered) void completeHandoff(current, rendered);
   };
 
   current.observer = new MutationObserver(tryComplete);
@@ -494,7 +516,7 @@ const waitForHandoff = (current) => {
     if (current.handoffComplete) return;
     const rendered = findRenderedDestinationNode(current);
     if (rendered) {
-      completeHandoff(current, rendered);
+      void completeHandoff(current, rendered);
       return;
     }
 
@@ -541,7 +563,6 @@ const finish = async (cancelled = false) => {
   }
 
   placePlaceholder(current, destination);
-  await animateOverlayTo(current, current.placeholder.getBoundingClientRect());
 
   const accepted = current.surface.onDrop?.({
     itemId: current.itemId,
@@ -556,6 +577,10 @@ const finish = async (cancelled = false) => {
     return;
   }
 
+  current.dropAnimationPromise = animateOverlayTo(
+    current,
+    current.placeholder.getBoundingClientRect(),
+  );
   waitForHandoff(current);
   session = null;
 };
@@ -671,6 +696,7 @@ const onPointerDown = (event) => {
     scrollCandidates: [],
     scrollCandidatesAt: 0,
     scrollContainerId: "",
+    dropAnimationPromise: null,
   };
 
   window.addEventListener("pointermove", onPointerMove, { capture: true, passive: false });
