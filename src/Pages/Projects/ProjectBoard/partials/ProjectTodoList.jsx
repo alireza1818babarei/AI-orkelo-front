@@ -149,7 +149,6 @@ const TodoColumn = memo(function TodoColumn({
   onOpenTask,
   onEditColumn,
   onDeleteColumn,
-  isBoardDragging,
   columnDragHandleProps,
   isColumnDragging,
 }) {
@@ -161,8 +160,6 @@ const TodoColumn = memo(function TodoColumn({
   const columnColor = column?.color || "#0ea5e9";
   const iconClass = normalizeIconClass(column?.icon);
   const taskCount = taskIds.length || Number(column?.tasks_count ?? 0) || 0;
-  const hasVisibleTaskArea =
-    isAdding || taskIds.length || tasksLoading || isBoardDragging;
 
   const actions = useMemo(
     () => [
@@ -188,9 +185,7 @@ const TodoColumn = memo(function TodoColumn({
     <section
       className={`project-todo-list__column ${
         actionsOpen ? "is-actions-open" : ""
-      } ${isColumnDragging ? "is-column-dragging" : ""} ${
-        taskIds.length ? "" : "is-empty"
-      }`}
+      } ${isColumnDragging ? "is-column-dragging" : ""}`}
       style={{ "--project-todo-list-column-color": columnColor }}
     >
       <div className="project-todo-list__column-header">
@@ -238,82 +233,78 @@ const TodoColumn = memo(function TodoColumn({
         </div>
       </div>
 
-      {hasVisibleTaskArea ? (
-        <Droppable droppableId={`todo-col-${columnId}`} type={TODO_TASK_DND_TYPE}>
-          {(dropProvided) => (
-            <div
-              ref={dropProvided.innerRef}
-              {...dropProvided.droppableProps}
-              className={`project-todo-list__tasks app-scroll ${
-                !taskIds.length && isBoardDragging
-                  ? "project-todo-list__tasks--drop-target"
-                  : ""
-              }`}
-            >
-              {isAdding ? (
-                <div className="project-todo-list__add-row">
-                  <span className="project-todo-list__check is-input"></span>
-                  <input
-                    type="text"
-                    className="project-todo-list__input"
-                    value={addTaskText}
-                    placeholder="Write a todo..."
-                    onChange={(event) => setAddTaskText(event.target.value)}
-                    onBlur={() => onSubmitAddTask?.(column)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        onSubmitAddTask?.(column);
-                      }
-                      if (event.key === "Escape") {
-                        event.preventDefault();
-                        onCancelAddTask?.();
-                      }
-                    }}
-                    autoFocus
-                  />
-                </div>
-              ) : null}
+      <Droppable droppableId={`todo-col-${columnId}`} type={TODO_TASK_DND_TYPE}>
+        {(dropProvided) => (
+          <div
+            ref={dropProvided.innerRef}
+            {...dropProvided.droppableProps}
+            className={`project-todo-list__tasks app-scroll ${
+              !taskIds.length ? "project-todo-list__tasks--drop-target" : ""
+            }`}
+          >
+            {isAdding ? (
+              <div className="project-todo-list__add-row">
+                <span className="project-todo-list__check is-input"></span>
+                <input
+                  type="text"
+                  className="project-todo-list__input"
+                  value={addTaskText}
+                  placeholder="Write a todo..."
+                  onChange={(event) => setAddTaskText(event.target.value)}
+                  onBlur={() => onSubmitAddTask?.(column)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      onSubmitAddTask?.(column);
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      onCancelAddTask?.();
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+            ) : null}
 
-              {tasksLoading && !taskIds.length ? (
-                <div className="project-todo-list__state">
-                  <iconify-icon icon="line-md:loading-loop" />
-                </div>
-              ) : (
-                taskIds.map((taskId, index) => {
-                  const task = tasksById?.[String(taskId)];
-                  if (!task) return null;
+            {tasksLoading && !taskIds.length ? (
+              <div className="project-todo-list__state">
+                <iconify-icon icon="line-md:loading-loop" />
+              </div>
+            ) : (
+              taskIds.map((taskId, index) => {
+                const task = tasksById?.[String(taskId)];
+                if (!task) return null;
 
-                  return (
-                    <Draggable
-                      key={String(taskId)}
-                      draggableId={`todo-task-${taskId}`}
-                      index={index}
-                    >
-                      {(dragProvided, dragSnapshot) => (
-                        <TodoTaskRow
-                          task={task}
-                          columnId={column?.id}
-                          completing={Boolean(
-                            completingByTaskId?.[String(task?.id)],
-                          )}
-                          onToggleTask={onToggleTask}
-                          onOpenTask={onOpenTask}
-                          innerRef={dragProvided.innerRef}
-                          draggableProps={dragProvided.draggableProps}
-                          dragHandleProps={dragProvided.dragHandleProps}
-                          isDragging={dragSnapshot.isDragging}
-                        />
-                      )}
-                    </Draggable>
-                  );
-                })
-              )}
-              {dropProvided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      ) : null}
+                return (
+                  <Draggable
+                    key={String(taskId)}
+                    draggableId={`todo-task-${taskId}`}
+                    index={index}
+                  >
+                    {(dragProvided, dragSnapshot) => (
+                      <TodoTaskRow
+                        task={task}
+                        columnId={column?.id}
+                        completing={Boolean(
+                          completingByTaskId?.[String(task?.id)],
+                        )}
+                        onToggleTask={onToggleTask}
+                        onOpenTask={onOpenTask}
+                        innerRef={dragProvided.innerRef}
+                        draggableProps={dragProvided.draggableProps}
+                        dragHandleProps={dragProvided.dragHandleProps}
+                        isDragging={dragSnapshot.isDragging}
+                      />
+                    )}
+                  </Draggable>
+                );
+              })
+            )}
+            {dropProvided.placeholder}
+          </div>
+        )}
+      </Droppable>
     </section>
   );
 });
@@ -334,7 +325,6 @@ const ProjectTodoList = ({
   const [board, setBoard] = useState(() => normalizeTodoBoard(columns));
   const snapshotRef = useRef(null);
   const isDraggingRef = useRef(false);
-  const [isBoardDragging, setIsBoardDragging] = useState(false);
   const [addingColumnId, setAddingColumnId] = useState(null);
   const [addTaskText, setAddTaskText] = useState("");
 
@@ -365,9 +355,8 @@ const ProjectTodoList = ({
     cancelAddTask();
   };
 
-  const onDragStart = (start) => {
+  const onDragStart = () => {
     isDraggingRef.current = true;
-    setIsBoardDragging(start?.type === TODO_TASK_DND_TYPE);
     snapshotRef.current = {
       columns: (board.columns || []).map((column) => ({
         ...column,
@@ -379,7 +368,6 @@ const ProjectTodoList = ({
 
   const onDragEnd = (result) => {
     isDraggingRef.current = false;
-    setIsBoardDragging(false);
     const { destination, draggableId, source } = result || {};
     const baseBoard = snapshotRef.current || board;
 
@@ -584,7 +572,9 @@ const ProjectTodoList = ({
                     <TodoColumn
                       column={column}
                       tasksById={board.tasksById}
-                      tasksLoading={Boolean(tasksLoadingByColumnId?.[String(column?.id)])}
+                      tasksLoading={Boolean(
+                        tasksLoadingByColumnId?.[String(column?.id)],
+                      )}
                       completingByTaskId={completingByTaskId}
                       addingColumnId={addingColumnId}
                       addTaskText={addTaskText}
@@ -596,7 +586,6 @@ const ProjectTodoList = ({
                       onOpenTask={onOpenTask}
                       onEditColumn={onEditColumn}
                       onDeleteColumn={onDeleteColumn}
-                      isBoardDragging={isBoardDragging}
                       columnDragHandleProps={dragProvided.dragHandleProps}
                       isColumnDragging={dragSnapshot.isDragging}
                     />
