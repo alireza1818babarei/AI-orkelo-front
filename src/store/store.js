@@ -28,6 +28,7 @@ import financialOperationsReducer from "./FileManager/operations/operations.slic
 import financialCounterpartiesReducer from "./FileManager/counterparties/counterparties.slice.js";
 import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
 import installTaskManagerPointerDrag from "../utils/taskManagerPointerDrag";
+import installTaskManagerDropHandoff from "../utils/taskManagerDropHandoff";
 
 export const store = configureStore({
   reducer: {
@@ -64,3 +65,4 @@ export const store = configureStore({
 });
 
 installTaskManagerPointerDrag(store);
+installTaskManagerDropHandoff();
