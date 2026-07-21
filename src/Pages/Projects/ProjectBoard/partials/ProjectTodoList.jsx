@@ -57,15 +57,25 @@ const normalizeTodoBoard = (columns = []) => {
   return { columns: nextColumns, tasksById };
 };
 
-const canDropInTodoGroup = (task, destinationTaskIds, destinationIndex, tasksById) => {
-  const draggedCompleted = isTodoTaskCompleted(task);
-  const activeCount = (destinationTaskIds || []).filter(
+const getTodoDestinationIndex = (
+  task,
+  destinationTaskIds,
+  destinationIndex,
+  tasksById,
+) => {
+  const taskIds = Array.isArray(destinationTaskIds) ? destinationTaskIds : [];
+  const maxIndex = taskIds.length;
+  const requestedIndex = Number.isInteger(destinationIndex)
+    ? destinationIndex
+    : maxIndex;
+  const boundedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
+  const activeCount = taskIds.filter(
     (id) => !isTodoTaskCompleted(tasksById?.[String(id)]),
   ).length;
 
-  return draggedCompleted
-    ? destinationIndex >= activeCount
-    : destinationIndex <= activeCount;
+  return isTodoTaskCompleted(task)
+    ? Math.max(boundedIndex, activeCount)
+    : Math.min(boundedIndex, activeCount);
 };
 
 const normalizeIconClass = (raw) => {
@@ -479,21 +489,14 @@ const ProjectTodoList = ({
       sourceColumnIndex === destinationColumnIndex
         ? sourceTaskIds
         : nextColumns[destinationColumnIndex].taskIds;
+    const nextDestinationIndex = getTodoDestinationIndex(
+      draggedTask,
+      destinationTaskIds,
+      destination.index,
+      nextTasksById,
+    );
 
-    if (
-      !canDropInTodoGroup(
-        draggedTask,
-        destinationTaskIds,
-        destination.index,
-        nextTasksById,
-      )
-    ) {
-      setBoard(baseBoard);
-      snapshotRef.current = null;
-      return;
-    }
-
-    destinationTaskIds.splice(destination.index, 0, taskId);
+    destinationTaskIds.splice(nextDestinationIndex, 0, taskId);
 
     nextTasksById[String(taskId)] = {
       ...draggedTask,
