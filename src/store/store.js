@@ -27,6 +27,7 @@ import fileManagementAccessReducer from "./FileManager/access/access.slice.js";
 import financialOperationsReducer from "./FileManager/operations/operations.slice.js";
 import financialCounterpartiesReducer from "./FileManager/counterparties/counterparties.slice.js";
 import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
+import installTaskManagerPointerDrag from "../utils/taskManagerPointerDrag";
 
 export const store = configureStore({
   reducer: {
@@ -60,4 +61,6 @@ export const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(taskReorderConsistencyMiddleware),
-})
+});
+
+installTaskManagerPointerDrag(store);
