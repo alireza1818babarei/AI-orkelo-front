@@ -33,7 +33,7 @@ const isScrollableOnAxis = (element, axis) => {
 const collectScrollableAncestors = (node, candidates, seen) => {
   if (typeof document === "undefined" || !node) return;
 
-  let current = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+  let current = node.nodeType === 1 ? node : node.parentElement;
 
   while (current && current !== document.body) {
     if (
@@ -58,6 +58,16 @@ const collectScrollableAncestors = (node, candidates, seen) => {
   }
 };
 
+const getElementDepth = (element) => {
+  let depth = 0;
+  let current = element;
+  while (current?.parentElement) {
+    depth += 1;
+    current = current.parentElement;
+  }
+  return depth;
+};
+
 const getScrollCandidates = (point, rootNode) => {
   if (typeof document === "undefined") return [];
 
@@ -72,7 +82,14 @@ const getScrollCandidates = (point, rootNode) => {
   });
   collectScrollableAncestors(rootNode, candidates, seen);
 
-  return candidates;
+  return candidates.sort((a, b) => {
+    const depthDifference = getElementDepth(b) - getElementDepth(a);
+    if (depthDifference !== 0) return depthDifference;
+
+    const aRect = a.getBoundingClientRect();
+    const bRect = b.getBoundingClientRect();
+    return aRect.width * aRect.height - bRect.width * bRect.height;
+  });
 };
 
 const getEdgeScrollSpeed = (
@@ -86,18 +103,23 @@ const getEdgeScrollSpeed = (
     return 0;
   }
 
+  const size = Math.max(end - start, 0);
+  const effectiveThreshold = Math.min(
+    threshold,
+    Math.max(24, size / 3),
+  );
   const startDistance = coordinate - start;
   const endDistance = end - coordinate;
-  const nearStart = startDistance < threshold;
-  const nearEnd = endDistance < threshold;
+  const nearStart = startDistance < effectiveThreshold;
+  const nearEnd = endDistance < effectiveThreshold;
 
   if (!nearStart && !nearEnd) return 0;
 
   const startRatio = nearStart
-    ? (threshold - Math.max(startDistance, 0)) / threshold
+    ? (effectiveThreshold - Math.max(startDistance, 0)) / effectiveThreshold
     : 0;
   const endRatio = nearEnd
-    ? (threshold - Math.max(endDistance, 0)) / threshold
+    ? (effectiveThreshold - Math.max(endDistance, 0)) / effectiveThreshold
     : 0;
 
   if (startRatio >= endRatio) {
