@@ -2,8 +2,8 @@ const ACTIVE_CLASS = "pointer-list-drag-active";
 const PLACEHOLDER_SELECTOR = ".pointer-list-drag-placeholder";
 const INTERACTIVE_SELECTOR =
   "button, a, input, textarea, select, [contenteditable='true']";
-const HEIGHT_DURATION_MS = 190;
-const RELEASE_SETTLE_MS = 720;
+const HEIGHT_DURATION_MS = 210;
+const RELEASE_FALLBACK_MS = 900;
 
 const SURFACES = [
   {
@@ -17,15 +17,6 @@ const SURFACES = [
     shellSelector: "[data-todo-column-shell-id]",
   },
 ];
-
-const captureInlineStyle = (element) =>
-  element?.getAttribute?.("style") ?? null;
-
-const restoreInlineStyle = (element, value) => {
-  if (!element) return;
-  if (value == null) element.removeAttribute("style");
-  else element.setAttribute("style", value);
-};
 
 const findSurface = (target) => {
   for (const surface of SURFACES) {
@@ -48,6 +39,19 @@ const mutationTouchesPlaceholder = (mutation) => {
   );
 };
 
+const captureManagedStyle = (element) => ({
+  height: element.style.height,
+  overflow: element.style.overflow,
+  willChange: element.style.willChange,
+});
+
+const restoreManagedStyle = (element, style) => {
+  if (!element || !style) return;
+  element.style.height = style.height;
+  element.style.overflow = style.overflow;
+  element.style.willChange = style.willChange;
+};
+
 export const installPointerListColumnHeightMotion = () => {
   if (
     typeof window === "undefined" ||
@@ -62,56 +66,68 @@ export const installPointerListColumnHeightMotion = () => {
   let drag = null;
   const runningAnimations = new WeakMap();
 
-  const ensureOriginalStyle = (shell) => {
-    if (!drag?.originalStyles.has(shell)) {
-      drag?.originalStyles.set(shell, captureInlineStyle(shell));
+  const getShells = () =>
+    drag?.root?.isConnected
+      ? [...drag.root.querySelectorAll(drag.surface.shellSelector)]
+      : [];
+
+  const ensureBaseStyle = (shell) => {
+    if (!drag?.baseStyles.has(shell)) {
+      drag?.baseStyles.set(shell, captureManagedStyle(shell));
     }
-    return drag?.originalStyles.get(shell) ?? null;
+    return drag?.baseStyles.get(shell);
   };
 
-  const releaseAnimation = (shell) => {
+  const cancelAnimation = (shell) => {
     const record = runningAnimations.get(shell);
-    const visualHeight = shell?.getBoundingClientRect?.().height;
+    if (!record) return null;
 
-    if (record) {
-      record.animation.cancel();
-      runningAnimations.delete(shell);
-    }
+    const visualHeight = shell.getBoundingClientRect().height;
+    record.animation.cancel();
+    runningAnimations.delete(shell);
+    restoreManagedStyle(shell, ensureBaseStyle(shell));
 
-    restoreInlineStyle(shell, ensureOriginalStyle(shell));
     return visualHeight;
   };
 
-  const animateShellToNaturalHeight = (shell) => {
+  const animateShell = (shell) => {
     if (!drag || !shell?.isConnected || !drag.root.contains(shell)) return;
+
+    const runningHeight = cancelAnimation(shell);
+    const previousHeight =
+      runningHeight ??
+      drag.heights.get(shell) ??
+      shell.getBoundingClientRect().height;
+
+    // Removing our temporary height exposes the new natural layout after the
+    // placeholder has entered or left this column.
+    restoreManagedStyle(shell, ensureBaseStyle(shell));
+    const targetHeight = shell.getBoundingClientRect().height;
+    drag.heights.set(shell, targetHeight);
 
     const reducedMotion = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
     )?.matches;
 
-    const fromHeight = releaseAnimation(shell);
-    const naturalHeight = shell.getBoundingClientRect().height;
-
     if (
       reducedMotion ||
       typeof shell.animate !== "function" ||
-      !Number.isFinite(fromHeight) ||
-      !Number.isFinite(naturalHeight) ||
-      Math.abs(naturalHeight - fromHeight) < 1
+      !Number.isFinite(previousHeight) ||
+      !Number.isFinite(targetHeight) ||
+      Math.abs(targetHeight - previousHeight) < 1
     ) {
-      restoreInlineStyle(shell, ensureOriginalStyle(shell));
       return;
     }
 
-    shell.style.height = `${fromHeight}px`;
+    shell.style.height = `${previousHeight}px`;
     shell.style.overflow = "clip";
     shell.style.willChange = "height";
     void shell.offsetHeight;
 
     const animation = shell.animate(
       [
-        { height: `${fromHeight}px` },
-        { height: `${naturalHeight}px` },
+        { height: `${previousHeight}px` },
+        { height: `${targetHeight}px` },
       ],
       {
         duration: HEIGHT_DURATION_MS,
@@ -128,43 +144,36 @@ export const installPointerListColumnHeightMotion = () => {
       .finally(() => {
         if (runningAnimations.get(shell) !== record) return;
         runningAnimations.delete(shell);
-        restoreInlineStyle(shell, ensureOriginalStyle(shell));
+        restoreManagedStyle(shell, ensureBaseStyle(shell));
+        if (drag?.root?.contains(shell)) {
+          drag.heights.set(shell, shell.getBoundingClientRect().height);
+        }
       });
   };
 
-  const animateAllShells = () => {
-    if (!drag?.root?.isConnected) return;
-
-    drag.root
-      .querySelectorAll(drag.surface.shellSelector)
-      .forEach((shell) => animateShellToNaturalHeight(shell));
+  const syncAllHeights = () => {
+    if (!drag) return;
+    getShells().forEach(animateShell);
   };
 
-  const scheduleHeightSync = () => {
-    if (!drag || drag.syncFrameId) return;
-
-    drag.syncFrameId = window.requestAnimationFrame(() => {
-      if (!drag) return;
-      drag.syncFrameId = null;
-      animateAllShells();
-    });
+  const scheduleStop = (delay = HEIGHT_DURATION_MS + 90) => {
+    if (!drag) return;
+    if (drag.stopTimerId) window.clearTimeout(drag.stopTimerId);
+    drag.stopTimerId = window.setTimeout(stop, delay);
   };
 
   const stop = () => {
     if (!drag) return;
 
-    if (drag.syncFrameId) window.cancelAnimationFrame(drag.syncFrameId);
-    if (drag.releaseTimerId) window.clearTimeout(drag.releaseTimerId);
+    if (drag.stopTimerId) window.clearTimeout(drag.stopTimerId);
     drag.observer?.disconnect();
 
-    drag.root
-      ?.querySelectorAll?.(drag.surface.shellSelector)
-      .forEach((shell) => {
-        const record = runningAnimations.get(shell);
-        record?.animation?.cancel?.();
-        runningAnimations.delete(shell);
-        restoreInlineStyle(shell, ensureOriginalStyle(shell));
-      });
+    getShells().forEach((shell) => {
+      const record = runningAnimations.get(shell);
+      record?.animation?.cancel?.();
+      runningAnimations.delete(shell);
+      restoreManagedStyle(shell, ensureBaseStyle(shell));
+    });
 
     drag = null;
   };
@@ -183,24 +192,30 @@ export const installPointerListColumnHeightMotion = () => {
         pointerId: event.pointerId,
         surface: match.surface,
         root: match.root,
-        originalStyles: new WeakMap(),
+        heights: new Map(),
+        baseStyles: new WeakMap(),
         observer: null,
-        syncFrameId: null,
-        releaseTimerId: null,
+        released: false,
+        stopTimerId: null,
       };
 
-      drag.root
-        .querySelectorAll(drag.surface.shellSelector)
-        .forEach((shell) => ensureOriginalStyle(shell));
+      getShells().forEach((shell) => {
+        ensureBaseStyle(shell);
+        drag.heights.set(shell, shell.getBoundingClientRect().height);
+      });
 
       drag.observer = new MutationObserver((mutations) => {
-        if (!drag) return;
-        if (!mutations.some(mutationTouchesPlaceholder)) return;
+        if (!drag || !mutations.some(mutationTouchesPlaceholder)) return;
 
-        // A placeholder move changes both the previous and next columns. Sync
-        // every shell from its current visual height to its new natural height
-        // so the previous column always collapses while the next one expands.
-        scheduleHeightSync();
+        // MutationObserver runs after the placeholder DOM mutation but before
+        // the next paint. Cached heights are therefore the previous layout,
+        // while the fresh measurements are the new layout. Animating all shells
+        // makes the old column collapse and the new column expand together.
+        syncAllHeights();
+
+        if (drag.released) {
+          scheduleStop();
+        }
       });
 
       drag.observer.observe(drag.root, {
@@ -215,12 +230,8 @@ export const installPointerListColumnHeightMotion = () => {
     "pointerup",
     (event) => {
       if (drag?.pointerId !== event.pointerId) return;
-
-      scheduleHeightSync();
-      drag.releaseTimerId = window.setTimeout(() => {
-        scheduleHeightSync();
-        window.requestAnimationFrame(stop);
-      }, RELEASE_SETTLE_MS);
+      drag.released = true;
+      scheduleStop(RELEASE_FALLBACK_MS);
     },
     true,
   );
@@ -234,10 +245,12 @@ export const installPointerListColumnHeightMotion = () => {
   );
 
   const activeClassObserver = new MutationObserver(() => {
-    if (!drag) return;
+    if (!drag || !drag.released) return;
     if (document.documentElement.classList.contains(ACTIVE_CLASS)) return;
 
-    scheduleHeightSync();
+    // The pointer engine has completed its handoff. Keep the observer alive for
+    // the placeholder removal mutation, then clean up after the height motion.
+    scheduleStop();
   });
 
   activeClassObserver.observe(document.documentElement, {
