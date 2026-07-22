@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
 const getInitials = (name) => {
@@ -56,9 +56,19 @@ function MenuItem(props) {
     return walk(links || []);
   }, [links, isActive]);
 
-  const dropdownOpen = type === "dropdown" && hasActiveInTree;
+  const [dropdownOpen, setDropdownOpen] = useState(
+    () => type === "dropdown" && hasActiveInTree,
+  );
+
   const compactProjectList =
     isSidebarCompact && type === "dropdown" && collapseId === "projects-collapse";
+  const effectiveDropdownOpen = dropdownOpen || compactProjectList;
+
+  useEffect(() => {
+    if (type === "dropdown" && hasActiveInTree) {
+      setDropdownOpen(true);
+    }
+  }, [hasActiveInTree, type]);
 
   if (type !== "dropdown") {
     return (
@@ -71,6 +81,12 @@ function MenuItem(props) {
     );
   }
 
+  const toggleDropdown = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDropdownOpen((current) => !current);
+  };
+
   return (
     <Fragment>
       {title && (
@@ -80,14 +96,14 @@ function MenuItem(props) {
       )}
 
       <li
-        className={`${dropdownOpen ? "active" : ""} ${
+        className={`${effectiveDropdownOpen ? "active" : ""} ${
           compactProjectList ? "sidebar-dropdown--compact-projects" : ""
         }`}
       >
         <Link
-          to={collapseId ? `#${collapseId}` : "#"}
-          data-bs-toggle="collapse"
-          aria-expanded={dropdownOpen || compactProjectList}
+          to="#"
+          onClick={toggleDropdown}
+          aria-expanded={effectiveDropdownOpen}
           aria-controls={collapseId}
           className="d-flex align-items-center justify-content-between"
         >
@@ -105,7 +121,7 @@ function MenuItem(props) {
 
         {links && (
           <ul
-            className={`collapse ${dropdownOpen || compactProjectList ? "show" : ""} ${
+            className={`collapse ${effectiveDropdownOpen ? "show" : ""} ${
               compactProjectList ? "sidebar-submenu--compact-projects" : ""
             }`}
             id={collapseId}
