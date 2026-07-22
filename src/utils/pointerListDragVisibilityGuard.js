@@ -1,6 +1,7 @@
 const POINTER_DRAG_ACTIVE_CLASS = "pointer-list-drag-active";
 const INTERACTIVE_SELECTOR =
   "button, a, input, textarea, select, [contenteditable='true']";
+const PLACEHOLDER_SELECTOR = ".pointer-list-drag-placeholder";
 const RESTORE_TIMEOUT_MS = 1200;
 
 const SURFACES = [
@@ -104,14 +105,36 @@ const restoreVisibleDisplay = (record) => {
   return window.getComputedStyle(layoutNode).display !== "none";
 };
 
+const prepositionSameColumnNode = (record, destination) => {
+  const placeholder = destination?.querySelector?.(PLACEHOLDER_SELECTOR);
+  const layoutNode = findCurrentLayoutNode(record);
+
+  if (
+    !placeholder ||
+    !layoutNode ||
+    placeholder.parentElement !== destination ||
+    layoutNode === placeholder
+  ) {
+    return;
+  }
+
+  // The pointer engine has already positioned the placeholder at the final
+  // visual index. Move the hidden real node beside it before Redux renders.
+  // React then reconciles an already-correct DOM order instead of moving every
+  // sibling again, which removes the same-column release flicker.
+  destination.insertBefore(layoutNode, placeholder);
+};
+
 /**
  * The shared pointer engine temporarily hides the original layout node while
  * its overlay is moving. In a same-column reorder React can reuse that exact
  * node. The handoff snapshot may therefore contain display:none and restore it
  * after the animation, leaving a valid task invisible until a page refresh.
  *
- * This guard runs only for same-column drops and restores the node's original
- * display value immediately after the central drag engine finishes cleanup.
+ * For same-column drops this guard also moves the hidden real node to the
+ * placeholder position before the optimistic Redux update runs. That keeps the
+ * DOM order and the next React state identical, so sibling cards do not jump a
+ * second time when the state is committed.
  */
 export const installPointerListDragVisibilityGuard = () => {
   if (
@@ -225,6 +248,8 @@ export const installPointerListDragVisibilityGuard = () => {
       );
 
       if (destinationContainerId !== record.sourceContainerId) return;
+
+      prepositionSameColumnNode(record, destination);
       finishWhenEngineIsIdle(record);
     },
     true,
