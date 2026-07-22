@@ -207,6 +207,28 @@ body .home-list__meta {
   body .app-wrapper .semi-nav:not(:hover) .app-nav .main-nav > li.sidebar-dropdown--compact-actions > ul.sidebar-submenu--compact-actions .sidebar-project-name {
     display: none !important;
   }
+
+  body .app-wrapper .semi-nav:hover .app-nav .main-nav > li.sidebar-dropdown--compact-actions.is-open > ul.sidebar-submenu--compact-actions {
+    display: block !important;
+    height: auto !important;
+    max-height: 420px !important;
+    margin-top: 8px;
+    opacity: 1 !important;
+    overflow: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  body .app-wrapper .semi-nav:hover .app-nav .main-nav > li.sidebar-dropdown--compact-actions.is-open > ul.sidebar-submenu--compact-actions li.sidebar-icon-submenu-item,
+  body .app-wrapper .semi-nav:hover .app-nav .main-nav > li.sidebar-dropdown--compact-actions.is-open > ul.sidebar-submenu--compact-actions li.sidebar-icon-submenu-item > a,
+  body .app-wrapper .semi-nav:hover .app-nav .main-nav > li.sidebar-dropdown--compact-actions.is-open > ul.sidebar-submenu--compact-actions .sidebar-project-name {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  body .app-wrapper .semi-nav:hover .app-nav .main-nav > li.sidebar-dropdown--compact-actions.is-open > ul.sidebar-submenu--compact-actions .sidebar-project-name {
+    display: block !important;
+  }
 }
 
 @media (max-width: 480px) {
