@@ -27,6 +27,7 @@ import fileManagementAccessReducer from "./FileManager/access/access.slice.js";
 import financialOperationsReducer from "./FileManager/operations/operations.slice.js";
 import financialCounterpartiesReducer from "./FileManager/counterparties/counterparties.slice.js";
 import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
+import "../styles/todoListDragOverrides.css";
 import installPointerListHorizontalAutoScroll from "../utils/pointerListHorizontalAutoScroll";
 import installTodoListVerticalOutsideAutoScroll from "../utils/todoListVerticalOutsideAutoScroll";
 import installTaskManagerPointerDrag from "../utils/taskManagerPointerDrag";
