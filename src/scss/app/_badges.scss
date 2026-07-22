@@ -33,13 +33,13 @@
 
     .text-light-#{$name} {
       background-color: rgba(#{$color},0.10) ;
-      color: rgba(#{$color},1) ;
+       color: rgb(161, 161, 161) ;
       border-color: transparent;
       transition: var(--app-transition);
       &:hover,&.active ,&.show,&:checked,&:focus {
         background-color: rgba(#{$color},0.20) ;
         border-color: rgba(#{$color}, 1) ;
-        color: rgba(#{$color},1) ;
+         color: rgb(127, 127, 127) ;
         transition: var(--app-transition);
       }
     }
