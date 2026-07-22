@@ -1,0 +1,159 @@
+* [33m42495e00[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31mai/main[m[33m, [m[1;31mai/HEAD[m[33m)[m revert(sidebar): restore behavior before hover removal
+* [33m2633543d[m fix(sidebar): remove hover expansion behavior
+* [33m1c5fb48b[m fix(sidebar): normalize compact submenu icon sizing
+* [33ma76c0048[m fix(sidebar): preserve open submenu while hovering
+* [33mc4df0ae5[m fix(sidebar): smooth compact submenu transitions
+* [33m2b4e2180[m style(sidebar): animate compact workspace submenus
+* [33m3d4ab3fb[m feat(sidebar): add compact workspace menu toggles
+* [33m4c1b57e3[m revert(sidebar): remove mobile dropdown state changes
+* [33mf034788f[m fix(sidebar): make mobile dropdown menus interactive
+* [33m594856a8[m fix(header): keep company menu above mobile sidebar
+* [33m27a879e2[m fix(home): improve responsive dashboard layout
+* [33m642ce28e[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix(dnd): prevent transient column scrollbar flash
+* [33m3f8086e5[m fix font color
+*   [33m7ca41082[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[32m|[m[33m\[m  
+[32m|[m * [33m9271a15e[m feat(dnd): enable smooth temporary column resizing
+[32m|[m * [33macf5a2a5[m feat(dnd): animate transient column resizing
+* [33m|[m [33m398e8bab[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[34m|[m[33m\[m[33m|[m 
+[34m|[m * [33m7f969996[m revert(dnd): restore task placement guide
+* [35m|[m [33m0b5e461f[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[36m|[m[35m\[m[35m|[m 
+[36m|[m * [33m7e19c352[m style(dnd): hide task placement guide
+* [1;31m|[m [33m3f9e959b[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[1;32m|[m[1;31m\[m[1;31m|[m 
+[1;32m|[m * [33m0fdbad14[m revert(dnd): restore behavior before column height animation
+[1;32m|[m * [33m9a8bccbc[m revert(dnd): remove column height animation experiment
+* [1;33m|[m [33m134037fc[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[1;34m|[m[1;33m\[m[1;33m|[m 
+[1;34m|[m * [33m128e9164[m fix(dnd): preserve smooth bidirectional column resizing
+* [1;35m|[m [33md71c27a8[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[1;36m|[m[1;35m\[m[1;35m|[m 
+[1;36m|[m * [33m39a96313[m fix(dnd): restore previous column height during drag
+* [31m|[m [33m28e295c6[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[32m|[m[31m\[m[31m|[m 
+[32m|[m * [33m0f8634ca[m feat(dnd): enable smooth column height transitions
+[32m|[m * [33m8bb2a641[m feat(dnd): animate column height during task placement
+* [33m|[m [33m1065014f[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[34m|[m[33m\[m[33m|[m 
+[34m|[m * [33mca2496dc[m style(dnd): remove drop guide border globally
+* [35m|[m [33m459dbd80[m Merge branch 'main' of https://github.com/alireza1818babarei/AI-orkelo-front
+[36m|[m[35m\[m[35m|[m 
+[36m|[m * [33mc1607b81[m style(todo-list): apply borderless drop guide
+[36m|[m * [33m13f35bf5[m style(todo-list): remove drag placement border
+* [1;31m|[m [33m76cdba08[m Stop tracking build output
+[1;31m|[m[1;31m/[m  
+* [33mfab1bda7[m feat(todo-list): enable outside vertical auto scroll
+* [33m408b4e47[m feat(todo-list): continue vertical auto scroll outside board
+* [33m1b86489e[m feat(dnd): enable stronger horizontal auto scroll
+* [33maef7155e[m feat(dnd): improve horizontal edge auto scroll
+* [33mbc9916c6[m remove mp4
+* [33m59dfbeb4[m refactor(dnd): delete obsolete visibility guard
+* [33m461ab3eb[m refactor(dnd): remove duplicate visibility guard
+* [33m9f963911[m refactor(todo-list): remove duplicate task drag renderer
+* [33m709bacfd[m fix(dnd): stabilize same-column pointer handoff
+* [33mdf7a0ac2[m mp4
+* [33m97af838c[m fix(dnd): preposition same-column cards before state commit
+* [33m98342593[m fix(dnd): stabilize same-column optimistic reorder
+* [33mdb860a50[m fix(dnd): activate same-column visibility guard
+* [33mc78da49b[m fix(dnd): restore same-column task visibility
+* [33m127df23c[m fix(dnd): commit optimistic drop before background persistence
+* [33mff7cdf68[m refactor(dnd): remove duplicate task manager handoff
+* [33ma50e9c7d[m refactor(dnd): register task and todo surfaces centrally
+* [33m9c94cecf[m fix(dnd): ignore stale todo reorder fulfillments
+* [33m233e3505[m refactor(todo-list): use shared pointer drag engine
+* [33md4c86ef1[m refactor(task-manager): use shared pointer drag engine
+* [33ma74668fd[m refactor(dnd): add shared pointer list drag engine
+* [33m9f1d722a[m fix(task-manager): activate seamless drop handoff
+* [33mdf3d136f[m fix(task-manager): eliminate cross-column drop flicker
+* [33me03046ae[m feat(task-manager): activate smooth pointer drag engine
+* [33mdc013941[m feat(task-manager): add high-performance pointer drag controller
+* [33m83230422[m fix(task-manager): prevent stale reorder fulfillments
+* [33m45f3ee8c[m fix(task-manager): keep latest optimistic task order
+* [33mb55095e6[m refactor(dnd): prioritize nested scroll containers and stabilize edge zones
+* [33m1243243e[m refactor(task-manager): improve pointer drag accuracy and nested auto-scroll
+* [33md7c6c6ad[m fix(todo-list): use pointer-based drag placement while scrolling
+* [33m8f59eb76[m feat(dnd): add shared pointer-based drag utilities
+* [33m3b006f74[m fix(todo-list): allow moving completed tasks between columns
+* [33mf95f385e[m fix(project-board): keep empty todo columns droppable
+* [33m279eef49[m gitignore
+* [33m1845b0db[m build info
+* [33m1cb942d7[m Show the name of the task column in the notification
+* [33m9f053598[m Implement Infinite Load for Task Cards in Project Board Columns
+* [33m6c8c175c[m build-info
+* [33mb46b2525[m Moving tasks in scroll
+* [33mc1e0ce30[m fix(tasks): support multi-user tracking and wating card state
+* [33mcd7b4bce[m build-info
+* [33mffeacfce[m feat(tasks-auth): add checklist copy and remember me expiry
+* [33m5b006e68[m Increase upload time. Cancel button
+* [33m6c630d81[m m
+* [33me69a59b8[m chore(assets): remove unused public images
+* [33mc5777651[m fix(project-board): improve todo column dragging and header menu behavior
+* [33m974acd09[m feat(tasks): support multi-file attachment uploads
+* [33m4c074b2e[m feat(projects): add separate todo list board view
+* [33mbcf7bcb7[m m
+* [33m2e6f499c[m add company warning management and reporting
+* [33m74d67518[m (feat) add user warning managment and performance reporting
+* [33mb149c25d[m m
+* [33m147d3bab[m fix(task): count only main checklist items in progress
+* [33m5f5b846c[m fix(tasks): prevent member panel refresh from excluded users dropdown & fix(finance): debounce finance center operation search
+* [33ma145c68d[m build-info
+* [33m2e78ddad[m feat(tasks): add checklist item attachments
+* [33mb908e73d[m orkelo-build-info
+* [33m8e7ec7a4[m fix(workspace): show active trackers for project managers
+* [33m7782dff8[m fix(theme): stabilize text colors and finance styling
+* [33m71f1dfdc[m improve responsive menus and file management layoutm4
+* [33m6c640a87[m hide unauthorized project delete action
+* [33ma199bc40[m fix(layout): improve responsive menus and file management layoutm3
+* [33m67901467[m fix(layout): improve responsive menus and file management layoutm2
+* [33med50c3ce[m fix(layout): improve responsive menus and file managment layout
+* [33m1ba6a28a[m[33m ([m[1;31morigin/fdev[m[33m)[m fix(finance): expose finance access in company context
+* [33m8a10fc40[m m
+* [33me5c52834[m  fix
+* [33mac766169[m feat(performance): add user performance analysis
+* [33m330dab0d[m add user performance analysis UI
+* [33mcb528218[m feat(leave-requests): add request management UI
+* [33mfe9b906c[m feat(tasks): add task review approval workflow
+* [33mf9087d1e[m fix(project-board): remove column auto-scroll behavior
+* [33m3373d3c0[m fix(finance):add (T) پmeaning Toman to finance amounts and)
+* [33m64331491[m refactor(finance): remove finance center header section
+* [33m78940aba[m fix(task): keep priority visible after completion
+* [33m524d8f67[m fix(tasks): support nullable task priority
+* [33mc6bf240a[m style(finance): polish operation detail header layout2
+* [33m58665626[m style(finance): polish operation detail header layout
+* [33m25239344[m deploy: 5 may 2026
+* [33mf6754d7e[m fix(projects): allow projet managers to load available members.
+* [33md37171ce[m Modal Update
+* [33md0dd2b0c[m feat(finance): support counterparty for all operation types
+* [33md796a232[m deploy
+* [33m3bbfc93c[m feat: update board scroll and checklist ordering
+* [33m1b475ece[m Active Trachers
+* [33me3f82d08[m Make home dashboard dynamic and clickable
+* [33me1838977[m feat: add report file descriptions, tracker expiry notifications, and clickable notifications
+* [33m8fdb7892[m feat: improve project charts, fix member roles, add project & finance management skeleton, and fix user removal role handling
+* [33m83f7b386[m finance operation chart
+* [33md7ce5abf[m fix manage projects and finance center
+* [33mb32a1904[m m
+* [33m2bcf9242[m implemented finance
+* [33m98f84c3a[m archive completed tasks
+* [33mf0bff8f5[m ignore rar files
+* [33m02add47a[m Huge
+* [33m06cd13ab[m feat(task): add excluded users & visible-for controls
+* [33md12d1cdd[m Fixed url for each tasks modal in project board, links are now able to redircet users to the exact task detail modal
+* [33m75b70ddf[m Implemented notification section
+* [33m5d1b28f8[m Optimized the whole template for better performance, fixed assign section for tasks, chnages user profile ui/ux and fixed few bugs
+* [33me12d7fff[m Implemented cheklist dnd and few ui bugs
+* [33m0817bcc6[m Fixed few ui/ux in dark and light mode, and members card in project page
+* [33m6caa0354[m Implemented wallpapers for platform
+* [33ma2e49147[m Added Private switch for projects, and implemented dnd for Cehklist(Only ui/ux)
+* [33mb40d13a2[m Implemented column & tasks position changing with dnd, fixed user profile dropdown , moved layout setting btn to header
+* [33m285872bc[m ali khast azam ke inaro bedam behesh
+* [33m948ba7fe[m Compeleted Modal
+* [33m397e6cd0[m finaly im done with the kanban columns
+* [33m19ed0400[m Tonight i went to ali's house
+* [33m1d236967[m kabnan column 80%  fine
+* [33maece24bf[m kabnan tasks fine
+* [33m15d3609b[m kabnan
+* [33mccca770a[m orkelo
+* [33m41bb585e[m first commit
