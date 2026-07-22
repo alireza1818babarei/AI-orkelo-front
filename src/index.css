@@ -160,7 +160,7 @@ body .home-list__meta {
 
   body .app-wrapper .semi-nav:not(:hover) .app-nav .main-nav > li.sidebar-dropdown--compact-actions > ul.sidebar-submenu--compact-actions {
     display: block !important;
-    height: 0 !important;
+    height: auto !important;
     max-height: 0;
     margin: 0;
     padding: 0;
