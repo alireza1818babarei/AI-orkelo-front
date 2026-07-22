@@ -5,6 +5,7 @@ const EDGE_THRESHOLD = 76;
 const MAX_SCROLL_SPEED = 24;
 const DROP_DURATION = 150;
 const HANDOFF_TIMEOUT = 700;
+const DROP_BOUNDARY_TOLERANCE = 72;
 const INTERACTIVE_SELECTOR =
   "button, a, input, textarea, select, [contenteditable='true']";
 
@@ -14,6 +15,9 @@ let frameId = null;
 let suppressClickUntil = 0;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const nextFrame = () =>
+  new Promise((resolve) => window.requestAnimationFrame(resolve));
 
 const getPoint = (event) => {
   const coalesced = event?.getCoalescedEvents?.();
@@ -67,7 +71,13 @@ const getEntries = (surface, container, draggedItemId = "") => {
   return entries;
 };
 
-const findContainerFromPoint = (surface, root, point) => {
+const getContainerFromShell = (surface, shell, root) => {
+  if (!shell || !root.contains(shell)) return null;
+  const container = shell.querySelector?.(surface.containerSelector);
+  return container && root.contains(container) ? container : null;
+};
+
+const findDirectContainerFromPoint = (surface, root, point) => {
   if (!point) return null;
 
   for (const element of document.elementsFromPoint(point.x, point.y)) {
@@ -76,17 +86,70 @@ const findContainerFromPoint = (surface, root, point) => {
 
     if (surface.shellSelector) {
       const shell = element.closest?.(surface.shellSelector);
-      const nested = shell?.querySelector?.(surface.containerSelector);
-      if (nested && root.contains(nested)) return nested;
+      const nested = getContainerFromShell(surface, shell, root);
+      if (nested) return nested;
     }
   }
 
   return null;
 };
 
-const resolveDestination = (current, point) => {
-  const { surface, root, itemId } = current;
-  const container = findContainerFromPoint(surface, root, point);
+const distanceToRect = (point, rect) => {
+  const dx =
+    point.x < rect.left
+      ? rect.left - point.x
+      : point.x > rect.right
+        ? point.x - rect.right
+        : 0;
+  const dy =
+    point.y < rect.top
+      ? rect.top - point.y
+      : point.y > rect.bottom
+        ? point.y - rect.bottom
+        : 0;
+
+  return { dx, dy, distance: Math.hypot(dx, dy) };
+};
+
+const findNearestContainer = (current, point) => {
+  const { surface, root } = current;
+  const selector = surface.shellSelector || surface.containerSelector;
+  const tolerance = Number(surface.dropBoundaryTolerance) || DROP_BOUNDARY_TOLERANCE;
+  let best = null;
+
+  root.querySelectorAll(selector).forEach((candidate) => {
+    const container = surface.shellSelector
+      ? getContainerFromShell(surface, candidate, root)
+      : candidate;
+    if (!container) return;
+
+    const rect = candidate.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const distance = distanceToRect(point, rect);
+    const xInside = point.x >= rect.left && point.x <= rect.right;
+    const yInside = point.y >= rect.top && point.y <= rect.bottom;
+    const acceptable =
+      (xInside && distance.dy <= tolerance) ||
+      (yInside && distance.dx <= tolerance) ||
+      distance.distance <= tolerance;
+
+    if (!acceptable) return;
+    if (!best || distance.distance < best.distance) {
+      best = { container, distance: distance.distance };
+    }
+  });
+
+  return best?.container || null;
+};
+
+const findContainerFromPoint = (current, point, allowNearest = false) =>
+  findDirectContainerFromPoint(current.surface, current.root, point) ||
+  (allowNearest ? findNearestContainer(current, point) : null);
+
+const resolveDestination = (current, point, allowNearest = false) => {
+  const { surface, itemId } = current;
+  const container = findContainerFromPoint(current, point, allowNearest);
   if (!container) return null;
 
   const containerId = getAttribute(container, surface.containerIdAttribute);
@@ -320,6 +383,22 @@ const moveOverlay = (current, point) => {
     `translate3d(${left}px, ${top}px, 0) scale(1.018) rotate(0.25deg)`;
 };
 
+const applyPlaceholderMetrics = (current) => {
+  const computed = window.getComputedStyle(current.sourceLayoutNode);
+  Object.assign(current.placeholder.style, {
+    width: `${current.sourceRect.width}px`,
+    height: `${current.sourceRect.height}px`,
+    minHeight: `${current.sourceRect.height}px`,
+    marginTop: computed.marginTop,
+    marginRight: computed.marginRight,
+    marginBottom: computed.marginBottom,
+    marginLeft: computed.marginLeft,
+    boxSizing: computed.boxSizing || "border-box",
+    flex: computed.flex,
+    alignSelf: computed.alignSelf,
+  });
+};
+
 const installStyles = () => {
   if (document.getElementById("pointer-list-drag-engine-styles")) return;
   const style = document.createElement("style");
@@ -328,7 +407,6 @@ const installStyles = () => {
     .pointer-list-drag-active, .pointer-list-drag-active * { cursor: grabbing !important; }
     .pointer-list-drag-overlay { filter: drop-shadow(0 18px 28px rgba(15, 23, 42, 0.28)); opacity: 0.98; }
     .pointer-list-drag-placeholder {
-      width: 100%; min-height: 64px; margin: 0 0 10px;
       border: 2px dashed rgba(var(--primary), 0.68); border-radius: 10px;
       background: rgba(var(--primary), 0.09); box-sizing: border-box;
       animation: pointer-list-placeholder-in 105ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -349,9 +427,10 @@ const activate = (current) => {
   current.placeholder = document.createElement("div");
   current.placeholder.className = `pointer-list-drag-placeholder ${current.surface.placeholderClass || ""}`.trim();
   current.placeholder.setAttribute("aria-hidden", "true");
-  current.placeholder.style.height = `${Math.max(current.sourceRect.height, 64)}px`;
+  applyPlaceholderMetrics(current);
 
   current.sourceStyle = captureInlineStyle(current.sourceLayoutNode);
+  current.sourceNextSibling = current.sourceLayoutNode.nextSibling;
   current.sourceLayoutNode.style.display = "none";
   current.sourceContainer.insertBefore(current.placeholder, current.sourceLayoutNode);
 
@@ -394,17 +473,10 @@ const cleanupBase = (current) => {
   document.body.style.userSelect = current.previousUserSelect || "";
 };
 
-const cancelCurrent = async (current) => {
-  await animateOverlayTo(current, current.sourceRect);
-  restoreInlineStyle(current.sourceLayoutNode, current.sourceStyle);
-  cleanupBase(current);
-};
-
-const findRenderedDestinationNode = (current) => {
+const findItemNode = (current, containerId) => {
   const container = [...current.root.querySelectorAll(current.surface.containerSelector)].find(
     (candidate) =>
-      getAttribute(candidate, current.surface.containerIdAttribute) ===
-      String(current.destination?.containerId || ""),
+      getAttribute(candidate, current.surface.containerIdAttribute) === String(containerId),
   );
   if (!container) return null;
 
@@ -417,10 +489,23 @@ const findRenderedDestinationNode = (current) => {
   const visual = current.surface.itemVisualSelector
     ? item.closest?.(current.surface.itemVisualSelector) || item
     : item;
-  return {
-    container,
-    node: getDirectLayoutNode(visual, container),
-  };
+  return { container, node: getDirectLayoutNode(visual, container) };
+};
+
+const restoreSourcePosition = (current) => {
+  const source = findItemNode(current, current.sourceContainerId);
+  const node = source?.node || current.sourceLayoutNode;
+  const parent = current.sourceContainer;
+
+  if (node?.isConnected && parent?.isConnected) {
+    if (current.sourceNextSibling?.parentElement === parent) {
+      parent.insertBefore(node, current.sourceNextSibling);
+    } else {
+      parent.appendChild(node);
+    }
+  }
+
+  restoreInlineStyle(node, current.sourceStyle);
 };
 
 const fadeOverlayOut = (current) => {
@@ -440,14 +525,77 @@ const fadeOverlayOut = (current) => {
     .finally(() => current.overlay?.remove());
 };
 
-const completeHandoff = async (current, rendered) => {
+const cancelCurrent = async (current) => {
+  await animateOverlayTo(current, current.sourceRect);
+  restoreSourcePosition(current);
+  cleanupBase(current);
+};
+
+const getDropPayload = (current) => ({
+  itemId: current.itemId,
+  sourceContainerId: current.sourceContainerId,
+  destinationContainerId: current.destination.containerId,
+  destinationIndex: current.destination.index,
+});
+
+const completeSameContainerDrop = async (current) => {
+  const targetRect = current.placeholder.getBoundingClientRect();
+  await animateOverlayTo(current, targetRect);
+
+  if (!current.placeholder?.isConnected) {
+    restoreSourcePosition(current);
+    cleanupBase(current);
+    return;
+  }
+
+  const parent = current.placeholder.parentElement;
+  const sourceNode = current.sourceLayoutNode;
+  if (!parent || !sourceNode?.isConnected) {
+    restoreSourcePosition(current);
+    cleanupBase(current);
+    return;
+  }
+
+  // Put the hidden real node in the final DOM position before Redux publishes
+  // the optimistic order. React then reconciles an already-correct list and
+  // does not move every sibling a second time on release.
+  parent.insertBefore(sourceNode, current.placeholder);
+
+  let accepted = false;
+  try {
+    accepted = current.surface.onDrop?.(getDropPayload(current)) !== false;
+  } catch {
+    accepted = false;
+  }
+
+  if (!accepted) {
+    restoreSourcePosition(current);
+    cleanupBase(current);
+    return;
+  }
+
+  await nextFrame();
+
+  const rendered = findItemNode(current, current.destination.containerId);
+  const node = rendered?.node || sourceNode;
+  current.placeholder?.remove();
+  restoreInlineStyle(node, current.sourceStyle);
+
+  await fadeOverlayOut(current);
+  cleanupBase(current);
+};
+
+const completeCrossContainerHandoff = async (current, rendered) => {
   if (current.handoffComplete) return;
   current.handoffComplete = true;
   current.observer?.disconnect();
   if (current.handoffTimeout) window.clearTimeout(current.handoffTimeout);
 
   const node = rendered.node;
-  const destinationStyle = captureInlineStyle(node);
+  const destinationStyle =
+    node === current.sourceLayoutNode
+      ? current.sourceStyle
+      : captureInlineStyle(node);
   const placeholderRect = current.placeholder?.getBoundingClientRect();
 
   Object.assign(node.style, {
@@ -466,35 +614,10 @@ const completeHandoff = async (current, rendered) => {
   window.requestAnimationFrame(() => {
     current.placeholder?.remove();
     restoreInlineStyle(node, destinationStyle);
-
-    if (node === current.sourceLayoutNode) {
-      restoreInlineStyle(node, current.sourceStyle);
-    }
-
-    node.style.opacity = "0";
-    node.style.transform = "translate3d(0, 4px, 0) scale(0.997)";
-    node.style.transition = "none";
     node.style.visibility = "visible";
 
-    const revealPromise =
-      typeof node.animate === "function" && current.motionDuration
-        ? node
-            .animate(
-              [
-                { opacity: 0, transform: "translate3d(0, 4px, 0) scale(0.997)" },
-                { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
-              ],
-              {
-                duration: DROP_DURATION,
-                easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-              },
-            )
-            .finished.catch(() => null)
-        : Promise.resolve();
-
     const overlayPromise = fadeOverlayOut(current);
-
-    Promise.all([revealPromise, overlayPromise]).finally(() => {
+    overlayPromise.finally(() => {
       if (node.isConnected) restoreInlineStyle(node, destinationStyle);
       if (current.sourceLayoutNode !== node && current.sourceLayoutNode?.isConnected) {
         current.sourceLayoutNode.style.display = "none";
@@ -504,23 +627,23 @@ const completeHandoff = async (current, rendered) => {
   });
 };
 
-const waitForHandoff = (current) => {
+const waitForCrossContainerHandoff = (current) => {
   const tryComplete = () => {
-    const rendered = findRenderedDestinationNode(current);
-    if (rendered) void completeHandoff(current, rendered);
+    const rendered = findItemNode(current, current.destination.containerId);
+    if (rendered) void completeCrossContainerHandoff(current, rendered);
   };
 
   current.observer = new MutationObserver(tryComplete);
   current.observer.observe(current.root, { childList: true, subtree: true });
   current.handoffTimeout = window.setTimeout(() => {
     if (current.handoffComplete) return;
-    const rendered = findRenderedDestinationNode(current);
+    const rendered = findItemNode(current, current.destination.containerId);
     if (rendered) {
-      void completeHandoff(current, rendered);
+      void completeCrossContainerHandoff(current, rendered);
       return;
     }
 
-    restoreInlineStyle(current.sourceLayoutNode, current.sourceStyle);
+    restoreSourcePosition(current);
     cleanupBase(current);
   }, HANDOFF_TIMEOUT);
 
@@ -553,7 +676,7 @@ const finish = async (cancelled = false) => {
 
   suppressClickUntil = performance.now() + 350;
   const destination = !cancelled
-    ? resolveDestination(current, current.latestPoint) || current.destination
+    ? resolveDestination(current, current.latestPoint, true)
     : null;
 
   if (!destination) {
@@ -563,15 +686,23 @@ const finish = async (cancelled = false) => {
   }
 
   placePlaceholder(current, destination);
+  const isSameContainer =
+    current.sourceContainerId === current.destination.containerId;
 
-  const accepted = current.surface.onDrop?.({
-    itemId: current.itemId,
-    sourceContainerId: current.sourceContainerId,
-    destinationContainerId: current.destination.containerId,
-    destinationIndex: current.destination.index,
-  });
+  if (isSameContainer) {
+    session = null;
+    await completeSameContainerDrop(current);
+    return;
+  }
 
-  if (accepted === false) {
+  let accepted = false;
+  try {
+    accepted = current.surface.onDrop?.(getDropPayload(current)) !== false;
+  } catch {
+    accepted = false;
+  }
+
+  if (!accepted) {
     await cancelCurrent(current);
     session = null;
     return;
@@ -581,7 +712,7 @@ const finish = async (cancelled = false) => {
     current,
     current.placeholder.getBoundingClientRect(),
   );
-  waitForHandoff(current);
+  waitForCrossContainerHandoff(current);
   session = null;
 };
 
@@ -697,6 +828,8 @@ const onPointerDown = (event) => {
     scrollCandidatesAt: 0,
     scrollContainerId: "",
     dropAnimationPromise: null,
+    handoffComplete: false,
+    sourceNextSibling: null,
   };
 
   window.addEventListener("pointermove", onPointerMove, { capture: true, passive: false });
