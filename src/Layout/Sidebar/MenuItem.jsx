@@ -1,5 +1,10 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+
+const COMPACT_ACTION_COLLAPSE_IDS = new Set([
+  "company-management-collapse",
+  "my-workspace-collapse",
+]);
 
 const getInitials = (name) => {
   const raw = String(name || "").trim();
@@ -25,6 +30,7 @@ function MenuItem(props) {
   } = props;
 
   const { pathname } = useLocation();
+  const [compactActionOpen, setCompactActionOpen] = useState(false);
 
   const isActive = useMemo(() => {
     const normalizePath = (value = "") => {
@@ -59,6 +65,13 @@ function MenuItem(props) {
   const dropdownOpen = type === "dropdown" && hasActiveInTree;
   const compactProjectList =
     isSidebarCompact && type === "dropdown" && collapseId === "projects-collapse";
+  const compactActionMenu =
+    isSidebarCompact &&
+    type === "dropdown" &&
+    COMPACT_ACTION_COLLAPSE_IDS.has(collapseId);
+  const effectiveDropdownOpen = compactActionMenu
+    ? compactActionOpen
+    : dropdownOpen || compactProjectList;
 
   if (type !== "dropdown") {
     return (
@@ -71,6 +84,14 @@ function MenuItem(props) {
     );
   }
 
+  const handleDropdownClick = (event) => {
+    if (!compactActionMenu) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    setCompactActionOpen((current) => !current);
+  };
+
   return (
     <Fragment>
       {title && (
@@ -80,14 +101,17 @@ function MenuItem(props) {
       )}
 
       <li
-        className={`${dropdownOpen ? "active" : ""} ${
+        className={`${effectiveDropdownOpen ? "active" : ""} ${
           compactProjectList ? "sidebar-dropdown--compact-projects" : ""
+        } ${compactActionMenu ? "sidebar-dropdown--compact-actions" : ""} ${
+          compactActionMenu && compactActionOpen ? "is-open" : ""
         }`}
       >
         <Link
-          to={collapseId ? `#${collapseId}` : "#"}
-          data-bs-toggle="collapse"
-          aria-expanded={dropdownOpen || compactProjectList}
+          to={compactActionMenu ? "#" : collapseId ? `#${collapseId}` : "#"}
+          data-bs-toggle={compactActionMenu ? undefined : "collapse"}
+          onClick={handleDropdownClick}
+          aria-expanded={effectiveDropdownOpen}
           aria-controls={collapseId}
           className="d-flex align-items-center justify-content-between"
         >
@@ -105,9 +129,9 @@ function MenuItem(props) {
 
         {links && (
           <ul
-            className={`collapse ${dropdownOpen || compactProjectList ? "show" : ""} ${
+            className={`collapse ${effectiveDropdownOpen ? "show" : ""} ${
               compactProjectList ? "sidebar-submenu--compact-projects" : ""
-            }`}
+            } ${compactActionMenu ? "sidebar-submenu--compact-actions" : ""}`}
             id={collapseId}
           >
             {(links || []).map((link, index) => {
