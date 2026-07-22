@@ -27,6 +27,7 @@ import fileManagementAccessReducer from "./FileManager/access/access.slice.js";
 import financialOperationsReducer from "./FileManager/operations/operations.slice.js";
 import financialCounterpartiesReducer from "./FileManager/counterparties/counterparties.slice.js";
 import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
+import installPointerListHorizontalAutoScroll from "../utils/pointerListHorizontalAutoScroll";
 import installTaskManagerPointerDrag from "../utils/taskManagerPointerDrag";
 import installTodoListPointerDrag from "../utils/todoListPointerDrag";
 
@@ -64,5 +65,6 @@ export const store = configureStore({
     getDefaultMiddleware().concat(taskReorderConsistencyMiddleware),
 });
 
+installPointerListHorizontalAutoScroll();
 installTaskManagerPointerDrag(store);
 installTodoListPointerDrag(store);
