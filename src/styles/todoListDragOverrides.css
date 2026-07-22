@@ -1,3 +1,22 @@
 .pointer-list-drag-placeholder {
   border: 0 !important;
 }
+
+html.pointer-list-drag-active .board [data-board-column-shell-id],
+html.pointer-list-drag-active .board [data-board-column-shell-id] *,
+html.pointer-list-drag-active .project-todo-list [data-todo-column-shell-id],
+html.pointer-list-drag-active .project-todo-list [data-todo-column-shell-id] * {
+  scrollbar-color: transparent transparent !important;
+}
+
+html.pointer-list-drag-active .board [data-board-column-shell-id]::-webkit-scrollbar-thumb,
+html.pointer-list-drag-active .board [data-board-column-shell-id] *::-webkit-scrollbar-thumb,
+html.pointer-list-drag-active .project-todo-list [data-todo-column-shell-id]::-webkit-scrollbar-thumb,
+html.pointer-list-drag-active .project-todo-list [data-todo-column-shell-id] *::-webkit-scrollbar-thumb,
+html.pointer-list-drag-active .board [data-board-column-shell-id]::-webkit-scrollbar-track,
+html.pointer-list-drag-active .board [data-board-column-shell-id] *::-webkit-scrollbar-track,
+html.pointer-list-drag-active .project-todo-list [data-todo-column-shell-id]::-webkit-scrollbar-track,
+html.pointer-list-drag-active .project-todo-list [data-todo-column-shell-id] *::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-color: transparent !important;
+}
