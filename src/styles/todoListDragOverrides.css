@@ -1,3 +1,7 @@
 .pointer-list-drag-placeholder {
+  visibility: hidden !important;
   border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
 }
