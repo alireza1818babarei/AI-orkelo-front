@@ -29,6 +29,7 @@ import financialCounterpartiesReducer from "./FileManager/counterparties/counter
 import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
 import installTaskManagerPointerDrag from "../utils/taskManagerPointerDrag";
 import installTodoListPointerDrag from "../utils/todoListPointerDrag";
+import installPointerListDragVisibilityGuard from "../utils/pointerListDragVisibilityGuard";
 
 export const store = configureStore({
   reducer: {
@@ -66,3 +67,4 @@ export const store = configureStore({
 
 installTaskManagerPointerDrag(store);
 installTodoListPointerDrag(store);
+installPointerListDragVisibilityGuard();
