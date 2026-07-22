@@ -78,3 +78,114 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Home dashboard responsive overrides */
+body .home-dashboard {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1180px;
+  min-width: 0;
+  margin-inline: auto;
+  padding: 0 clamp(0.25rem, 2vw, 1rem) 1rem;
+}
+
+body .home-dashboard__header {
+  box-sizing: border-box;
+  width: min(100%, 560px);
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+body .home-dashboard__date {
+  font-size: clamp(0.95rem, 2.5vw, 1.2rem);
+  line-height: 1.35;
+}
+
+body .home-dashboard__welcome {
+  max-width: 100%;
+  font-size: clamp(1.65rem, 4.5vw, 2.3rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body .home-dashboard__grid,
+body .home-dashboard__primary,
+body .home-dashboard__notifications,
+body .home-panel,
+body .home-list__item,
+body .home-list__button,
+body .leave-summary,
+body .tracker__homeContent,
+body .tracker__homePage {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+body .home-list__title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body .home-list__meta {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 768px) {
+  body .home-dashboard {
+    padding-inline: 0.5rem;
+  }
+
+  body .home-dashboard__header {
+    border-radius: 0.85rem;
+  }
+
+  body .home-dashboard__primary,
+  body .home-dashboard__notifications {
+    padding: 0.75rem;
+    border-radius: 14px;
+  }
+
+  body .home-panel {
+    padding: 0.8rem;
+    border-radius: 12px;
+  }
+
+  body .leave-summary__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  body .home-dashboard {
+    padding-inline: 0.25rem;
+  }
+
+  body .home-dashboard__header {
+    width: 100%;
+    padding: 1rem 0.75rem;
+  }
+
+  body .home-dashboard__welcome {
+    font-size: clamp(1.35rem, 7vw, 1.75rem);
+  }
+
+  body .leave-summary__grid {
+    grid-template-columns: 1fr;
+  }
+
+  body .home-list__button {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  body .home-list__meta {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
