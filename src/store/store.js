@@ -65,6 +65,8 @@ export const store = configureStore({
     getDefaultMiddleware().concat(taskReorderConsistencyMiddleware),
 });
 
+// Install the same-column DOM handoff listener before the central pointer
+// engine so it can pre-position the hidden node before Redux reconciles.
+installPointerListDragVisibilityGuard();
 installTaskManagerPointerDrag(store);
 installTodoListPointerDrag(store);
-installPointerListDragVisibilityGuard();
