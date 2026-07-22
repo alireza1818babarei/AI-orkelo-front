@@ -28,7 +28,6 @@ import financialOperationsReducer from "./FileManager/operations/operations.slic
 import financialCounterpartiesReducer from "./FileManager/counterparties/counterparties.slice.js";
 import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
 import "../styles/todoListDragOverrides.css";
-import installPointerListColumnHeightMotion from "../utils/pointerListColumnHeightMotion";
 import installPointerListHorizontalAutoScroll from "../utils/pointerListHorizontalAutoScroll";
 import installTodoListVerticalOutsideAutoScroll from "../utils/todoListVerticalOutsideAutoScroll";
 import installTaskManagerPointerDrag from "../utils/taskManagerPointerDrag";
@@ -68,7 +67,6 @@ export const store = configureStore({
     getDefaultMiddleware().concat(taskReorderConsistencyMiddleware),
 });
 
-installPointerListColumnHeightMotion();
 installPointerListHorizontalAutoScroll();
 installTodoListVerticalOutsideAutoScroll();
 installTaskManagerPointerDrag(store);
