@@ -29,7 +29,6 @@ import financialCounterpartiesReducer from "./FileManager/counterparties/counter
 import taskReorderConsistencyMiddleware from "./middleware/taskReorderConsistencyMiddleware";
 import installTaskManagerPointerDrag from "../utils/taskManagerPointerDrag";
 import installTodoListPointerDrag from "../utils/todoListPointerDrag";
-import installPointerListDragVisibilityGuard from "../utils/pointerListDragVisibilityGuard";
 
 export const store = configureStore({
   reducer: {
@@ -65,8 +64,5 @@ export const store = configureStore({
     getDefaultMiddleware().concat(taskReorderConsistencyMiddleware),
 });
 
-// Install the same-column DOM handoff listener before the central pointer
-// engine so it can pre-position the hidden node before Redux reconciles.
-installPointerListDragVisibilityGuard();
 installTaskManagerPointerDrag(store);
 installTodoListPointerDrag(store);
