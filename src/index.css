@@ -186,22 +186,23 @@ body .home-list__meta {
 
   body .app-wrapper .semi-nav:not(:hover) .app-nav .main-nav > li.sidebar-dropdown--compact-actions > ul.sidebar-submenu--compact-actions li.sidebar-icon-submenu-item {
     width: 100%;
-    padding: 0.2rem 0 !important;
+    padding: 0.1rem 0 !important;
   }
 
   body .app-wrapper .semi-nav:not(:hover) .app-nav .main-nav > li.sidebar-dropdown--compact-actions > ul.sidebar-submenu--compact-actions li.sidebar-icon-submenu-item > a {
-    min-height: 40px;
+    min-height: 32px;
     justify-content: center !important;
     gap: 0;
-    padding: 0.15rem 0 !important;
+    padding: 0.1rem 0 !important;
   }
 
   body .app-wrapper .semi-nav:not(:hover) .app-nav .main-nav > li.sidebar-dropdown--compact-actions > ul.sidebar-submenu--compact-actions .sidebar-submenu-icon {
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
     margin: 0;
-    border-radius: 10px;
+    border-radius: 6px;
+    font-size: 0.95rem;
   }
 
   body .app-wrapper .semi-nav:not(:hover) .app-nav .main-nav > li.sidebar-dropdown--compact-actions > ul.sidebar-submenu--compact-actions .sidebar-project-name {
