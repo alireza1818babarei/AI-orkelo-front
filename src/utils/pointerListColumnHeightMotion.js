@@ -3,19 +3,18 @@ const PLACEHOLDER_SELECTOR = ".pointer-list-drag-placeholder";
 const INTERACTIVE_SELECTOR =
   "button, a, input, textarea, select, [contenteditable='true']";
 const HEIGHT_DURATION_MS = 190;
+const RELEASE_SETTLE_MS = 720;
 
 const SURFACES = [
   {
     rootSelector: ".board",
     itemSelector: "[data-board-task-id]",
     shellSelector: "[data-board-column-shell-id]",
-    containerSelector: "[data-board-column-id]",
   },
   {
     rootSelector: ".project-todo-list",
     itemSelector: "[data-todo-task-id]",
     shellSelector: "[data-todo-column-shell-id]",
-    containerSelector: "[data-todo-column-id]",
   },
 ];
 
@@ -49,15 +48,6 @@ const mutationTouchesPlaceholder = (mutation) => {
   );
 };
 
-const getShellFromMutation = (surface, root, mutation) => {
-  const target = mutation.target;
-  if (!(target instanceof Element) || !root.contains(target)) return null;
-
-  const container = target.closest?.(surface.containerSelector);
-  const shell = container?.closest?.(surface.shellSelector);
-  return shell && root.contains(shell) ? shell : null;
-};
-
 export const installPointerListColumnHeightMotion = () => {
   if (
     typeof window === "undefined" ||
@@ -72,49 +62,56 @@ export const installPointerListColumnHeightMotion = () => {
   let drag = null;
   const runningAnimations = new WeakMap();
 
-  const stopHeightAnimation = (element) => {
-    const record = runningAnimations.get(element);
-    if (!record) return null;
+  const ensureOriginalStyle = (shell) => {
+    if (!drag?.originalStyles.has(shell)) {
+      drag?.originalStyles.set(shell, captureInlineStyle(shell));
+    }
+    return drag?.originalStyles.get(shell) ?? null;
+  };
 
-    const visualHeight = element.getBoundingClientRect().height;
-    record.animation.cancel();
-    restoreInlineStyle(element, record.originalStyle);
-    runningAnimations.delete(element);
+  const releaseAnimation = (shell) => {
+    const record = runningAnimations.get(shell);
+    const visualHeight = shell?.getBoundingClientRect?.().height;
 
+    if (record) {
+      record.animation.cancel();
+      runningAnimations.delete(shell);
+    }
+
+    restoreInlineStyle(shell, ensureOriginalStyle(shell));
     return visualHeight;
   };
 
-  const animateHeight = (element, previousHeight) => {
-    if (!element?.isConnected) return;
+  const animateShellToNaturalHeight = (shell) => {
+    if (!drag || !shell?.isConnected || !drag.root.contains(shell)) return;
 
     const reducedMotion = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
     )?.matches;
-    if (reducedMotion || typeof element.animate !== "function") return;
 
-    const interruptedHeight = stopHeightAnimation(element);
-    const fromHeight = interruptedHeight ?? previousHeight;
-    const originalStyle = captureInlineStyle(element);
-    const targetHeight = element.getBoundingClientRect().height;
+    const fromHeight = releaseAnimation(shell);
+    const naturalHeight = shell.getBoundingClientRect().height;
 
     if (
+      reducedMotion ||
+      typeof shell.animate !== "function" ||
       !Number.isFinite(fromHeight) ||
-      !Number.isFinite(targetHeight) ||
-      Math.abs(targetHeight - fromHeight) < 1
+      !Number.isFinite(naturalHeight) ||
+      Math.abs(naturalHeight - fromHeight) < 1
     ) {
-      drag?.heights.set(element, targetHeight);
+      restoreInlineStyle(shell, ensureOriginalStyle(shell));
       return;
     }
 
-    element.style.height = `${fromHeight}px`;
-    element.style.overflow = "clip";
-    element.style.willChange = "height";
-    void element.offsetHeight;
+    shell.style.height = `${fromHeight}px`;
+    shell.style.overflow = "clip";
+    shell.style.willChange = "height";
+    void shell.offsetHeight;
 
-    const animation = element.animate(
+    const animation = shell.animate(
       [
         { height: `${fromHeight}px` },
-        { height: `${targetHeight}px` },
+        { height: `${naturalHeight}px` },
       ],
       {
         duration: HEIGHT_DURATION_MS,
@@ -123,40 +120,52 @@ export const installPointerListColumnHeightMotion = () => {
       },
     );
 
-    const record = { animation, originalStyle };
-    runningAnimations.set(element, record);
+    const record = { animation };
+    runningAnimations.set(shell, record);
 
     animation.finished
       .catch(() => null)
       .finally(() => {
-        if (runningAnimations.get(element) !== record) return;
-        restoreInlineStyle(element, originalStyle);
-        runningAnimations.delete(element);
-        if (drag?.root?.contains(element)) {
-          drag.heights.set(element, element.getBoundingClientRect().height);
-        }
+        if (runningAnimations.get(shell) !== record) return;
+        runningAnimations.delete(shell);
+        restoreInlineStyle(shell, ensureOriginalStyle(shell));
       });
   };
 
-  const snapshotHeights = () => {
+  const animateAllShells = () => {
     if (!drag?.root?.isConnected) return;
 
-    drag.root.querySelectorAll(drag.surface.shellSelector).forEach((shell) => {
-      if (runningAnimations.has(shell)) return;
-      drag.heights.set(shell, shell.getBoundingClientRect().height);
-    });
+    drag.root
+      .querySelectorAll(drag.surface.shellSelector)
+      .forEach((shell) => animateShellToNaturalHeight(shell));
   };
 
-  const frame = () => {
-    if (!drag) return;
-    snapshotHeights();
-    drag.frameId = window.requestAnimationFrame(frame);
+  const scheduleHeightSync = () => {
+    if (!drag || drag.syncFrameId) return;
+
+    drag.syncFrameId = window.requestAnimationFrame(() => {
+      if (!drag) return;
+      drag.syncFrameId = null;
+      animateAllShells();
+    });
   };
 
   const stop = () => {
     if (!drag) return;
-    if (drag.frameId) window.cancelAnimationFrame(drag.frameId);
+
+    if (drag.syncFrameId) window.cancelAnimationFrame(drag.syncFrameId);
+    if (drag.releaseTimerId) window.clearTimeout(drag.releaseTimerId);
     drag.observer?.disconnect();
+
+    drag.root
+      ?.querySelectorAll?.(drag.surface.shellSelector)
+      .forEach((shell) => {
+        const record = runningAnimations.get(shell);
+        record?.animation?.cancel?.();
+        runningAnimations.delete(shell);
+        restoreInlineStyle(shell, ensureOriginalStyle(shell));
+      });
+
     drag = null;
   };
 
@@ -174,44 +183,30 @@ export const installPointerListColumnHeightMotion = () => {
         pointerId: event.pointerId,
         surface: match.surface,
         root: match.root,
-        heights: new Map(),
-        frameId: null,
+        originalStyles: new WeakMap(),
         observer: null,
+        syncFrameId: null,
+        releaseTimerId: null,
       };
 
-      snapshotHeights();
+      drag.root
+        .querySelectorAll(drag.surface.shellSelector)
+        .forEach((shell) => ensureOriginalStyle(shell));
 
       drag.observer = new MutationObserver((mutations) => {
-        if (
-          !drag ||
-          !document.documentElement.classList.contains(ACTIVE_CLASS)
-        ) {
-          return;
-        }
+        if (!drag) return;
+        if (!mutations.some(mutationTouchesPlaceholder)) return;
 
-        const affectedShells = new Set();
-
-        mutations.forEach((mutation) => {
-          if (!mutationTouchesPlaceholder(mutation)) return;
-          const shell = getShellFromMutation(
-            drag.surface,
-            drag.root,
-            mutation,
-          );
-          if (shell) affectedShells.add(shell);
-        });
-
-        affectedShells.forEach((shell) => {
-          const previousHeight = drag.heights.get(shell);
-          animateHeight(shell, previousHeight);
-        });
+        // A placeholder move changes both the previous and next columns. Sync
+        // every shell from its current visual height to its new natural height
+        // so the previous column always collapses while the next one expands.
+        scheduleHeightSync();
       });
 
       drag.observer.observe(drag.root, {
         childList: true,
         subtree: true,
       });
-      drag.frameId = window.requestAnimationFrame(frame);
     },
     true,
   );
@@ -219,9 +214,13 @@ export const installPointerListColumnHeightMotion = () => {
   window.addEventListener(
     "pointerup",
     (event) => {
-      if (drag?.pointerId === event.pointerId) {
-        window.setTimeout(stop, HEIGHT_DURATION_MS + 40);
-      }
+      if (drag?.pointerId !== event.pointerId) return;
+
+      scheduleHeightSync();
+      drag.releaseTimerId = window.setTimeout(() => {
+        scheduleHeightSync();
+        window.requestAnimationFrame(stop);
+      }, RELEASE_SETTLE_MS);
     },
     true,
   );
@@ -233,6 +232,18 @@ export const installPointerListColumnHeightMotion = () => {
     },
     true,
   );
+
+  const activeClassObserver = new MutationObserver(() => {
+    if (!drag) return;
+    if (document.documentElement.classList.contains(ACTIVE_CLASS)) return;
+
+    scheduleHeightSync();
+  });
+
+  activeClassObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
 
   window.addEventListener("blur", stop);
 };
