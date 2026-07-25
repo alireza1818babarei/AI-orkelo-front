@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Button,
@@ -12,6 +12,7 @@ import {
   UncontrolledDropdown,
 } from 'reactstrap';
 import { resolveUserAvatarWithFallback } from '../../../../utils/mediaUrl.js';
+import '../projectMemberFilter.css';
 
 const resolveInitials = (member) => {
   if (member?.initials) return member.initials;
@@ -123,6 +124,51 @@ const normalizeMembers = (members) =>
     };
   });
 
+const collectTaskAssigneeIds = (task) => {
+  const ids = new Set();
+  const addId = (value) => {
+    const normalized = String(value ?? '').trim();
+    if (normalized) ids.add(normalized);
+  };
+
+  const addAssignee = (assignee) => {
+    if (!assignee || typeof assignee !== 'object') return;
+    addId(
+      assignee?.id ??
+        assignee?.user_id ??
+        assignee?.userId ??
+        assignee?.user?.id ??
+        assignee?.pivot?.user_id,
+    );
+  };
+
+  if (Array.isArray(task?.assignees)) {
+    task.assignees.forEach(addAssignee);
+  }
+
+  addAssignee(task?.assignee);
+
+  const scalarAssigneeIds = [
+    task?.assignee_id,
+    task?.assigneeId,
+    task?.assigned_to,
+    task?.assignedTo,
+    task?.assigned_user_id,
+    task?.assignedUserId,
+  ];
+  scalarAssigneeIds.forEach(addId);
+
+  const listAssigneeIds = task?.assignee_ids ?? task?.assigneeIds;
+  if (Array.isArray(listAssigneeIds)) {
+    listAssigneeIds.forEach((value) => {
+      if (value && typeof value === 'object') addAssignee(value);
+      else addId(value);
+    });
+  }
+
+  return ids;
+};
+
 const ProjectMembers = ({
   members = [],
   loading = false,
@@ -136,7 +182,9 @@ const ProjectMembers = ({
   const data = useMemo(() => normalizeMembers(members), [members]);
   const [roleModalMember, setRoleModalMember] = useState(null);
   const [roleModalValue, setRoleModalValue] = useState('member');
+  const [selectedMemberId, setSelectedMemberId] = useState('');
   const user = useSelector((s) => s.auth?.user ?? null);
+  const projectColumns = useSelector((s) => s.projectColumns?.items ?? []);
   const activeCompanyRole = useSelector(
     (s) => s.companyContext?.activeCompany?.membership?.role ?? null,
   );
@@ -158,6 +206,95 @@ const ProjectMembers = ({
 
   const canManageProjectRoles =
     companyRole === 'company_owner' || companyRole === 'company_supervisor';
+
+  const taskAssigneeIdsByTaskId = useMemo(() => {
+    const map = new Map();
+
+    (Array.isArray(projectColumns) ? projectColumns : []).forEach((column) => {
+      (Array.isArray(column?.tasks) ? column.tasks : []).forEach((task) => {
+        const taskId = String(task?.id ?? '').trim();
+        if (!taskId) return;
+        map.set(taskId, collectTaskAssigneeIds(task));
+      });
+    });
+
+    return map;
+  }, [projectColumns]);
+
+  useEffect(() => {
+    if (!selectedMemberId) return;
+    const memberStillExists = data.some(
+      (member) => String(member.id) === selectedMemberId,
+    );
+    if (!memberStillExists) setSelectedMemberId('');
+  }, [data, selectedMemberId]);
+
+  const applyMemberTaskFilter = useCallback(() => {
+    if (typeof document === 'undefined') return;
+
+    const taskShells = Array.from(
+      document.querySelectorAll(
+        '.project-board-main__content .board-item-shell',
+      ),
+    );
+
+    taskShells.forEach((taskShell) => {
+      const taskElement = taskShell.querySelector('[data-board-task-id]');
+      const taskId = String(taskElement?.dataset?.boardTaskId ?? '').trim();
+      const assigneeIds = taskAssigneeIdsByTaskId.get(taskId) ?? new Set();
+      const shouldHide =
+        Boolean(selectedMemberId) && !assigneeIds.has(selectedMemberId);
+
+      taskShell.classList.toggle('task-member-filter-hidden', shouldHide);
+    });
+  }, [selectedMemberId, taskAssigneeIdsByTaskId]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const boardRoot = document.querySelector('.project-board-main__content');
+    applyMemberTaskFilter();
+
+    if (!boardRoot || typeof MutationObserver === 'undefined') {
+      return () => {
+        document
+          .querySelectorAll('.board-item-shell.task-member-filter-hidden')
+          .forEach((taskShell) => {
+            taskShell.classList.remove('task-member-filter-hidden');
+          });
+      };
+    }
+
+    let animationFrame = null;
+    const observer = new MutationObserver(() => {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(applyMemberTaskFilter);
+    });
+
+    observer.observe(boardRoot, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      document
+        .querySelectorAll('.board-item-shell.task-member-filter-hidden')
+        .forEach((taskShell) => {
+          taskShell.classList.remove('task-member-filter-hidden');
+        });
+    };
+  }, [applyMemberTaskFilter]);
+
+  const toggleMemberFilter = (member) => {
+    const memberId = String(member?.id ?? '').trim();
+    if (!memberId) return;
+    setSelectedMemberId((current) => (current === memberId ? '' : memberId));
+  };
+
+  const handleMemberKeyDown = (event, member) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    toggleMemberFilter(member);
+  };
 
   const handleRoleChange = async (member, nextRole) => {
     if (!nextRole || nextRole === member.projectRole) return;
@@ -216,11 +353,30 @@ const ProjectMembers = ({
                 actorProjectRole,
                 member,
               );
+              const memberId = String(member.id);
+              const isFilterActive = selectedMemberId === memberId;
 
               return (
-                <div key={member.id} className='project-members-panel__item'>
+                <div
+                  key={member.id}
+                  className={`project-members-panel__item ${
+                    isFilterActive ? 'is-filter-active' : ''
+                  }`}
+                  role='button'
+                  tabIndex={0}
+                  aria-pressed={isFilterActive}
+                  aria-label={`${
+                    isFilterActive ? 'Clear task filter for' : 'Filter tasks assigned to'
+                  } ${member.name || 'member'}`}
+                  onClick={() => toggleMemberFilter(member)}
+                  onKeyDown={(event) => handleMemberKeyDown(event, member)}
+                >
                   {member.removeId && canRemoveMember ? (
-                    <UncontrolledDropdown className='project-members-panel__actions'>
+                    <UncontrolledDropdown
+                      className='project-members-panel__actions'
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
                       <DropdownToggle
                         tag='button'
                         type='button'
