@@ -1,82 +1,39 @@
 export const APP_UPDATES = [
   {
-    id: "2026-05-31-request-task-tracker-finance-and-performance-updates",
-    version: "v1.3.0",
-    releasedAt: "2026-05-31",
-    title: "Orkelo Product Update",
+    id: "2026-07-25-project-board-filter-and-checklist-update",
+    version: "v1.4.0",
+    releasedAt: "2026-07-25",
+    title: "Project Board Update",
     summary:
-      "This update improves leave requests, user warnings, task management, trackers, performance analysis, file handling, and Finance Center so daily work is clearer for admins, project managers, and regular users.",
+      "This update makes the Project Board easier to search, filter, and manage by improving checklist actions and adding task filtering by tags, priorities, and assigned members.",
     newFeatures: [
       {
-        title: "Leave Requests For Regular Users",
+        title: "Project Board Filters",
         description:
-          "Regular users can now view their pending leave requests and cancel their own request before it is approved or rejected.",
-        icon: "ph-duotone ph-calendar-check",
+          "A new filter drawer lets users narrow board tasks by search text, project tags, and priority levels.",
+        icon: "ph-duotone ph-funnel",
       },
       {
-        title: "Checklist Item Attachments",
+        title: "Tag And Priority Filtering",
         description:
-          "Each checklist item can now have its own attachments with preview, download, and delete actions.",
-        icon: "ph-duotone ph-paperclip",
+          "Tasks can now be filtered by one or more tags and priorities, with filters staying active as board content changes.",
+        icon: "ph-duotone ph-tag",
       },
       {
-        title: "Project Todo List",
+        title: "Member-Based Task Filtering",
         description:
-          "Projects now include a separate Todo List view with its own columns and tasks, direct checkbox completion, drag-and-drop ordering, and task detail access.",
-        icon: "ph-duotone ph-check-square-offset",
-      },
-      {
-        title: "Multi-File Attachments",
-        description:
-          "Task and checklist attachments now support selecting, dragging, pasting, and uploading multiple files at the same time.",
-        icon: "ph-duotone ph-files",
-      },
-      {
-        title: "Better Project Manager Access",
-        description:
-          "Project managers can access active trackers and available project members only within their permitted project scope.",
-        icon: "ph-duotone ph-user-gear",
-      },
-      {
-        title: "User Performance Analysis",
-        description:
-          "Company owners and supervisors can review tracked time, working days, leave days, task totals, overdue tasks, and ratings.",
-        icon: "ph-duotone ph-chart-line-up",
-      },
-      {
-        title: "User Warning Management",
-        description:
-          "Managers can issue low, medium, or high warnings, review warning history, and users must acknowledge pending warnings before continuing.",
-        icon: "ph-duotone ph-warning-octagon",
-      },
-      {
-        title: "Improved Task Controls",
-        description:
-          "Task priority, two-stage approval, rejection notes, task ratings, approved task ordering, and attachment preview slider have been improved.",
-        icon: "ph-duotone ph-kanban",
-      },
-      {
-        title: "Finance Center Improvements",
-        description:
-          "Amount display, search behavior, pending calculations, menu access, and company balance color behavior are now clearer and more accurate.",
-        icon: "ph-duotone ph-currency-circle-dollar",
+          "Project member cards can now be selected to show only tasks assigned to that member across all board columns.",
+        icon: "ph-duotone ph-user-focus",
       },
     ],
     bugFixes: [
-      "Fixed missing pending leave requests for regular users.",
-      "Fixed active trackers staying open after final task approval.",
-      "Fixed Home trackers showing previous company data after switching companies.",
-      "Fixed project members refreshing when opening Excluded Users in the task modal.",
-      "Fixed tracked time calculations in performance analysis using real tracking sessions.",
-      "Fixed file downloads so uploaded files use their original names.",
+      "The checklist copy action is no longer hidden inside the three-dot actions menu.",
     ],
     improvements: [
-      "Leave request tabs, summaries, durations, and date display are clearer.",
-      "Approved tasks now move to the bottom of the column with clearer review states.",
-      "Task and checklist attachments are easier to preview and manage.",
-      "Finance Center amounts now show the Toman label and search waits until typing pauses.",
-      "Sensitive menus and actions, such as project delete and Finance Center, better match real access permissions.",
-      "Main UI, dark mode, main menu, Project Members, and My File Management responsive behavior were improved.",
+      "The checklist copy action was moved out of the three-dot menu and placed directly in the checklist action row.",
+      "The copy all checklists tooltip and existing copy modal behavior were preserved.",
+      "The filter drawer supports Reset, Apply Filters, backdrop closing, and Escape key closing.",
+      "Selected member filters include hover, focus, active, keyboard, light mode, dark mode, and reduced-motion states.",
     ],
     active: true,
   },
