@@ -2142,6 +2142,26 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
   color: var(--td-text) !important;
 }
 
+.task-detail-checklist-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.task-detail-checklist-copy-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.task-detail-checklist-copy-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
 .task-detail-editor {
   position: relative;
   border-radius: 18px;

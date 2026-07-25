@@ -1742,14 +1742,6 @@ const TaskDetailModal = ({
                       onClick: copyTaskLink,
                     },
                     {
-                      key: "copyChecklist",
-                      label: "Copy checklist",
-                      icon: "ti-copy",
-                      destructive: false,
-                      disabled: !hasCopyableChecklist,
-                      onClick: () => setChecklistCopyModalOpen(true),
-                    },
-                    {
                       key: "archive",
                       label: "Archive",
                       icon: "ti-archive",
@@ -1911,17 +1903,33 @@ const TaskDetailModal = ({
                 </div>
 
                 <div className="py-3">
-                  <button
-                    type="button"
-                    className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-primary"
-                    onClick={() => {
-                      setShowRootInput(true);
-                      setRootInput("");
-                    }}
-                  >
-                    <i className="fa-solid fa-plus fa-fw"></i>
-                    <span>Add checklist item</span>
-                  </button>
+                  <div className="task-detail-checklist-actions">
+                    <button
+                      type="button"
+                      className="btn px-2 b-r-20 d-flex align-items-center gap-2 text-primary"
+                      onClick={() => {
+                        setShowRootInput(true);
+                        setRootInput("");
+                      }}
+                    >
+                      <i className="fa-solid fa-plus fa-fw"></i>
+                      <span>Add checklist item</span>
+                    </button>
+                    <span
+                      className="task-detail-checklist-copy-action"
+                      title="copy all checklists"
+                    >
+                      <button
+                        type="button"
+                        className="btn text-muted icon-btn b-r-100 task-detail-checklist-copy-button"
+                        aria-label="copy all checklists"
+                        disabled={!hasCopyableChecklist}
+                        onClick={() => setChecklistCopyModalOpen(true)}
+                      >
+                        <i className="ti ti-copy fs-4" aria-hidden="true"></i>
+                      </button>
+                    </span>
+                  </div>
                   {showRootInput ? (
                     <div>
                       <textarea
