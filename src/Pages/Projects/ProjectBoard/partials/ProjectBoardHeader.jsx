@@ -13,13 +13,24 @@ const TAG_COLORS = [
   "#64748b",
 ];
 
+const PRIORITY_OPTIONS = [
+  { value: "low", label: "Low", color: "#16a66a", icon: "ph-arrow-down" },
+  { value: "medium", label: "Medium", color: "#0891a2", icon: "ph-equals" },
+  { value: "high", label: "High", color: "#f97316", icon: "ph-arrow-up" },
+  { value: "urgent", label: "Urgent", color: "#dc3545", icon: "ph-warning" },
+];
+
 const normalizeText = (value) =>
   String(value ?? "")
     .trim()
     .toLowerCase();
 
 const getTaskElements = () =>
-  Array.from(document.querySelectorAll(".project-board-main .board-item-shell"));
+  Array.from(
+    document.querySelectorAll(
+      ".project-board-main__content .board-item-shell",
+    ),
+  );
 
 const getTaskSearchContent = (taskElement) => {
   const title = taskElement.querySelector(".board-item-title")?.textContent ?? "";
@@ -35,6 +46,43 @@ const getTaskTagNames = (taskElement) =>
   Array.from(taskElement.querySelectorAll(".board-item-tags-row .badge"))
     .map((tag) => String(tag.textContent ?? "").trim())
     .filter(Boolean);
+
+const getTaskPriority = (taskElement) => {
+  const priorityDataElement = taskElement.hasAttribute("data-task-priority")
+    ? taskElement
+    : taskElement.querySelector("[data-task-priority]");
+  const explicitPriority = normalizeText(
+    priorityDataElement?.getAttribute("data-task-priority"),
+  );
+
+  if (PRIORITY_OPTIONS.some((priority) => priority.value === explicitPriority)) {
+    return explicitPriority;
+  }
+
+  const priorityCue = taskElement.querySelector(".board-item-priority-cue");
+  if (!priorityCue) return "";
+
+  const className = String(priorityCue.className ?? "");
+  const priorityFromClass = PRIORITY_OPTIONS.find(
+    (priority) =>
+      className.includes(`board-item-priority-cue--${priority.value}`),
+  );
+
+  if (priorityFromClass) return priorityFromClass.value;
+
+  const accessibleLabel = normalizeText(
+    priorityCue.getAttribute("aria-label") ||
+      priorityCue.getAttribute("title") ||
+      priorityCue.textContent,
+  );
+
+  return (
+    PRIORITY_OPTIONS.find(
+      (priority) =>
+        accessibleLabel.includes(priority.value),
+    )?.value ?? ""
+  );
+};
 
 const ProjectBoardHeader = ({
   projectName,
@@ -54,14 +102,18 @@ const ProjectBoardHeader = ({
   const [filterOpen, setFilterOpen] = useState(false);
   const [availableTags, setAvailableTags] = useState([]);
   const [draftTags, setDraftTags] = useState([]);
+  const [draftPriorities, setDraftPriorities] = useState([]);
   const [draftSearch, setDraftSearch] = useState("");
   const [draftHideUnmatched, setDraftHideUnmatched] = useState(true);
   const [activeTags, setActiveTags] = useState([]);
+  const [activePriorities, setActivePriorities] = useState([]);
   const [activeSearch, setActiveSearch] = useState("");
   const [activeHideUnmatched, setActiveHideUnmatched] = useState(true);
   const [matchingTaskCount, setMatchingTaskCount] = useState(0);
 
-  const hasActiveFilters = Boolean(activeTags.length || activeSearch.trim());
+  const hasActiveFilters = Boolean(
+    activeTags.length || activePriorities.length || activeSearch.trim(),
+  );
 
   const scanBoardTags = useCallback(() => {
     if (typeof document === "undefined") return;
@@ -83,28 +135,43 @@ const ProjectBoardHeader = ({
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    setAvailableTags(nextTags);
+    setAvailableTags((currentTags) => {
+      const currentKey = currentTags
+        .map((tag) => `${tag.key}:${tag.name}:${tag.color}`)
+        .join("|");
+      const nextKey = nextTags
+        .map((tag) => `${tag.key}:${tag.name}:${tag.color}`)
+        .join("|");
+      return currentKey === nextKey ? currentTags : nextTags;
+    });
   }, []);
 
   const applyFiltersToBoard = useCallback(() => {
     if (typeof document === "undefined") return;
 
     const normalizedSelectedTags = activeTags.map(normalizeText).filter(Boolean);
+    const normalizedSelectedPriorities = activePriorities
+      .map(normalizeText)
+      .filter(Boolean);
     const normalizedSearch = normalizeText(activeSearch);
     const taskElements = getTaskElements();
     let matches = 0;
 
     taskElements.forEach((taskElement) => {
       const taskTags = getTaskTagNames(taskElement).map(normalizeText);
+      const taskPriority = getTaskPriority(taskElement);
       const matchesTags =
         normalizedSelectedTags.length === 0 ||
         normalizedSelectedTags.some((selectedTag) =>
           taskTags.includes(selectedTag),
         );
+      const matchesPriority =
+        normalizedSelectedPriorities.length === 0 ||
+        normalizedSelectedPriorities.includes(taskPriority);
       const matchesSearch =
         !normalizedSearch ||
         getTaskSearchContent(taskElement).includes(normalizedSearch);
-      const isMatch = matchesTags && matchesSearch;
+      const isMatch = matchesTags && matchesPriority && matchesSearch;
 
       if (isMatch) matches += 1;
 
@@ -119,12 +186,18 @@ const ProjectBoardHeader = ({
     });
 
     setMatchingTaskCount(hasActiveFilters ? matches : taskElements.length);
-  }, [activeHideUnmatched, activeSearch, activeTags, hasActiveFilters]);
+  }, [
+    activeHideUnmatched,
+    activePriorities,
+    activeSearch,
+    activeTags,
+    hasActiveFilters,
+  ]);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
 
-    const boardRoot = document.querySelector(".project-board-main");
+    const boardRoot = document.querySelector(".project-board-main__content");
     scanBoardTags();
     applyFiltersToBoard();
 
@@ -176,13 +249,10 @@ const ProjectBoardHeader = ({
   );
 
   useEffect(() => {
-    $(function () {
-      const tooltipInit = {
-        init: function () {
-          $("Button").tooltip();
-        },
-      };
-      tooltipInit.init();
+    if (typeof window === "undefined" || typeof window.$ !== "function") return;
+
+    window.$(() => {
+      window.$("Button").tooltip();
     });
   }, []);
 
@@ -195,6 +265,7 @@ const ProjectBoardHeader = ({
   const openFilterDrawer = () => {
     if (filterDisabled) return;
     setDraftTags(activeTags);
+    setDraftPriorities(activePriorities);
     setDraftSearch(activeSearch);
     setDraftHideUnmatched(activeHideUnmatched);
     scanBoardTags();
@@ -214,8 +285,17 @@ const ProjectBoardHeader = ({
     });
   };
 
+  const toggleDraftPriority = (priorityValue) => {
+    setDraftPriorities((current) =>
+      current.includes(priorityValue)
+        ? current.filter((value) => value !== priorityValue)
+        : [...current, priorityValue],
+    );
+  };
+
   const handleApplyFilters = () => {
     setActiveTags(draftTags);
+    setActivePriorities(draftPriorities);
     setActiveSearch(draftSearch.trim());
     setActiveHideUnmatched(draftHideUnmatched);
     setFilterOpen(false);
@@ -223,9 +303,11 @@ const ProjectBoardHeader = ({
 
   const handleResetFilters = () => {
     setDraftTags([]);
+    setDraftPriorities([]);
     setDraftSearch("");
     setDraftHideUnmatched(true);
     setActiveTags([]);
+    setActivePriorities([]);
     setActiveSearch("");
     setActiveHideUnmatched(true);
   };
@@ -286,7 +368,11 @@ const ProjectBoardHeader = ({
                 onClick={openFilterDrawer}
                 disabled={filterDisabled}
                 aria-label="Filter tasks"
-                title={filterDisabled ? "Task filters are available in Task Manager" : "Filter tasks"}
+                title={
+                  filterDisabled
+                    ? "Task filters are available in Task Manager"
+                    : "Filter tasks"
+                }
                 aria-expanded={filterOpen}
                 aria-controls="project-task-filter-drawer"
               >
@@ -335,22 +421,22 @@ const ProjectBoardHeader = ({
           <div>
             <h5 className="project-task-filter-drawer__title">Filter Tasks</h5>
             <p className="project-task-filter-drawer__subtitle">
-              Filter by project tags
+              Filter by project tags and priority
             </p>
           </div>
           <button
             type="button"
             className="project-task-filter-drawer__close"
             onClick={() => setFilterOpen(false)}
-            aria-label="Close task filters"
+            aria-label="Close filter drawer"
           >
             <i className="ph ph-x" />
           </button>
         </div>
 
-        <div className="project-task-filter-drawer__body">
+        <div className="project-task-filter-drawer__body app-scroll">
           <label className="project-task-filter-search">
-            <i className="ph ph-magnifying-glass" />
+            <i className="ph ph-magnifying-glass" aria-hidden="true" />
             <input
               type="search"
               value={draftSearch}
@@ -360,73 +446,117 @@ const ProjectBoardHeader = ({
             />
           </label>
 
-          <h6 className="project-task-filter-section-title">Project Tags</h6>
-          {filteredTags.length ? (
+          <section className="project-task-filter-section" aria-labelledby="project-tags-title">
+            <div className="project-task-filter-section__heading">
+              <h6 id="project-tags-title">Project Tags</h6>
+              {draftTags.length ? <span>{draftTags.length} selected</span> : null}
+            </div>
+
             <div className="project-task-filter-tags">
               {filteredTags.map((tag) => {
                 const selected = draftTags.some(
-                  (selectedTag) =>
-                    normalizeText(selectedTag) === normalizeText(tag.name),
+                  (selectedTag) => normalizeText(selectedTag) === tag.key,
                 );
 
                 return (
                   <button
-                    key={tag.key}
                     type="button"
-                    className={`project-task-filter-tag ${
-                      selected ? "is-selected" : ""
-                    }`}
+                    key={tag.key}
+                    className={`project-task-filter-tag ${selected ? "is-selected" : ""}`}
                     style={{ "--tag-color": tag.color }}
                     onClick={() => toggleDraftTag(tag.name)}
                     aria-pressed={selected}
                   >
-                    <i className="ph ph-tag" />
+                    <i className="ph ph-tag" aria-hidden="true" />
                     <span>{tag.name}</span>
                     {selected ? (
-                      <span className="project-task-filter-tag__check">
-                        <i className="ph ph-check" />
-                      </span>
+                      <i className="ph ph-check project-task-filter-tag__check" aria-hidden="true" />
                     ) : null}
                   </button>
                 );
               })}
             </div>
-          ) : (
-            <div className="project-task-filter-empty">
-              No project tags match this search.
+
+            {!availableTags.length ? (
+              <p className="project-task-filter-empty">No task tags are available.</p>
+            ) : filteredTags.length === 0 ? (
+              <p className="project-task-filter-empty">No tags match this search.</p>
+            ) : null}
+          </section>
+
+          <section className="project-task-filter-section" aria-labelledby="task-priority-title">
+            <div className="project-task-filter-section__heading">
+              <h6 id="task-priority-title">Priority</h6>
+              {draftPriorities.length ? (
+                <span>{draftPriorities.length} selected</span>
+              ) : null}
             </div>
-          )}
+
+            <div className="project-task-filter-tags project-task-filter-priorities">
+              {PRIORITY_OPTIONS.map((priority) => {
+                const selected = draftPriorities.includes(priority.value);
+
+                return (
+                  <button
+                    type="button"
+                    key={priority.value}
+                    className={`project-task-filter-tag project-task-filter-priority ${
+                      selected ? "is-selected" : ""
+                    }`}
+                    style={{ "--tag-color": priority.color }}
+                    onClick={() => toggleDraftPriority(priority.value)}
+                    aria-pressed={selected}
+                  >
+                    <i className={`ph ${priority.icon}`} aria-hidden="true" />
+                    <span>{priority.label}</span>
+                    {selected ? (
+                      <i className="ph ph-check project-task-filter-tag__check" aria-hidden="true" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
           <div className="project-task-filter-summary" aria-live="polite">
-            <i className="ph ph-check-square-offset" />
-            <span>{matchingTaskCount} matching tasks</span>
+            <span className="project-task-filter-summary__icon">
+              <i className="ph ph-check-square-offset" aria-hidden="true" />
+            </span>
+            <span>
+              <strong>{matchingTaskCount}</strong> matching task
+              {matchingTaskCount === 1 ? "" : "s"}
+            </span>
           </div>
 
-          <div className="project-task-filter-toggle-row">
+          <div className="project-task-filter-option">
             <span>Show only matching tasks</span>
             <button
               type="button"
-              className={`project-task-filter-toggle ${
+              className={`project-task-filter-switch ${
                 draftHideUnmatched ? "is-on" : ""
               }`}
+              role="switch"
+              aria-checked={draftHideUnmatched}
               onClick={() => setDraftHideUnmatched((current) => !current)}
-              aria-pressed={draftHideUnmatched}
-              aria-label="Show only matching tasks"
-            />
+            >
+              <span className="visually-hidden">
+                {draftHideUnmatched ? "Disable" : "Enable"} show only matching tasks
+              </span>
+            </button>
           </div>
         </div>
 
         <div className="project-task-filter-drawer__footer">
           <button
             type="button"
-            className="project-task-filter-action project-task-filter-action--reset"
+            className="project-task-filter-reset"
             onClick={handleResetFilters}
           >
             Reset
           </button>
           <button
             type="button"
-            className="project-task-filter-action project-task-filter-action--apply"
+            className="project-task-filter-apply"
             onClick={handleApplyFilters}
           >
             Apply Filters
