@@ -271,12 +271,6 @@
   box-shadow: 0 8px 20px rgba(var(--primary), 0.2);
 }
 
-.project-board-header__icon-btn.filter-active {
-  color: rgb(var(--primary));
-  background: rgba(var(--primary), 0.09);
-  border-color: rgba(var(--primary), 0.28);
-  box-shadow: 0 0 0 3px rgba(var(--primary), 0.07);
-}
 
 .board-item-shell.task-filter-hidden {
   display: none !important;
