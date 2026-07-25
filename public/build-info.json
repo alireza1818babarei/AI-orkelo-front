@@ -1,6 +1,6 @@
 {
     "app": "orkelo",
-    "back-commit": "Show the name of the task column in the notification",
-    "front-commit": "Show the name of the task column in the notification",
+    "back-commit": "fix(task-manager): use dependency-free project mutation locks",
+    "front-commit": "refactor(task-modal): relocate checklist copy action",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }
