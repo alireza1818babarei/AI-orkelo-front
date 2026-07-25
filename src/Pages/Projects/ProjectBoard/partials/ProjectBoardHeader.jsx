@@ -42,10 +42,24 @@ const getTaskSearchContent = (taskElement) => {
   return normalizeText([title, description, ...tags].join(" "));
 };
 
-const getTaskTagNames = (taskElement) =>
+const normalizeTagColor = (value) => {
+  const color = String(value ?? "").trim();
+  if (!color || color.includes("var(--primary)")) return "";
+  return color;
+};
+
+const getTaskTags = (taskElement) =>
   Array.from(taskElement.querySelectorAll(".board-item-tags-row .badge"))
-    .map((tag) => String(tag.textContent ?? "").trim())
-    .filter(Boolean);
+    .map((tag) => ({
+      name: String(tag.textContent ?? "").trim(),
+      color: normalizeTagColor(
+        tag.style.backgroundColor || tag.style.background,
+      ),
+    }))
+    .filter((tag) => Boolean(tag.name));
+
+const getTaskTagNames = (taskElement) =>
+  getTaskTags(taskElement).map((tag) => tag.name);
 
 const getTaskPriority = (taskElement) => {
   const priorityDataElement = taskElement.hasAttribute("data-task-priority")
@@ -104,12 +118,9 @@ const ProjectBoardHeader = ({
   const [draftTags, setDraftTags] = useState([]);
   const [draftPriorities, setDraftPriorities] = useState([]);
   const [draftSearch, setDraftSearch] = useState("");
-  const [draftHideUnmatched, setDraftHideUnmatched] = useState(true);
   const [activeTags, setActiveTags] = useState([]);
   const [activePriorities, setActivePriorities] = useState([]);
   const [activeSearch, setActiveSearch] = useState("");
-  const [activeHideUnmatched, setActiveHideUnmatched] = useState(true);
-  const [matchingTaskCount, setMatchingTaskCount] = useState(0);
 
   const hasActiveFilters = Boolean(
     activeTags.length || activePriorities.length || activeSearch.trim(),
@@ -120,18 +131,22 @@ const ProjectBoardHeader = ({
 
     const tagMap = new Map();
     getTaskElements().forEach((taskElement) => {
-      getTaskTagNames(taskElement).forEach((tagName) => {
-        const key = normalizeText(tagName);
-        if (!key || tagMap.has(key)) return;
-        tagMap.set(key, tagName);
+      getTaskTags(taskElement).forEach(({ name, color }) => {
+        const key = normalizeText(name);
+        if (!key) return;
+
+        const current = tagMap.get(key);
+        if (!current || (!current.color && color)) {
+          tagMap.set(key, { name, color });
+        }
       });
     });
 
     const nextTags = Array.from(tagMap.entries())
-      .map(([key, name], index) => ({
+      .map(([key, tag], index) => ({
         key,
-        name,
-        color: TAG_COLORS[index % TAG_COLORS.length],
+        name: tag.name,
+        color: tag.color || TAG_COLORS[index % TAG_COLORS.length],
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -155,7 +170,6 @@ const ProjectBoardHeader = ({
       .filter(Boolean);
     const normalizedSearch = normalizeText(activeSearch);
     const taskElements = getTaskElements();
-    let matches = 0;
 
     taskElements.forEach((taskElement) => {
       const taskTags = getTaskTagNames(taskElement).map(normalizeText);
@@ -173,21 +187,13 @@ const ProjectBoardHeader = ({
         getTaskSearchContent(taskElement).includes(normalizedSearch);
       const isMatch = matchesTags && matchesPriority && matchesSearch;
 
-      if (isMatch) matches += 1;
-
       taskElement.classList.toggle(
         "task-filter-hidden",
-        hasActiveFilters && activeHideUnmatched && !isMatch,
+        hasActiveFilters && !isMatch,
       );
-      taskElement.classList.toggle(
-        "task-filter-dimmed",
-        hasActiveFilters && !activeHideUnmatched && !isMatch,
-      );
+      taskElement.classList.remove("task-filter-dimmed");
     });
-
-    setMatchingTaskCount(hasActiveFilters ? matches : taskElements.length);
   }, [
-    activeHideUnmatched,
     activePriorities,
     activeSearch,
     activeTags,
@@ -267,7 +273,6 @@ const ProjectBoardHeader = ({
     setDraftTags(activeTags);
     setDraftPriorities(activePriorities);
     setDraftSearch(activeSearch);
-    setDraftHideUnmatched(activeHideUnmatched);
     scanBoardTags();
     setFilterOpen(true);
   };
@@ -297,7 +302,6 @@ const ProjectBoardHeader = ({
     setActiveTags(draftTags);
     setActivePriorities(draftPriorities);
     setActiveSearch(draftSearch.trim());
-    setActiveHideUnmatched(draftHideUnmatched);
     setFilterOpen(false);
   };
 
@@ -305,11 +309,9 @@ const ProjectBoardHeader = ({
     setDraftTags([]);
     setDraftPriorities([]);
     setDraftSearch("");
-    setDraftHideUnmatched(true);
     setActiveTags([]);
     setActivePriorities([]);
     setActiveSearch("");
-    setActiveHideUnmatched(true);
   };
 
   return (
@@ -518,32 +520,6 @@ const ProjectBoardHeader = ({
             </div>
           </section>
 
-          <div className="project-task-filter-summary" aria-live="polite">
-            <span className="project-task-filter-summary__icon">
-              <i className="ph ph-check-square-offset" aria-hidden="true" />
-            </span>
-            <span>
-              <strong>{matchingTaskCount}</strong> matching task
-              {matchingTaskCount === 1 ? "" : "s"}
-            </span>
-          </div>
-
-          <div className="project-task-filter-option">
-            <span>Show only matching tasks</span>
-            <button
-              type="button"
-              className={`project-task-filter-switch ${
-                draftHideUnmatched ? "is-on" : ""
-              }`}
-              role="switch"
-              aria-checked={draftHideUnmatched}
-              onClick={() => setDraftHideUnmatched((current) => !current)}
-            >
-              <span className="visually-hidden">
-                {draftHideUnmatched ? "Disable" : "Enable"} show only matching tasks
-              </span>
-            </button>
-          </div>
         </div>
 
         <div className="project-task-filter-drawer__footer">
