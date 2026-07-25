@@ -1,0 +1,64 @@
+.project-members-panel__item {
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.project-members-panel__item:hover,
+.project-members-panel__item:focus-visible,
+.project-members-panel__item.is-filter-active {
+  background: rgba(var(--primary), 0.12) !important;
+  border-color: rgba(var(--primary), 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--primary), 0.08),
+    0 8px 20px rgba(15, 23, 42, 0.1);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.project-members-panel__item:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(var(--primary), 0.18),
+    0 8px 20px rgba(15, 23, 42, 0.1);
+}
+
+.project-members-panel__item.is-filter-active .project-members-panel__avatar {
+  box-shadow: 0 0 0 3px rgba(var(--primary), 0.3);
+}
+
+.project-members-panel__item.is-filter-active .project-members-panel__name {
+  color: rgb(var(--primary));
+}
+
+.project-members-panel__actions,
+.project-members-panel__actions * {
+  cursor: pointer;
+}
+
+.board-item-shell.task-member-filter-hidden {
+  display: none !important;
+}
+
+body.dark .project-members-panel__item:hover,
+body.dark .project-members-panel__item:focus-visible,
+body.dark .project-members-panel__item.is-filter-active,
+nav.dark-sidebar ~ .app-content .project-members-panel__item:hover,
+nav.dark-sidebar ~ .app-content .project-members-panel__item:focus-visible,
+nav.dark-sidebar ~ .app-content .project-members-panel__item.is-filter-active {
+  background: rgba(var(--primary), 0.16) !important;
+  border-color: rgba(var(--primary), 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--primary), 0.12),
+    0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-members-panel__item {
+    transition: none;
+  }
+}
