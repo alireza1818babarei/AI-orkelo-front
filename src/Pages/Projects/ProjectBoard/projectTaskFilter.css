@@ -1,0 +1,350 @@
+.project-task-filter-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1045;
+  background: rgba(15, 23, 42, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.project-task-filter-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.project-task-filter-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  width: min(390px, 100vw);
+  height: 100dvh;
+  background: #fff;
+  border-left: 1px solid rgba(25, 55, 99, 0.14);
+  box-shadow: -18px 0 44px rgba(15, 23, 42, 0.14);
+  transform: translateX(102%);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.project-task-filter-drawer.is-open {
+  transform: translateX(0);
+}
+
+.project-task-filter-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid rgba(25, 55, 99, 0.1);
+}
+
+.project-task-filter-drawer__title {
+  margin: 0;
+  color: #183b71;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.project-task-filter-drawer__subtitle {
+  margin: 5px 0 0;
+  color: #71809b;
+  font-size: 0.86rem;
+}
+
+.project-task-filter-drawer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: #183b71;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.project-task-filter-drawer__close:hover,
+.project-task-filter-drawer__close:focus-visible {
+  color: rgb(var(--primary));
+  background: rgba(var(--primary), 0.08);
+}
+
+.project-task-filter-drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.project-task-filter-search {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.project-task-filter-search i {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  color: #71809b;
+  font-size: 1.15rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.project-task-filter-search input {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 14px 11px 43px;
+  color: #183b71;
+  background: #fff;
+  border: 1px solid rgba(25, 55, 99, 0.2);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.project-task-filter-search input:focus {
+  border-color: rgba(var(--primary), 0.72);
+  box-shadow: 0 0 0 4px rgba(var(--primary), 0.1);
+}
+
+.project-task-filter-section-title {
+  margin: 0 0 13px;
+  color: #183b71;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.project-task-filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.project-task-filter-tag {
+  --tag-color: #3884ff;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 12px;
+  color: var(--tag-color);
+  background: color-mix(in srgb, var(--tag-color) 9%, white);
+  border: 1px solid color-mix(in srgb, var(--tag-color) 24%, white);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.project-task-filter-tag:hover,
+.project-task-filter-tag:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--tag-color) 16%, transparent);
+}
+
+.project-task-filter-tag.is-selected {
+  color: #fff;
+  background: var(--tag-color);
+  border-color: var(--tag-color);
+}
+
+.project-task-filter-tag__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  margin-left: 1px;
+  color: var(--tag-color);
+  background: #fff;
+  border-radius: 50%;
+  font-size: 0.68rem;
+}
+
+.project-task-filter-empty {
+  padding: 18px 12px;
+  color: #71809b;
+  background: #f7f9fc;
+  border: 1px dashed rgba(25, 55, 99, 0.18);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 0.86rem;
+}
+
+.project-task-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 26px;
+  padding: 18px 0;
+  color: #455a7b;
+  border-top: 1px solid rgba(25, 55, 99, 0.1);
+  border-bottom: 1px solid rgba(25, 55, 99, 0.1);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.project-task-filter-summary i {
+  color: #183b71;
+  font-size: 1.2rem;
+}
+
+.project-task-filter-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 21px 0 4px;
+  color: #455a7b;
+  font-size: 0.9rem;
+}
+
+.project-task-filter-toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 26px;
+  padding: 0;
+  background: #ccd4df;
+  border: 0;
+  border-radius: 999px;
+  transition: background-color 160ms ease;
+}
+
+.project-task-filter-toggle::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  content: "";
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+  transition: transform 160ms ease;
+}
+
+.project-task-filter-toggle.is-on {
+  background: rgb(var(--primary));
+}
+
+.project-task-filter-toggle.is-on::after {
+  transform: translateX(20px);
+}
+
+.project-task-filter-drawer__footer {
+  display: grid;
+  grid-template-columns: 1fr 1.18fr;
+  gap: 12px;
+  padding: 18px 24px 22px;
+  background: #fff;
+  border-top: 1px solid rgba(25, 55, 99, 0.1);
+}
+
+.project-task-filter-action {
+  min-height: 44px;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.project-task-filter-action--reset {
+  color: #455a7b;
+  background: #fff;
+  border: 1px solid rgba(25, 55, 99, 0.2);
+}
+
+.project-task-filter-action--apply {
+  color: #fff;
+  background: rgb(var(--primary));
+  border: 1px solid rgb(var(--primary));
+  box-shadow: 0 8px 20px rgba(var(--primary), 0.2);
+}
+
+.project-board-header__icon-btn.filter-active {
+  color: rgb(var(--primary));
+  background: rgba(var(--primary), 0.09);
+  border-color: rgba(var(--primary), 0.28);
+  box-shadow: 0 0 0 3px rgba(var(--primary), 0.07);
+}
+
+.board-item-shell.task-filter-hidden {
+  display: none !important;
+}
+
+.board-item-shell.task-filter-dimmed {
+  opacity: 0.28;
+  filter: grayscale(0.35);
+  transition: opacity 160ms ease, filter 160ms ease;
+}
+
+body.dark .project-task-filter-drawer,
+nav.dark-sidebar ~ .app-content .project-task-filter-drawer {
+  background: #202531;
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .project-task-filter-drawer__header,
+body.dark .project-task-filter-drawer__footer,
+nav.dark-sidebar ~ .app-content .project-task-filter-drawer__header,
+nav.dark-sidebar ~ .app-content .project-task-filter-drawer__footer {
+  background: #202531;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .project-task-filter-drawer__title,
+body.dark .project-task-filter-section-title,
+body.dark .project-task-filter-search input,
+nav.dark-sidebar ~ .app-content .project-task-filter-drawer__title,
+nav.dark-sidebar ~ .app-content .project-task-filter-section-title,
+nav.dark-sidebar ~ .app-content .project-task-filter-search input {
+  color: #f3f6fb;
+}
+
+body.dark .project-task-filter-search input,
+nav.dark-sidebar ~ .app-content .project-task-filter-search input {
+  background: #2a303d;
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+body.dark .project-task-filter-drawer__subtitle,
+body.dark .project-task-filter-toggle-row,
+body.dark .project-task-filter-summary,
+nav.dark-sidebar ~ .app-content .project-task-filter-drawer__subtitle,
+nav.dark-sidebar ~ .app-content .project-task-filter-toggle-row,
+nav.dark-sidebar ~ .app-content .project-task-filter-summary {
+  color: #b9c2d0;
+}
+
+@media (max-width: 767px) {
+  .project-task-filter-drawer {
+    width: 100vw;
+  }
+
+  .project-task-filter-drawer__header,
+  .project-task-filter-drawer__body,
+  .project-task-filter-drawer__footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-task-filter-backdrop,
+  .project-task-filter-drawer,
+  .project-task-filter-tag,
+  .project-task-filter-toggle,
+  .project-task-filter-toggle::after {
+    transition: none;
+  }
+}
