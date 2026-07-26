@@ -3,6 +3,7 @@ import App from './App';
 import './index.css';
 import './reports-responsive.css';
 import './user-performance-responsive.css';
+import './task-modal-responsive.css';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
 
