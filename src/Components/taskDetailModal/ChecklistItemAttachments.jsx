@@ -54,6 +54,27 @@ const normalizeResponseAttachments = (payload) => {
   return [];
 };
 
+const isFileDragEvent = (event) =>
+  Array.from(event?.dataTransfer?.types || []).includes("Files");
+
+const getDataTransferFiles = (dataTransfer) =>
+  Array.from(dataTransfer?.files || []).filter(
+    (file) => file && (typeof File === "undefined" || file instanceof File),
+  );
+
+const getClipboardFiles = (clipboardData) => {
+  const directFiles = Array.from(clipboardData?.files || []).filter(
+    (file) => file && (typeof File === "undefined" || file instanceof File),
+  );
+
+  if (directFiles.length) return directFiles;
+
+  return Array.from(clipboardData?.items || [])
+    .filter((item) => item?.kind === "file")
+    .map((item) => item.getAsFile?.())
+    .filter(Boolean);
+};
+
 const buildChecklistAttachmentUrl = ({
   projectId,
   taskId,
@@ -72,8 +93,10 @@ const buildChecklistAttachmentUrl = ({
 const safeFormatDate = (value, formatDateTime) => {
   if (typeof formatDateTime === "function") return formatDateTime(value);
   if (!value) return "";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
+
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
@@ -105,28 +128,22 @@ export default function ChecklistItemAttachments({
     Array.isArray(initialAttachments) ? initialAttachments : [],
   );
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [dragActive, setDragActive] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewDownloading, setPreviewDownloading] = useState(false);
+
+  const rootRef = useRef(null);
   const inputRef = useRef(null);
+  const dragDepthRef = useRef(0);
   const uploadAbortControllerRef = useRef(null);
   const uploadCancelReasonRef = useRef(null);
 
   const isUploading = uploadingCount > 0;
   const isDisabled =
     disabled || !projectId || !taskId || !checklistItemId || isUploading;
-
-  const cancelUpload = useCallback(() => {
-    uploadCancelReasonRef.current = "manual";
-    uploadAbortControllerRef.current?.abort();
-  }, []);
-
-  useEffect(() => () => {
-    uploadCancelReasonRef.current = "unmount";
-    uploadAbortControllerRef.current?.abort();
-  }, []);
 
   const previewAttachmentCount = attachments.length;
   const normalizedPreviewIndex = previewAttachmentCount
@@ -137,6 +154,19 @@ export default function ChecklistItemAttachments({
       ? attachments[normalizedPreviewIndex] ?? null
       : null;
   const canNavigatePreview = previewAttachmentCount > 1;
+
+  const cancelUpload = useCallback(() => {
+    uploadCancelReasonRef.current = "manual";
+    uploadAbortControllerRef.current?.abort();
+  }, []);
+
+  useEffect(
+    () => () => {
+      uploadCancelReasonRef.current = "unmount";
+      uploadAbortControllerRef.current?.abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     const next = getInitialChecklistAttachments(checklistItem);
@@ -163,22 +193,22 @@ export default function ChecklistItemAttachments({
   const showPreviousPreview = useCallback(() => {
     setPreviewIndex((current) => {
       if (previewAttachmentCount <= 1) return current;
-      const currentIndex = Math.min(
+      const safeIndex = Math.min(
         Math.max(current, 0),
         previewAttachmentCount - 1,
       );
-      return (currentIndex - 1 + previewAttachmentCount) % previewAttachmentCount;
+      return (safeIndex - 1 + previewAttachmentCount) % previewAttachmentCount;
     });
   }, [previewAttachmentCount]);
 
   const showNextPreview = useCallback(() => {
     setPreviewIndex((current) => {
       if (previewAttachmentCount <= 1) return current;
-      const currentIndex = Math.min(
+      const safeIndex = Math.min(
         Math.max(current, 0),
         previewAttachmentCount - 1,
       );
-      return (currentIndex + 1) % previewAttachmentCount;
+      return (safeIndex + 1) % previewAttachmentCount;
     });
   }, [previewAttachmentCount]);
 
@@ -221,7 +251,6 @@ export default function ChecklistItemAttachments({
       const selectedFiles = Array.from(files || []).filter(Boolean);
       if (!selectedFiles.length || isDisabled) return;
 
-      let uploadedCount = 0;
       let controller = null;
       try {
         setUploadingCount(selectedFiles.length);
@@ -229,35 +258,34 @@ export default function ChecklistItemAttachments({
         uploadAbortControllerRef.current = controller;
         uploadCancelReasonRef.current = null;
 
-        const fd = new FormData();
+        const formData = new FormData();
         selectedFiles.forEach((file) => {
-          fd.append("files[]", file);
+          formData.append("files[]", file);
         });
 
-        const res = await api.post(
+        const response = await api.post(
           buildChecklistAttachmentUrl({
             projectId,
             taskId,
             checklistItemId,
           }),
-          fd,
+          formData,
           { signal: controller.signal },
         );
 
-        const uploaded = normalizeResponseAttachments(res?.data);
+        const uploaded = normalizeResponseAttachments(response?.data);
+        const uploadedCount = uploaded.length || selectedFiles.length;
+
         if (uploaded.length) {
-          uploadedCount = uploaded.length;
-          setAttachments((prev) => [...uploaded, ...(prev || [])]);
+          setAttachments((current) => [...uploaded, ...(current || [])]);
         }
 
-        if (uploadedCount) {
-          toastSuccess(uploadedCount > 1 ? "Files attached" : "File attached");
-          onChanged?.();
-        }
-      } catch (err) {
+        toastSuccess(uploadedCount > 1 ? "Files attached" : "File attached");
+        onChanged?.();
+      } catch (error) {
         if (
           uploadCancelReasonRef.current === "manual" ||
-          err?.message === "canceled"
+          error?.message === "canceled"
         ) {
           if (uploadCancelReasonRef.current === "manual") {
             toastInfo("Upload canceled");
@@ -265,7 +293,11 @@ export default function ChecklistItemAttachments({
           return;
         }
 
-        toastError(err?.message || "Upload checklist attachment failed");
+        toastError(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Upload checklist attachment failed",
+        );
       } finally {
         if (uploadAbortControllerRef.current === controller) {
           uploadAbortControllerRef.current = null;
@@ -277,6 +309,92 @@ export default function ChecklistItemAttachments({
     },
     [checklistItemId, isDisabled, onChanged, projectId, taskId],
   );
+
+  const handleDragEnter = useCallback(
+    (event) => {
+      if (!isFileDragEvent(event)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = isDisabled ? "none" : "copy";
+      }
+
+      if (isDisabled) return;
+
+      dragDepthRef.current += 1;
+      setDragActive(true);
+    },
+    [isDisabled],
+  );
+
+  const handleDragOver = useCallback(
+    (event) => {
+      if (!isFileDragEvent(event)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = isDisabled ? "none" : "copy";
+      }
+    },
+    [isDisabled],
+  );
+
+  const handleDragLeave = useCallback((event) => {
+    if (!isFileDragEvent(event)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    dragDepthRef.current = Math.max(dragDepthRef.current - 1, 0);
+    if (dragDepthRef.current === 0) setDragActive(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    async (event) => {
+      if (!isFileDragEvent(event)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      dragDepthRef.current = 0;
+      setDragActive(false);
+
+      if (isDisabled) return;
+
+      const files = getDataTransferFiles(event.dataTransfer);
+      if (!files.length) return;
+
+      await uploadFiles(files);
+    },
+    [isDisabled, uploadFiles],
+  );
+
+  useEffect(() => {
+    const handleFocusedChecklistPaste = (event) => {
+      const root = rootRef.current;
+      const activeElement = document.activeElement;
+
+      if (!root || !activeElement || !root.contains(activeElement)) return;
+      if (isDisabled) return;
+
+      const files = getClipboardFiles(event.clipboardData);
+      if (!files.length) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+
+      uploadFiles(files);
+    };
+
+    window.addEventListener("paste", handleFocusedChecklistPaste, true);
+    return () =>
+      window.removeEventListener("paste", handleFocusedChecklistPaste, true);
+  }, [isDisabled, uploadFiles]);
 
   const downloadAttachment = async (attachment) => {
     const href = resolveAttachmentHref(getAttachmentUrl(attachment));
@@ -291,7 +409,7 @@ export default function ChecklistItemAttachments({
 
       if (projectId && taskId && checklistItemId && attachmentId != null) {
         try {
-          const res = await api.get(
+          const response = await api.get(
             buildChecklistAttachmentUrl({
               projectId,
               taskId,
@@ -302,29 +420,34 @@ export default function ChecklistItemAttachments({
             { responseType: "blob" },
           );
           const blob =
-            res?.data instanceof Blob ? res.data : new Blob([res?.data]);
+            response?.data instanceof Blob
+              ? response.data
+              : new Blob([response?.data]);
           const headerName = parseFilenameFromContentDisposition(
-            res?.headers?.["content-disposition"] ??
-              res?.headers?.["Content-Disposition"],
+            response?.headers?.["content-disposition"] ??
+              response?.headers?.["Content-Disposition"],
           );
           triggerBrowserDownload({ blob, filename: headerName || name });
           return;
         } catch {
-          // Existing file URLs still allow download when the item endpoint is unavailable.
+          // Existing file URLs remain a fallback when the download endpoint is unavailable.
         }
       }
 
       if (!href) throw new Error("Download url missing");
 
-      const res = await api.get(href, { responseType: "blob" });
-      const blob = res?.data instanceof Blob ? res.data : new Blob([res?.data]);
+      const response = await api.get(href, { responseType: "blob" });
+      const blob =
+        response?.data instanceof Blob
+          ? response.data
+          : new Blob([response?.data]);
       const headerName = parseFilenameFromContentDisposition(
-        res?.headers?.["content-disposition"] ??
-          res?.headers?.["Content-Disposition"],
+        response?.headers?.["content-disposition"] ??
+          response?.headers?.["Content-Disposition"],
       );
       triggerBrowserDownload({ blob, filename: headerName || name });
-    } catch (err) {
-      toastError(err?.message || "Download failed");
+    } catch (error) {
+      toastError(error?.message || "Download failed");
     } finally {
       setPreviewDownloading(false);
     }
@@ -355,46 +478,78 @@ export default function ChecklistItemAttachments({
         }),
       );
 
-      setAttachments((prev) =>
-        (prev || []).filter(
+      setAttachments((current) =>
+        (current || []).filter(
           (item) => String(getAttachmentId(item)) !== String(attachmentId),
         ),
       );
       setMenuOpenId(null);
       toastSuccess("File deleted");
       onChanged?.();
-    } catch (err) {
-      toastError(err?.message || "Delete checklist attachment failed");
+    } catch (error) {
+      toastError(error?.message || "Delete checklist attachment failed");
     } finally {
       setDeletingId(null);
     }
   };
 
   return (
-    <div className="checklist-item-attachments">
+    <div
+      ref={rootRef}
+      className={`checklist-item-attachments ${
+        dragActive
+          ? "border border-primary rounded-3 p-2 bg-light-primary"
+          : ""
+      }`}
+      role="group"
+      tabIndex={isDisabled ? -1 : 0}
+      aria-label="Checklist item attachments. Choose, drop, or paste multiple files."
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+
+        event.preventDefault();
+        inputRef.current?.click();
+      }}
+    >
       {showTrigger ? (
-        <button
-          type="button"
-          className="btn px-0 text-info small f-s-12 checklist-item-attachments__trigger"
-          onClick={() => inputRef.current?.click()}
-          disabled={isDisabled}
-        >
-          <i className="ti ti-paperclip" aria-hidden="true"></i>
-          <span>Add attachment</span>
-        </button>
+        <div className="d-flex align-items-center flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn px-0 text-info small f-s-12 checklist-item-attachments__trigger"
+            onClick={() => inputRef.current?.click()}
+            disabled={isDisabled}
+          >
+            <i className="ti ti-paperclip" aria-hidden="true"></i>
+            <span>Add attachments</span>
+          </button>
+          <span className={dragActive ? "text-primary f-s-10 fw-semibold" : "text-muted f-s-10"}>
+            {dragActive
+              ? "Drop files to attach"
+              : "Choose, drop, or paste multiple files"}
+          </span>
+        </div>
       ) : null}
 
       <input
         ref={inputRef}
         id={resolvedInputId}
         type="file"
+        name="files[]"
         multiple
         className="d-none"
+        aria-label="Choose one or more checklist item attachments"
         onChange={async (event) => {
           const input = event.currentTarget;
           const files = Array.from(input.files || []);
+          if (!files.length) return;
+
           await uploadFiles(files);
-          if (input) input.value = "";
+          input.value = "";
         }}
         disabled={isDisabled}
       />
@@ -426,7 +581,9 @@ export default function ChecklistItemAttachments({
             const attachmentId = getAttachmentId(attachment);
             const isImg = isImageAttachment(attachment) && !!href;
             const iconSrc = toPublicAsset(resolveAttachmentIcon(attachment));
-            const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
+            const fallbackIconSrc = toPublicAsset(
+              "assets/images/icons/file.png",
+            );
             const idKey =
               attachmentId != null
                 ? String(attachmentId)
@@ -436,7 +593,12 @@ export default function ChecklistItemAttachments({
 
             return (
               <div
-                key={attachment?.id ?? attachment?.url ?? attachment?.path ?? idKey}
+                key={
+                  attachment?.id ??
+                  attachment?.url ??
+                  attachment?.path ??
+                  idKey
+                }
                 className="checklist-item-attachment-card"
               >
                 {attachmentId != null ? (
@@ -445,7 +607,9 @@ export default function ChecklistItemAttachments({
                       direction="up"
                       isOpen={menuOpen}
                       toggle={() =>
-                        setMenuOpenId((prev) => (prev === idKey ? null : idKey))
+                        setMenuOpenId((current) =>
+                          current === idKey ? null : idKey,
+                        )
                       }
                     >
                       <DropdownToggle
@@ -454,9 +618,9 @@ export default function ChecklistItemAttachments({
                         className="btn p-0 text-muted"
                         title="Options"
                         aria-label="Options"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
                         }}
                       >
                         <i className="ti ti-dots-vertical fs-5"></i>
@@ -465,9 +629,9 @@ export default function ChecklistItemAttachments({
                         <DropdownItem
                           className="text-danger"
                           disabled={deleting}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
                             deleteAttachment(attachment);
                           }}
                         >
@@ -485,9 +649,9 @@ export default function ChecklistItemAttachments({
                   type="button"
                   className="checklist-item-attachment-card__button"
                   title={name}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     openPreview(index);
                   }}
                 >
@@ -509,9 +673,9 @@ export default function ChecklistItemAttachments({
                       <img
                         src={iconSrc}
                         alt={name}
-                        onError={(e) => {
-                          if (e.currentTarget.src === fallbackIconSrc) return;
-                          e.currentTarget.src = fallbackIconSrc;
+                        onError={(event) => {
+                          if (event.currentTarget.src === fallbackIconSrc) return;
+                          event.currentTarget.src = fallbackIconSrc;
                         }}
                       />
                     )}
@@ -549,114 +713,136 @@ export default function ChecklistItemAttachments({
           </div>
         </ModalHeader>
         <ModalBody className="task-attachment-preview-modal__body">
-          {previewAttachment ? (
-            (() => {
-              const name = getAttachmentName(previewAttachment);
-              const href = resolveAttachmentHref(getAttachmentUrl(previewAttachment));
-              const attachmentId = getAttachmentId(previewAttachment);
-              const isImg = isImageAttachment(previewAttachment) && !!href;
-              const iconSrc = toPublicAsset(resolveAttachmentIcon(previewAttachment));
-              const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
+          {previewAttachment
+            ? (() => {
+                const name = getAttachmentName(previewAttachment);
+                const href = resolveAttachmentHref(
+                  getAttachmentUrl(previewAttachment),
+                );
+                const attachmentId = getAttachmentId(previewAttachment);
+                const isImg =
+                  isImageAttachment(previewAttachment) && !!href;
+                const iconSrc = toPublicAsset(
+                  resolveAttachmentIcon(previewAttachment),
+                );
+                const fallbackIconSrc = toPublicAsset(
+                  "assets/images/icons/file.png",
+                );
 
-              return (
-                <div className="d-flex flex-column gap-3">
-                  <div className="task-attachment-preview-modal__content">
-                    {canNavigatePreview ? (
-                      <button
-                        type="button"
-                        className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--prev"
-                        aria-label="Previous attachment"
-                        title="Previous attachment"
-                        onClick={showPreviousPreview}
-                      >
-                        <i className="ti ti-chevron-left" aria-hidden="true"></i>
-                        <span className="visually-hidden">
-                          Previous attachment
-                        </span>
-                      </button>
-                    ) : null}
+                return (
+                  <div className="d-flex flex-column gap-3">
+                    <div className="task-attachment-preview-modal__content">
+                      {canNavigatePreview ? (
+                        <button
+                          type="button"
+                          className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--prev"
+                          aria-label="Previous attachment"
+                          title="Previous attachment"
+                          onClick={showPreviousPreview}
+                        >
+                          <i
+                            className="ti ti-chevron-left"
+                            aria-hidden="true"
+                          ></i>
+                          <span className="visually-hidden">
+                            Previous attachment
+                          </span>
+                        </button>
+                      ) : null}
 
-                    <div className="task-attachment-preview-modal__stage bg-light rounded-3 d-flex-center overflow-hidden">
-                      {isImg ? (
-                        <AttachmentImage
-                          attachment={previewAttachment}
-                          href={href}
-                          alt={name}
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: 520,
-                            objectFit: "contain",
-                          }}
-                          fallbackIconSrc={fallbackIconSrc}
-                        />
-                      ) : (
-                        <div className="d-flex flex-column align-items-center gap-2 py-4">
-                          <img
-                            src={iconSrc}
+                      <div className="task-attachment-preview-modal__stage bg-light rounded-3 d-flex-center overflow-hidden">
+                        {isImg ? (
+                          <AttachmentImage
+                            attachment={previewAttachment}
+                            href={href}
                             alt={name}
-                            onError={(e) => {
-                              if (e.currentTarget.src === fallbackIconSrc) return;
-                              e.currentTarget.src = fallbackIconSrc;
-                            }}
                             style={{
-                              width: 84,
-                              height: 84,
+                              maxWidth: "100%",
+                              maxHeight: 520,
                               objectFit: "contain",
                             }}
+                            fallbackIconSrc={fallbackIconSrc}
                           />
-                          <div className="text-muted small">
-                            {formatBytes(previewAttachment?.size)}
+                        ) : (
+                          <div className="d-flex flex-column align-items-center gap-2 py-4">
+                            <img
+                              src={iconSrc}
+                              alt={name}
+                              onError={(event) => {
+                                if (
+                                  event.currentTarget.src === fallbackIconSrc
+                                ) {
+                                  return;
+                                }
+                                event.currentTarget.src = fallbackIconSrc;
+                              }}
+                              style={{
+                                width: 84,
+                                height: 84,
+                                objectFit: "contain",
+                              }}
+                            />
+                            <div className="text-muted small">
+                              {formatBytes(previewAttachment?.size)}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+
+                      {canNavigatePreview ? (
+                        <button
+                          type="button"
+                          className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--next"
+                          aria-label="Next attachment"
+                          title="Next attachment"
+                          onClick={showNextPreview}
+                        >
+                          <i
+                            className="ti ti-chevron-right"
+                            aria-hidden="true"
+                          ></i>
+                          <span className="visually-hidden">
+                            Next attachment
+                          </span>
+                        </button>
+                      ) : null}
                     </div>
 
-                    {canNavigatePreview ? (
+                    <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                      <div className="text-muted small">
+                        {previewAttachment?.created_at
+                          ? `Uploaded: ${safeFormatDate(
+                              previewAttachment.created_at,
+                              formatDateTime,
+                            )}`
+                          : null}
+                      </div>
                       <button
                         type="button"
-                        className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--next"
-                        aria-label="Next attachment"
-                        title="Next attachment"
-                        onClick={showNextPreview}
+                        className="btn btn-primary"
+                        disabled={
+                          (!href && attachmentId == null) ||
+                          previewDownloading
+                        }
+                        onClick={() => downloadAttachment(previewAttachment)}
                       >
-                        <i className="ti ti-chevron-right" aria-hidden="true"></i>
-                        <span className="visually-hidden">Next attachment</span>
+                        {previewDownloading ? (
+                          <span className="d-inline-flex align-items-center gap-2">
+                            <Spinner size="sm" />
+                            <span>Downloading...</span>
+                          </span>
+                        ) : (
+                          <>
+                            <i className="ti ti-download me-1"></i>
+                            Download
+                          </>
+                        )}
                       </button>
-                    ) : null}
-                  </div>
-
-                  <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div className="text-muted small">
-                      {previewAttachment?.created_at
-                        ? `Uploaded: ${safeFormatDate(
-                            previewAttachment.created_at,
-                            formatDateTime,
-                          )}`
-                        : null}
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      disabled={(!href && attachmentId == null) || previewDownloading}
-                      onClick={() => downloadAttachment(previewAttachment)}
-                    >
-                      {previewDownloading ? (
-                        <span className="d-inline-flex align-items-center gap-2">
-                          <Spinner size="sm" />
-                          <span>Downloading...</span>
-                        </span>
-                      ) : (
-                        <>
-                          <i className="ti ti-download me-1"></i>
-                          Download
-                        </>
-                      )}
-                    </button>
                   </div>
-                </div>
-              );
-            })()
-          ) : null}
+                );
+              })()
+            : null}
         </ModalBody>
       </Modal>
     </div>
