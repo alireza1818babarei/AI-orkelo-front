@@ -1,5 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
+import TaskMoveModal from "./TaskMoveModal";
 
 const MOBILE_HEADER_QUERY = "(max-width: 600px)";
 const VIEWPORT_GAP = 8;
@@ -14,6 +15,7 @@ const ActionDropdown = ({
   children,
 }) => {
   const menuRef = React.useRef(null);
+  const [taskMoveOpen, setTaskMoveOpen] = React.useState(false);
   const [isMobileHeader, setIsMobileHeader] = React.useState(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia(MOBILE_HEADER_QUERY).matches;
@@ -24,6 +26,42 @@ const ActionDropdown = ({
     rootRef?.current?.closest?.(".header-company"),
   );
   const shouldUsePortal = isMobileHeader && isCompanyHeaderDropdown;
+
+  const isTaskDetailActionMenu = React.useMemo(() => {
+    const actionKeys = new Set(
+      (Array.isArray(actions) ? actions : []).map((action) => action?.key),
+    );
+
+    return (
+      actionKeys.has("copyLink") &&
+      actionKeys.has("archive") &&
+      actionKeys.has("delete")
+    );
+  }, [actions]);
+
+  const displayedActions = React.useMemo(() => {
+    if (!isTaskDetailActionMenu) return actions;
+    if (actions.some((action) => action?.key === "moveBetweenProjects")) {
+      return actions;
+    }
+
+    const moveAction = {
+      key: "moveBetweenProjects",
+      label: "Move to another project",
+      icon: "ti-arrow-right",
+      destructive: false,
+      onClick: () => setTaskMoveOpen(true),
+    };
+
+    const archiveIndex = actions.findIndex((action) => action?.key === "archive");
+    if (archiveIndex < 0) return [...actions, moveAction];
+
+    return [
+      ...actions.slice(0, archiveIndex),
+      moveAction,
+      ...actions.slice(archiveIndex),
+    ];
+  }, [actions, isTaskDetailActionMenu]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -107,15 +145,13 @@ const ActionDropdown = ({
     };
   }, [open, onToggle, rootRef]);
 
-  if (!open) return null;
-
   const placementStyle =
     align === "start" ? { left: 0, right: "auto" } : { right: 0, left: "auto" };
 
-  const dropdown = (
+  const dropdown = open ? (
     <div
       ref={menuRef}
-      className={`dropdown-menu position-absolute ${open ? "show" : ""} p-1`}
+      className="dropdown-menu position-absolute show p-1"
       style={
         shouldUsePortal
           ? portalStyle || { visibility: "hidden" }
@@ -128,9 +164,9 @@ const ActionDropdown = ({
             }
       }
     >
-      {actions.length !== 0
-        ? actions.map((a, index) => {
-            if (a.type === "divider") {
+      {displayedActions.length !== 0
+        ? displayedActions.map((action, index) => {
+            if (action.type === "divider") {
               return (
                 <hr key={`div-${index}`} className="dropdown-divider my-1" />
               );
@@ -138,34 +174,50 @@ const ActionDropdown = ({
 
             return (
               <button
-                key={a.key ?? index}
+                key={action.key ?? index}
                 type="button"
                 className={`dropdown-item d-flex align-items-center py-1 px-2 text-start ${
-                  a.destructive ? "text-danger text-center border-t" : ""
+                  action.destructive ? "text-danger text-center border-t" : ""
                 }`}
-                disabled={!!a.disabled}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (a.disabled) return;
-                  a.onClick?.();
+                disabled={!!action.disabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (action.disabled) return;
+                  action.onClick?.();
                   onToggle(false);
                 }}
               >
-                <span className="text-truncate flex-grow-1 pe-2">{a.label}</span>
-                {a.icon ? <i className={`ti ${a.icon} fs-5 ms-auto`}></i> : null}
+                <span className="text-truncate flex-grow-1 pe-2">
+                  {action.label}
+                </span>
+                {action.icon ? (
+                  <i className={`ti ${action.icon} fs-5 ms-auto`}></i>
+                ) : null}
               </button>
             );
           })
         : null}
       {children}
     </div>
+  ) : null;
+
+  const renderedDropdown =
+    dropdown && shouldUsePortal && typeof document !== "undefined"
+      ? createPortal(dropdown, document.body)
+      : dropdown;
+
+  return (
+    <>
+      {renderedDropdown}
+      {isTaskDetailActionMenu ? (
+        <TaskMoveModal
+          isOpen={taskMoveOpen}
+          onClose={() => setTaskMoveOpen(false)}
+          rootRef={rootRef}
+        />
+      ) : null}
+    </>
   );
-
-  if (shouldUsePortal && typeof document !== "undefined") {
-    return createPortal(dropdown, document.body);
-  }
-
-  return dropdown;
 };
 
 export default ActionDropdown;
