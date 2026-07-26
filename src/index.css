@@ -115,6 +115,8 @@ body .home-dashboard__grid,
 body .home-dashboard__primary,
 body .home-dashboard__notifications,
 body .home-panel,
+body .home-panel__body,
+body .home-list,
 body .home-list__item,
 body .home-list__button,
 body .leave-summary,
@@ -125,8 +127,17 @@ body .tracker__homePage {
   min-width: 0;
 }
 
+body .home-panel__body,
+body .home-list,
+body .home-list__item,
+body .home-list__button {
+  width: 100%;
+}
+
 body .home-list__title {
-  flex: 1 1 auto;
+  display: block;
+  flex: 1 1 0;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -250,10 +261,20 @@ body .home-list__meta {
     grid-template-columns: 1fr;
   }
 
+  body .home-list__item,
   body .home-list__button {
     align-items: flex-start;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.25rem;
+  }
+
+  body .home-list__title {
+    width: 100%;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   body .home-list__meta {
