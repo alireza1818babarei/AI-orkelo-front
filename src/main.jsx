@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import './reports-responsive.css';
+import './user-performance-responsive.css';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
 
