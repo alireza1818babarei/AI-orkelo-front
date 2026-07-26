@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Modal,
   ModalBody,
@@ -25,7 +26,8 @@ const normalizeBoardType = (value) => {
 };
 
 const resolveTaskColumn = (task, projectColumns, taskId) => {
-  const directColumnId = task?.column?.id ?? task?.column_id ?? task?.columnId ?? null;
+  const directColumnId =
+    task?.column?.id ?? task?.column_id ?? task?.columnId ?? null;
   const directBoardType = task?.column?.board_type ?? task?.board_type ?? null;
 
   if (directColumnId != null) {
@@ -57,21 +59,25 @@ const resolveTaskColumn = (task, projectColumns, taskId) => {
   return { id: null, boardType: TASK_MANAGER_BOARD };
 };
 
-const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
+const TaskMoveModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const taskDetail = useSelector((state) => state.taskDetail ?? {});
   const projectsState = useSelector((state) => state.projects ?? {});
   const projectColumns = useSelector(
     (state) => state.projectColumns?.items ?? [],
   );
 
+  const projectItems = Array.isArray(projectsState?.items)
+    ? projectsState.items
+    : [];
   const task = taskDetail?.task ?? null;
   const taskId = task?.id ?? taskDetail?.taskId ?? null;
   const sourceProjectId =
     task?.project?.id ?? task?.project_id ?? taskDetail?.projectId ?? null;
   const sourceProjectName =
     task?.project?.name ??
-    (projectsState?.items || []).find(
+    projectItems.find(
       (project) => String(project?.id) === String(sourceProjectId),
     )?.name ??
     "Current project";
@@ -83,10 +89,10 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
 
   const destinationProjects = useMemo(
     () =>
-      (Array.isArray(projectsState?.items) ? projectsState.items : []).filter(
+      projectItems.filter(
         (project) => String(project?.id) !== String(sourceProjectId),
       ),
-    [projectsState?.items, sourceProjectId],
+    [projectItems, sourceProjectId],
   );
 
   const [destinationProjectId, setDestinationProjectId] = useState("");
@@ -103,8 +109,21 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
     setDestinationColumnId("");
     setDestinationColumns([]);
     setInlineError("");
-    dispatch(getProjectsThunk());
-  }, [dispatch, isOpen]);
+
+    if (
+      projectItems.length === 0 &&
+      projectsState?.status !== "loading" &&
+      !projectsState?.loading
+    ) {
+      dispatch(getProjectsThunk());
+    }
+  }, [
+    dispatch,
+    isOpen,
+    projectItems.length,
+    projectsState?.loading,
+    projectsState?.status,
+  ]);
 
   useEffect(() => {
     if (!isOpen || !destinationProjectId) {
@@ -114,6 +133,7 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
     }
 
     let active = true;
+
     const loadColumns = async () => {
       setColumnsLoading(true);
       setInlineError("");
@@ -138,9 +158,12 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
         );
       } catch (error) {
         if (!active) return;
-        const message = getErrorMessage(error)?.message ?? getErrorMessage(error);
+        const normalizedError = getErrorMessage(error);
         setDestinationColumns([]);
-        setInlineError(message || "Destination columns could not be loaded.");
+        setInlineError(
+          normalizedError?.message ||
+            "Destination columns could not be loaded.",
+        );
       } finally {
         if (active) setColumnsLoading(false);
       }
@@ -153,16 +176,11 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
     };
   }, [destinationProjectId, isOpen, sourceColumn.boardType]);
 
-  const closeTaskDetail = () => {
-    const taskModal = rootRef?.current?.closest?.(".task-detail-modal-dialog");
-    const closeIcon = taskModal?.querySelector?.("button .fa-times");
-    const closeButton = closeIcon?.closest?.("button");
-    closeButton?.click?.();
-  };
-
   const handleMove = async () => {
     if (!sourceProjectId || !sourceColumn.id || !taskId) {
-      setInlineError("Task location is unavailable. Refresh the board and try again.");
+      setInlineError(
+        "Task location is unavailable. Refresh the board and try again.",
+      );
       return;
     }
 
@@ -196,12 +214,12 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
 
       toastSuccess("Task moved to the destination project.");
       onClose();
-      closeTaskDetail();
+      navigate(`/projects/${sourceProjectId}`, { replace: true });
     } catch (error) {
       const normalizedError = getErrorMessage(error);
-      const message = normalizedError?.message ?? normalizedError;
-      setInlineError(message || "Task could not be moved.");
-      toastError(message || "Task could not be moved.");
+      const message = normalizedError?.message || "Task could not be moved.";
+      setInlineError(message);
+      toastError(message);
     } finally {
       setSubmitting(false);
     }
@@ -216,7 +234,10 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
       isOpen={isOpen}
       toggle={submitting ? undefined : onClose}
       centered
-      className="byekan-font"
+      zIndex={1080}
+      backdrop={submitting ? "static" : true}
+      keyboard={!submitting}
+      className="byekan-font task-move-modal"
     >
       <ModalHeader toggle={submitting ? undefined : onClose}>
         Move task to another project
@@ -244,7 +265,9 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
             onChange={(event) => setDestinationProjectId(event.target.value)}
           >
             <option value="">
-              {projectsState?.loading ? "Loading projects..." : "Select a project"}
+              {projectsState?.loading
+                ? "Loading projects..."
+                : "Select a project"}
             </option>
             {destinationProjects.map((project) => (
               <option key={project.id} value={project.id}>
@@ -320,7 +343,11 @@ const TaskMoveModal = ({ isOpen, onClose, rootRef }) => {
             submitting || !destinationProjectId || !destinationColumnId
           }
         >
-          {submitting ? <Spinner size="sm" /> : <i className="ti ti-arrow-right" />}
+          {submitting ? (
+            <Spinner size="sm" />
+          ) : (
+            <i className="ti ti-arrow-right" aria-hidden="true" />
+          )}
           Move task
         </button>
       </ModalFooter>
