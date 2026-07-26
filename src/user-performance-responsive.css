@@ -1,0 +1,356 @@
+/* Responsive overrides for the User Performance Analysis page */
+body .user-performance-analyze {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1480px;
+  min-width: 0;
+  padding-inline: clamp(0.25rem, 1.2vw, 1rem);
+}
+
+body .user-performance-analyze > *,
+body .user-performance-analyze .card,
+body .user-performance-analyze .card-body,
+body .user-performance-analyze .row,
+body .user-performance-analyze [class*='col-'],
+body .user-performance-analyze__filter-grid,
+body .user-performance-analyze__filter-grid > *,
+body .user-performance-analyze__metrics,
+body .user-performance-analyze__metric,
+body .user-performance-analyze__metric > span:last-child,
+body .user-performance-analyze__panel,
+body .user-performance-analyze__time-item,
+body .user-performance-analyze__time-item > div,
+body .user-performance-analyze__table-wrap,
+body .user-performance-analyze__person,
+body .user-performance-analyze__person > span,
+body .user-performance-analyze__assignee {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+body .user-performance-analyze__filters,
+body .user-performance-analyze__panel {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+body .user-performance-analyze__title,
+body .user-performance-analyze__title h2,
+body .user-performance-analyze__title strong,
+body .user-performance-analyze__panel-header h5 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body .user-performance-analyze__filter-grid .form-control,
+body .user-performance-analyze__filter-grid .form-select,
+body .user-performance-analyze__date-range {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+body .user-performance-analyze__metric small,
+body .user-performance-analyze__metric strong,
+body .user-performance-analyze__metric em {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body .user-performance-analyze__time-item strong,
+body .user-performance-analyze__time-item small {
+  max-width: 100%;
+}
+
+body .user-performance-analyze__table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+body .user-performance-analyze__table-wrap > .table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+body .user-performance-analyze__table-wrap table {
+  width: 100%;
+}
+
+body .user-performance-analyze__person > span,
+body .user-performance-analyze__person strong,
+body .user-performance-analyze__person small,
+body .user-performance-analyze__assignee {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body .user-performance-warning-modal .modal-dialog,
+body .user-performance-warning-modal .modal-content,
+body .user-performance-warning-modal__user,
+body .user-performance-warning-modal__user > span,
+body .user-performance-warning-modal__meta,
+body .user-performance-warning-modal__meta > div {
+  min-width: 0;
+}
+
+body .user-performance-warning-modal__user strong,
+body .user-performance-warning-modal__user small,
+body .user-performance-warning-modal__meta dd {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 1199.98px) {
+  body .user-performance-analyze__filters .card-body {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  body .user-performance-analyze__filter-grid,
+  body .user-performance-analyze__filter-grid.is-self-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body .user-performance-analyze__refresh {
+    grid-column: 1 / -1;
+    justify-content: center;
+    width: 100%;
+  }
+
+  body .user-performance-analyze__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  body .user-performance-analyze {
+    gap: 0.75rem;
+    padding-inline: 0.25rem;
+  }
+
+  body .user-performance-analyze__filters .card-body,
+  body .user-performance-analyze__panel .card-body {
+    padding: 0.75rem;
+  }
+
+  body .user-performance-analyze__filter-grid,
+  body .user-performance-analyze__filter-grid.is-self-view {
+    grid-template-columns: 1fr;
+  }
+
+  body .user-performance-analyze__refresh {
+    grid-column: auto;
+    min-height: 44px;
+  }
+
+  body .user-performance-analyze__metrics {
+    gap: 0.65rem;
+    grid-template-columns: 1fr;
+  }
+
+  body .user-performance-analyze__metric {
+    min-height: 0;
+    padding: 0.85rem;
+  }
+
+  body .user-performance-analyze__metric-icon {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  body .user-performance-analyze__panel-header {
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+  }
+
+  body .user-performance-analyze__time-item {
+    align-items: start;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 0.55rem;
+  }
+
+  body .user-performance-analyze__time-item strong,
+  body .user-performance-analyze__time-item small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  body .user-performance-analyze__table-wrap {
+    border: 0;
+    overflow: visible;
+  }
+
+  body .user-performance-analyze__table-wrap > .table-responsive {
+    overflow: visible;
+  }
+
+  body .user-performance-analyze__table-wrap table {
+    display: block;
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  body .user-performance-analyze__table-wrap thead {
+    display: none;
+  }
+
+  body .user-performance-analyze__table-wrap tbody {
+    display: grid;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  body .user-performance-analyze__table-wrap tbody tr {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--upa-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.48);
+  }
+
+  body .user-performance-analyze__table-wrap tbody td {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.65rem;
+    padding: 0.65rem 0 !important;
+    border: 0;
+    border-bottom: 1px dashed var(--upa-border);
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  body .user-performance-analyze__table-wrap tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  body .user-performance-analyze__table-wrap tbody td:not([colspan])::before {
+    color: var(--upa-muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1.45;
+  }
+
+  /* Most Overdue Tasks */
+  body .user-performance-analyze > .row > :nth-child(2) tbody td:nth-child(1)::before { content: 'Task'; }
+  body .user-performance-analyze > .row > :nth-child(2) tbody td:nth-child(2)::before { content: 'Project'; }
+  body .user-performance-analyze > .row > :nth-child(2) tbody td:nth-child(3)::before { content: 'Assignee'; }
+  body .user-performance-analyze > .row > :nth-child(2) tbody td:nth-child(4)::before { content: 'Due Date'; }
+  body .user-performance-analyze > .row > :nth-child(2) tbody td:nth-child(5)::before { content: 'Overdue By'; }
+
+  /* User Performance Overview */
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(1)::before { content: 'User'; }
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(2)::before { content: 'Total Tracked Time'; }
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(3)::before { content: 'Working Hours'; }
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(4)::before { content: 'Tracked Days'; }
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(5)::before { content: 'Leave Time'; }
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(6)::before { content: 'Completed Tasks'; }
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(7)::before { content: 'Overdue Tasks'; }
+  body .user-performance-analyze > .row > :nth-child(3) tbody td:nth-child(8)::before { content: 'Tasks Rating'; }
+
+  /* User Warnings */
+  body .user-performance-analyze > .row > :nth-child(4) tbody td:nth-child(1)::before { content: 'User'; }
+  body .user-performance-analyze > .row > :nth-child(4) tbody td:nth-child(2)::before { content: 'Warning Title'; }
+  body .user-performance-analyze > .row > :nth-child(4) tbody td:nth-child(3)::before { content: 'Description'; }
+  body .user-performance-analyze > .row > :nth-child(4) tbody td:nth-child(4)::before { content: 'Level'; }
+  body .user-performance-analyze > .row > :nth-child(4) tbody td:nth-child(5)::before { content: 'View'; }
+
+  body .user-performance-analyze__table-wrap tbody td[colspan] {
+    display: flex;
+    min-height: 104px;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 0;
+    text-align: center;
+  }
+
+  body .user-performance-analyze__table-wrap tbody td[colspan]::before {
+    content: none;
+  }
+
+  body .user-performance-analyze__person,
+  body .user-performance-analyze__assignee {
+    width: 100%;
+    white-space: normal;
+  }
+
+  body .user-performance-analyze__warning-description {
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  body .user-performance-analyze__icon-button {
+    min-height: 36px;
+  }
+
+  body .user-performance-warning-modal .modal-dialog {
+    width: auto;
+    max-width: calc(100vw - 1rem);
+    margin: 0.5rem;
+  }
+
+  body .user-performance-warning-modal .modal-body,
+  body .user-performance-warning-modal .modal-header {
+    padding: 0.85rem;
+  }
+
+  body .user-performance-warning-modal__meta {
+    grid-template-columns: 1fr;
+  }
+
+  body .user-performance-warning-modal__meta dd {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  body.dark .user-performance-analyze__table-wrap tbody tr,
+  nav.dark-sidebar ~ .app-content .user-performance-analyze__table-wrap tbody tr {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+@media (max-width: 420px) {
+  body .user-performance-analyze__time-item {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  body .user-performance-analyze__time-item em {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  body .user-performance-analyze__table-wrap tbody td {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  body .user-performance-analyze__warning-level {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
