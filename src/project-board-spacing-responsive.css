@@ -1,0 +1,88 @@
+/* Project board edge-spacing fixes. The title row is intentionally unchanged. */
+body .project-board-main {
+  padding-right: 0;
+}
+
+body .project-board-main__scroll .board {
+  padding-inline: 0;
+}
+
+body .project-board-header__actions-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .project-board-header__actions {
+  min-width: 0;
+  max-width: 100%;
+  margin-right: 0;
+}
+
+@media (max-width: 1199px) {
+  body .project-board-header__actions-wrap {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body .project-board-header__actions {
+    width: 100%;
+    margin-inline: 0;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body .project-board-header__add-btn,
+  body .project-board-header__icon-btn {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  body .project-board-header__actions {
+    gap: 0.2rem;
+    padding: 0.25rem;
+    justify-content: flex-start;
+  }
+
+  body .project-board-header__add-btn {
+    min-height: 34px;
+    padding: 0.42rem 0.58rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  body .project-board-header__icon-btn {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 9px;
+  }
+
+  body .project-board-header__icon-btn i {
+    font-size: 1.05rem;
+  }
+
+  body .project-board-main__scroll .board {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  body .project-board-header__actions {
+    border-radius: 12px;
+  }
+
+  body .project-board-header__add-btn {
+    padding-inline: 0.5rem;
+  }
+
+  body .project-board-header__icon-btn {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+}
