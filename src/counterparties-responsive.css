@@ -1,0 +1,309 @@
+/* Responsive overrides for Finance Center > Counterparties */
+body .manage-finance,
+body .manage-finance > [class*='col-'],
+body .manage-finance__counterparties-card,
+body .manage-finance__counterparties-card .card-body,
+body .manage-finance__counterparty-header,
+body .manage-finance__counterparty-copy,
+body .manage-finance__counterparty-toolbar,
+body .manage-finance__counterparty-table,
+body .manage-finance__counterparty-actions {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .manage-finance__counterparty-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+body .manage-finance__counterparty-copy {
+  flex: 1 1 280px;
+}
+
+body .manage-finance__counterparty-copy h5,
+body .manage-finance__counterparty-copy p,
+body .manage-finance__counterparty-table td,
+body .manage-finance__counterparty-table th {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body .manage-finance__counterparty-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1 1 560px;
+  width: 100%;
+  max-width: 760px;
+}
+
+body .manage-finance__counterparty-toolbar .form-control,
+body .manage-finance__counterparty-toolbar .btn {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .manage-finance__counterparty-toolbar .manage-finance__operations-search {
+  width: 100%;
+  min-width: 0;
+}
+
+body .manage-finance__counterparty-table {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+body .manage-finance__counterparty-table table {
+  width: 100%;
+  min-width: 760px;
+}
+
+body .manage-finance__counterparty-table th,
+body .manage-finance__counterparty-table td {
+  vertical-align: middle;
+}
+
+body .manage-finance__counterparty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+body .manage-finance__counterparty-modal-dialog {
+  width: min(500px, calc(100vw - 1rem));
+  max-width: none;
+  margin-inline: auto;
+}
+
+body .manage-finance__counterparty-modal-dialog .modal-content {
+  max-height: calc(100vh - 1rem);
+  max-height: calc(100dvh - 1rem);
+}
+
+body .manage-finance__counterparty-modal-dialog .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+body .manage-finance__counterparty-modal-dialog .manage-finance__create-form,
+body .manage-finance__counterparty-modal-dialog .row,
+body .manage-finance__counterparty-modal-dialog [class*='col-'],
+body .manage-finance__counterparty-modal-dialog .form-control {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 991.98px) {
+  body .manage-finance__tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body .manage-finance__tabs .nav-item,
+  body .manage-finance__tabs .nav-link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  body .manage-finance__counterparty-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    max-width: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  body .manage-finance {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+  }
+
+  body .manage-finance__tabs-card .card-body,
+  body .manage-finance__counterparties-card .card-body {
+    padding: 0.875rem;
+  }
+
+  body .manage-finance__counterparty-header {
+    align-items: stretch;
+  }
+
+  body .manage-finance__counterparty-copy {
+    flex-basis: 100%;
+    width: 100%;
+  }
+
+  body .manage-finance__counterparty-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body .manage-finance__counterparty-toolbar .manage-finance__operations-search {
+    grid-column: 1 / -1;
+  }
+
+  body .manage-finance__counterparty-toolbar .btn {
+    width: 100%;
+    min-height: 42px;
+    white-space: normal;
+  }
+
+  body .manage-finance__counterparty-table--data {
+    overflow: visible;
+  }
+
+  body .manage-finance__counterparty-table--data table,
+  body .manage-finance__counterparty-table--data tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  body .manage-finance__counterparty-table--data thead {
+    display: none;
+  }
+
+  body .manage-finance__counterparty-table--data tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  body .manage-finance__counterparty-table--data tbody tr {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid rgba(var(--secondary), 0.24);
+    border-radius: 10px;
+    background: rgba(var(--light), 0.32);
+  }
+
+  body .manage-finance__counterparty-table--data tbody td {
+    display: grid;
+    grid-template-columns: minmax(105px, 36%) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.65rem;
+    width: 100%;
+    padding: 0.65rem 0 !important;
+    border: 0;
+    border-bottom: 1px dashed rgba(var(--secondary), 0.24);
+    text-align: left !important;
+    white-space: normal;
+  }
+
+  body .manage-finance__counterparty-table--data tbody td::before {
+    content: attr(data-label);
+    color: var(--font-muted-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  body .manage-finance__counterparty-table--data tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  body .manage-finance__counterparty-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  body .manage-finance__counterparty-actions .btn {
+    min-height: 38px;
+    flex: 1 1 110px;
+  }
+
+  body .manage-finance__state--empty {
+    min-height: 11rem;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  body .manage-finance__counterparties-card .card-footer {
+    padding-inline: 0.875rem;
+  }
+
+  body .manage-finance__counterparty-modal-dialog {
+    width: calc(100vw - 1rem);
+    margin: 0.5rem auto;
+  }
+
+  body .manage-finance__counterparty-modal-dialog .modal-header,
+  body .manage-finance__counterparty-modal-dialog .modal-body,
+  body .manage-finance__counterparty-modal-dialog .modal-footer {
+    padding: 0.875rem;
+  }
+
+  body .manage-finance__counterparty-modal-dialog .modal-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+
+  body .manage-finance__counterparty-modal-dialog .modal-footer .btn {
+    width: 100%;
+    min-height: 42px;
+    margin: 0;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 480px) {
+  body .manage-finance__counterparty-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  body .manage-finance__counterparty-toolbar .manage-finance__operations-search {
+    grid-column: auto;
+  }
+
+  body .manage-finance__counterparty-table--data tbody td {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  body .manage-finance__counterparty-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body .manage-finance__counterparty-modal-dialog {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
+  }
+
+  body .manage-finance__counterparty-modal-dialog .modal-content {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  body .manage-finance__counterparty-modal-dialog .modal-footer {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.dark .manage-finance__counterparty-table--data tbody tr,
+nav.dark-sidebar ~ .app-content .manage-finance__counterparty-table--data tbody tr {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+}
