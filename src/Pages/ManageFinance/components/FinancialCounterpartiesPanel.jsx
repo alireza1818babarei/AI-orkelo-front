@@ -51,7 +51,13 @@ const validateCounterpartyForm = (form) => {
   return null;
 };
 
-function CounterpartyFormFields({ form, onChange, disabled, error }) {
+function CounterpartyFormFields({
+  form,
+  onChange,
+  disabled,
+  error,
+  showPlaceholders = true,
+}) {
   return (
     <Form className='manage-finance__create-form'>
       <Form.Group>
@@ -60,7 +66,7 @@ function CounterpartyFormFields({ form, onChange, disabled, error }) {
           type='text'
           value={form.fullName}
           onChange={onChange('fullName')}
-          placeholder='Ali Ahmadi'
+          placeholder={showPlaceholders ? 'Ali Ahmadi' : undefined}
           disabled={disabled}
         />
       </Form.Group>
@@ -71,9 +77,10 @@ function CounterpartyFormFields({ form, onChange, disabled, error }) {
             <Form.Label>Card Number</Form.Label>
             <Form.Control
               type='text'
+              inputMode='numeric'
               value={form.cardNumber}
               onChange={onChange('cardNumber')}
-              placeholder='6037991234567890'
+              placeholder={showPlaceholders ? '6037991234567890' : undefined}
               disabled={disabled}
             />
           </Form.Group>
@@ -85,7 +92,7 @@ function CounterpartyFormFields({ form, onChange, disabled, error }) {
               type='text'
               value={form.iban}
               onChange={onChange('iban')}
-              placeholder='IR...'
+              placeholder={showPlaceholders ? 'IR...' : undefined}
               disabled={disabled}
             />
           </Form.Group>
@@ -98,9 +105,10 @@ function CounterpartyFormFields({ form, onChange, disabled, error }) {
             <Form.Label>Account</Form.Label>
             <Form.Control
               type='text'
+              inputMode='numeric'
               value={form.account}
               onChange={onChange('account')}
-              placeholder='Account number'
+              placeholder={showPlaceholders ? 'Account number' : undefined}
               disabled={disabled}
             />
           </Form.Group>
@@ -112,7 +120,7 @@ function CounterpartyFormFields({ form, onChange, disabled, error }) {
               type='text'
               value={form.bankName}
               onChange={onChange('bankName')}
-              placeholder='Mellat'
+              placeholder={showPlaceholders ? 'Mellat' : undefined}
               disabled={disabled}
             />
           </Form.Group>
@@ -315,8 +323,8 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
   return (
     <Card className='manage-finance__panel manage-finance__counterparties-card border-0'>
       <Card.Body>
-        <div className='d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4'>
-          <div>
+        <div className='manage-finance__counterparty-header mb-4'>
+          <div className='manage-finance__counterparty-copy'>
             <Badge bg='primary' className='mb-2'>
               Counterparties
             </Badge>
@@ -333,6 +341,7 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder='Search counterparties...'
+              aria-label='Search counterparties'
             />
             <Button variant='outline-secondary' onClick={handleRefresh} disabled={loading}>
               Refresh
@@ -355,8 +364,8 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
             tableClassName='table table-bordered align-middle mb-0'
           />
         ) : counterparties.length > 0 ? (
-          <div className='table-responsive manage-finance__counterparty-table'>
-            <Table className='table table-bordered align-middle mb-0'>
+          <div className='table-responsive manage-finance__counterparty-table manage-finance__counterparty-table--data'>
+            <Table className='table table-bordered align-middle mb-0' aria-label='Counterparties'>
               <thead>
                 <tr>
                   <th>Full Name</th>
@@ -370,14 +379,14 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
               <tbody>
                 {counterparties.map((counterparty) => (
                   <tr key={counterparty.id}>
-                    <td>
+                    <td data-label='Full Name'>
                       <strong>{counterparty.fullName || '-'}</strong>
                     </td>
-                    <td>{counterparty.bankName || '-'}</td>
-                    <td>{counterparty.cardNumber || '-'}</td>
-                    <td>{counterparty.iban || '-'}</td>
-                    <td>{counterparty.account || '-'}</td>
-                    <td>
+                    <td data-label='Bank'>{counterparty.bankName || '-'}</td>
+                    <td data-label='Card Number'>{counterparty.cardNumber || '-'}</td>
+                    <td data-label='IBAN'>{counterparty.iban || '-'}</td>
+                    <td data-label='Account'>{counterparty.account || '-'}</td>
+                    <td data-label='Actions'>
                       <div className='manage-finance__counterparty-actions'>
                         <Button
                           variant='light-success'
@@ -420,7 +429,13 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
         />
       </Card.Footer>
 
-      <Modal show={createModalOpen} onHide={handleCloseCreateModal} centered>
+      <Modal
+        show={createModalOpen}
+        onHide={handleCloseCreateModal}
+        centered
+        scrollable
+        dialogClassName='manage-finance__counterparty-modal-dialog'
+      >
         <Modal.Header closeButton={createStatus !== 'loading'}>
           <Modal.Title>Add Counterparty</Modal.Title>
         </Modal.Header>
@@ -430,6 +445,7 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
             onChange={buildChangeHandler(setCreateForm)}
             disabled={createStatus === 'loading'}
             error={createError}
+            showPlaceholders={false}
           />
         </Modal.Body>
         <Modal.Footer>
@@ -449,7 +465,13 @@ export default function FinancialCounterpartiesPanel({ enabled = true }) {
         </Modal.Footer>
       </Modal>
 
-      <Modal show={editModalOpen} onHide={handleCloseEditModal} centered>
+      <Modal
+        show={editModalOpen}
+        onHide={handleCloseEditModal}
+        centered
+        scrollable
+        dialogClassName='manage-finance__counterparty-modal-dialog'
+      >
         <Modal.Header closeButton={updateStatus !== 'loading'}>
           <Modal.Title>Edit Counterparty</Modal.Title>
         </Modal.Header>
