@@ -126,14 +126,14 @@ const ActionDropdown = ({
   React.useEffect(() => {
     if (!open) return undefined;
 
-    const onDocMouseDown = (e) => {
-      if (rootRef?.current && rootRef.current.contains(e.target)) return;
-      if (menuRef.current && menuRef.current.contains(e.target)) return;
+    const onDocMouseDown = (event) => {
+      if (rootRef?.current && rootRef.current.contains(event.target)) return;
+      if (menuRef.current && menuRef.current.contains(event.target)) return;
       onToggle(false);
     };
 
-    const onEsc = (e) => {
-      if (e.key === "Escape") onToggle(false);
+    const onEsc = (event) => {
+      if (event.key === "Escape") onToggle(false);
     };
 
     document.addEventListener("mousedown", onDocMouseDown);
@@ -180,10 +180,16 @@ const ActionDropdown = ({
                   action.destructive ? "text-danger text-center border-t" : ""
                 }`}
                 disabled={!!action.disabled}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
                 onClick={(event) => {
+                  event.preventDefault();
                   event.stopPropagation();
                   if (action.disabled) return;
-                  action.onClick?.();
+
+                  action.onClick?.(event);
                   onToggle(false);
                 }}
               >
@@ -213,7 +219,6 @@ const ActionDropdown = ({
         <TaskMoveModal
           isOpen={taskMoveOpen}
           onClose={() => setTaskMoveOpen(false)}
-          rootRef={rootRef}
         />
       ) : null}
     </>
