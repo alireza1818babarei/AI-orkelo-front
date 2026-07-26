@@ -1,0 +1,102 @@
+/* Extra-small phone fixes for the task detail modal */
+@media (max-width: 400px) {
+  body .task-detail-modal-dialog .task-detail-modal__header {
+    gap: 0.5rem;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+    width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .btn,
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown,
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > div:not(.task-review-summary) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-toggle {
+    display: flex !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    justify-content: flex-start;
+    overflow: hidden !important;
+    text-align: left;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-toggle > span,
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-toggle .text-truncate {
+    min-width: 0;
+    max-width: 100% !important;
+  }
+
+  /*
+   * Reactstrap/Popper calculates a desktop translate3d position for this menu.
+   * On very narrow screens that translation can move the menu outside the left
+   * edge. Present it as a contained mobile sheet instead.
+   */
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-menu {
+    position: fixed !important;
+    inset: auto max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: min(62vh, 420px);
+    max-height: min(62dvh, 420px);
+    margin: 0 !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: none !important;
+    border-radius: 12px;
+    z-index: 1095;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-menu .dropdown-item {
+    min-width: 0;
+    padding: 0.65rem 0.75rem;
+    white-space: normal;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-menu .dropdown-item > div,
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-menu .dropdown-item > div > span:first-child {
+    min-width: 0;
+    width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-menu .dropdown-item > div > span:first-child {
+    flex: 1 1 auto;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown > .dropdown-menu .h-25.w-25 {
+    width: 2rem !important;
+    min-width: 2rem;
+    height: 2rem !important;
+    flex: 0 0 2rem;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header-right {
+    gap: 0.35rem !important;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__quick-actions {
+    gap: 0.25rem !important;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__body {
+    padding-inline: 0.5rem !important;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__main > div,
+  body .task-detail-modal-dialog .task-detail-modal__main .border.rounded-3 {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
