@@ -1,664 +1,245 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-  Modal,
-  ModalBody,
-  ModalHeader,
-  Spinner,
-} from "reactstrap";
+import { Modal, ModalBody, ModalFooter, ModalHeader, Spinner } from "reactstrap";
 import api from "../../api/axios";
-import {
-  alertConfirm,
-  toastError,
-  toastInfo,
-  toastSuccess,
-} from "../../utils/sweetAlert";
-import {
-  AttachmentImage,
-  formatBytes,
-  getAttachmentName,
-  getAttachmentUrl,
-  isImageAttachment,
-  parseFilenameFromContentDisposition,
-  resolveAttachmentHref,
-  resolveAttachmentIcon,
-  toPublicAsset,
-  triggerBrowserDownload,
-} from "./TaskAttachments";
+import { alertConfirm, toastError, toastInfo, toastSuccess } from "../../utils/sweetAlert";
+import { AttachmentImage, formatBytes, getAttachmentName, getAttachmentUrl, isImageAttachment, parseFilenameFromContentDisposition, resolveAttachmentHref, resolveAttachmentIcon, toPublicAsset, triggerBrowserDownload } from "./TaskAttachments";
 
-const getAttachmentId = (attachment) =>
-  attachment?.id ?? attachment?.attachment_id ?? null;
-
-const getInitialChecklistAttachments = (item) => {
-  const keys = [
-    "attachments",
-    "checklist_item_attachments",
-    "checklistAttachments",
-    "files",
-  ];
-
-  for (const key of keys) {
+const attachmentId = (a) => a?.id ?? a?.attachment_id ?? null;
+const initialFiles = (item) => {
+  for (const key of ["attachments", "checklist_item_attachments", "checklistAttachments", "files"]) {
     if (Array.isArray(item?.[key])) return item[key];
   }
-
-  return null;
-};
-
-const normalizeResponseAttachments = (payload) => {
-  const root = payload?.data ?? payload ?? null;
-  if (Array.isArray(root)) return root;
-  if (root && typeof root === "object") return [root];
   return [];
 };
-
-const buildChecklistAttachmentUrl = ({
-  projectId,
-  taskId,
-  checklistItemId,
-  attachmentId = null,
-  action = null,
-}) => {
-  const base =
-    `/projects/${projectId}/tasks/${taskId}` +
-    `/checklist-items/${checklistItemId}/attachments`;
-
-  if (attachmentId == null) return base;
-  return `${base}/${attachmentId}${action ? `/${action}` : ""}`;
+const responseFiles = (payload) => {
+  const value = payload?.data ?? payload;
+  return Array.isArray(value) ? value : value && typeof value === "object" ? [value] : [];
+};
+const transferFiles = (data) => Array.from(data?.files || []).filter(Boolean);
+const clipboardFiles = (data) => {
+  const direct = transferFiles(data);
+  if (direct.length) return direct;
+  return Array.from(data?.items || []).filter((item) => item?.kind === "file").map((item) => item.getAsFile?.()).filter(Boolean);
+};
+const endpoint = ({ projectId, taskId, checklistItemId, id, action }) => {
+  const base = `/projects/${projectId}/tasks/${taskId}/checklist-items/${checklistItemId}/attachments`;
+  return id == null ? base : `${base}/${id}${action ? `/${action}` : ""}`;
 };
 
-const safeFormatDate = (value, formatDateTime) => {
-  if (typeof formatDateTime === "function") return formatDateTime(value);
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
-export default function ChecklistItemAttachments({
-  projectId,
-  taskId,
-  checklistItem,
-  inputId,
-  disabled = false,
-  showTrigger = true,
-  onChanged,
-  formatDateTime,
-}) {
+export default function ChecklistItemAttachments({ projectId, taskId, checklistItem, inputId, disabled = false, showTrigger = true, onChanged }) {
   const checklistItemId = checklistItem?.id ?? null;
-  const generatedInputId = useMemo(
-    () => `checklist-item-attachment-input-${checklistItemId ?? "new"}`,
-    [checklistItemId],
-  );
-  const resolvedInputId = inputId || generatedInputId;
-  const initialAttachments = getInitialChecklistAttachments(checklistItem);
-
-  const [attachments, setAttachments] = useState(
-    Array.isArray(initialAttachments) ? initialAttachments : [],
-  );
-  const [uploadingCount, setUploadingCount] = useState(0);
-  const [menuOpenId, setMenuOpenId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewIndex, setPreviewIndex] = useState(0);
-  const [previewDownloading, setPreviewDownloading] = useState(false);
+  const resolvedInputId = inputId || `checklist-item-attachment-input-${checklistItemId ?? "new"}`;
+  const [attachments, setAttachments] = useState(() => initialFiles(checklistItem));
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [downloading, setDownloading] = useState(false);
   const inputRef = useRef(null);
-  const uploadAbortControllerRef = useRef(null);
-  const uploadCancelReasonRef = useRef(null);
+  const dropRef = useRef(null);
+  const dragDepth = useRef(0);
+  const controllerRef = useRef(null);
+  const cancelReason = useRef(null);
+  const unavailable = disabled || !projectId || !taskId || !checklistItemId;
+  const busy = uploading > 0;
+  const blocked = unavailable || busy;
 
-  const isUploading = uploadingCount > 0;
-  const isDisabled =
-    disabled || !projectId || !taskId || !checklistItemId || isUploading;
-
-  const cancelUpload = useCallback(() => {
-    uploadCancelReasonRef.current = "manual";
-    uploadAbortControllerRef.current?.abort();
-  }, []);
-
+  useEffect(() => setAttachments(initialFiles(checklistItem)), [checklistItem]);
+  useEffect(() => {
+    setUploadOpen(false);
+    setDragging(false);
+    dragDepth.current = 0;
+  }, [checklistItemId]);
   useEffect(() => () => {
-    uploadCancelReasonRef.current = "unmount";
-    uploadAbortControllerRef.current?.abort();
+    cancelReason.current = "unmount";
+    controllerRef.current?.abort();
   }, []);
 
-  const previewAttachmentCount = attachments.length;
-  const normalizedPreviewIndex = previewAttachmentCount
-    ? Math.min(Math.max(previewIndex, 0), previewAttachmentCount - 1)
-    : 0;
-  const previewAttachment =
-    previewOpen && previewAttachmentCount
-      ? attachments[normalizedPreviewIndex] ?? null
-      : null;
-  const canNavigatePreview = previewAttachmentCount > 1;
+  const closeUpload = useCallback(() => {
+    if (busy) return;
+    setUploadOpen(false);
+    setDragging(false);
+    dragDepth.current = 0;
+  }, [busy]);
 
-  useEffect(() => {
-    const next = getInitialChecklistAttachments(checklistItem);
-    if (Array.isArray(next)) setAttachments(next);
-  }, [
-    checklistItem?.id,
-    checklistItem?.attachments,
-    checklistItem?.checklist_item_attachments,
-    checklistItem?.checklistAttachments,
-    checklistItem?.files,
-  ]);
-
-  const closePreview = useCallback(() => {
-    setPreviewOpen(false);
-    setPreviewIndex(0);
-  }, []);
-
-  const openPreview = useCallback((index) => {
-    setMenuOpenId(null);
-    setPreviewIndex(index);
-    setPreviewOpen(true);
-  }, []);
-
-  const showPreviousPreview = useCallback(() => {
-    setPreviewIndex((current) => {
-      if (previewAttachmentCount <= 1) return current;
-      const currentIndex = Math.min(
-        Math.max(current, 0),
-        previewAttachmentCount - 1,
-      );
-      return (currentIndex - 1 + previewAttachmentCount) % previewAttachmentCount;
-    });
-  }, [previewAttachmentCount]);
-
-  const showNextPreview = useCallback(() => {
-    setPreviewIndex((current) => {
-      if (previewAttachmentCount <= 1) return current;
-      const currentIndex = Math.min(
-        Math.max(current, 0),
-        previewAttachmentCount - 1,
-      );
-      return (currentIndex + 1) % previewAttachmentCount;
-    });
-  }, [previewAttachmentCount]);
-
-  useEffect(() => {
-    if (!previewOpen) return undefined;
-
-    if (!previewAttachmentCount) {
-      closePreview();
-      return undefined;
-    }
-
-    setPreviewIndex((current) =>
-      Math.min(Math.max(current, 0), previewAttachmentCount - 1),
-    );
-
-    return undefined;
-  }, [closePreview, previewAttachmentCount, previewOpen]);
-
-  useEffect(() => {
-    if (!previewOpen) return undefined;
-
-    const handlePreviewKeyDown = (event) => {
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        showPreviousPreview();
-      }
-
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        showNextPreview();
-      }
-    };
-
-    window.addEventListener("keydown", handlePreviewKeyDown);
-    return () => window.removeEventListener("keydown", handlePreviewKeyDown);
-  }, [previewOpen, showNextPreview, showPreviousPreview]);
-
-  const uploadFiles = useCallback(
-    async (files) => {
-      const selectedFiles = Array.from(files || []).filter(Boolean);
-      if (!selectedFiles.length || isDisabled) return;
-
-      let uploadedCount = 0;
-      let controller = null;
-      try {
-        setUploadingCount(selectedFiles.length);
-        controller = new AbortController();
-        uploadAbortControllerRef.current = controller;
-        uploadCancelReasonRef.current = null;
-
-        const fd = new FormData();
-        selectedFiles.forEach((file) => {
-          fd.append("files[]", file);
-        });
-
-        const res = await api.post(
-          buildChecklistAttachmentUrl({
-            projectId,
-            taskId,
-            checklistItemId,
-          }),
-          fd,
-          { signal: controller.signal },
-        );
-
-        const uploaded = normalizeResponseAttachments(res?.data);
-        if (uploaded.length) {
-          uploadedCount = uploaded.length;
-          setAttachments((prev) => [...uploaded, ...(prev || [])]);
-        }
-
-        if (uploadedCount) {
-          toastSuccess(uploadedCount > 1 ? "Files attached" : "File attached");
-          onChanged?.();
-        }
-      } catch (err) {
-        if (
-          uploadCancelReasonRef.current === "manual" ||
-          err?.message === "canceled"
-        ) {
-          if (uploadCancelReasonRef.current === "manual") {
-            toastInfo("Upload canceled");
-          }
-          return;
-        }
-
-        toastError(err?.message || "Upload checklist attachment failed");
-      } finally {
-        if (uploadAbortControllerRef.current === controller) {
-          uploadAbortControllerRef.current = null;
-          uploadCancelReasonRef.current = null;
-        }
-
-        setUploadingCount(0);
-      }
-    },
-    [checklistItemId, isDisabled, onChanged, projectId, taskId],
-  );
-
-  const downloadAttachment = async (attachment) => {
-    const href = resolveAttachmentHref(getAttachmentUrl(attachment));
-    const attachmentId = getAttachmentId(attachment);
-    if (!href && attachmentId == null) return;
-
-    const fallbackName = getAttachmentName(attachment);
-    const name = String(fallbackName || "Attachment").trim() || "Attachment";
-
+  const uploadFiles = useCallback(async (files) => {
+    const selected = Array.from(files || []).filter(Boolean);
+    if (!selected.length || blocked) return;
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    cancelReason.current = null;
+    setUploading(selected.length);
     try {
-      setPreviewDownloading(true);
-
-      if (projectId && taskId && checklistItemId && attachmentId != null) {
-        try {
-          const res = await api.get(
-            buildChecklistAttachmentUrl({
-              projectId,
-              taskId,
-              checklistItemId,
-              attachmentId,
-              action: "download",
-            }),
-            { responseType: "blob" },
-          );
-          const blob =
-            res?.data instanceof Blob ? res.data : new Blob([res?.data]);
-          const headerName = parseFilenameFromContentDisposition(
-            res?.headers?.["content-disposition"] ??
-              res?.headers?.["Content-Disposition"],
-          );
-          triggerBrowserDownload({ blob, filename: headerName || name });
-          return;
-        } catch {
-          // Existing file URLs still allow download when the item endpoint is unavailable.
-        }
+      const data = new FormData();
+      selected.forEach((file) => data.append("files[]", file));
+      const response = await api.post(endpoint({ projectId, taskId, checklistItemId }), data, { signal: controller.signal });
+      const added = responseFiles(response?.data);
+      if (added.length) setAttachments((current) => [...added, ...current]);
+      toastSuccess((added.length || selected.length) > 1 ? "Files attached" : "File attached");
+      onChanged?.();
+    } catch (error) {
+      if (cancelReason.current === "manual" || error?.message === "canceled") {
+        if (cancelReason.current === "manual") toastInfo("Upload canceled");
+      } else {
+        toastError(error?.response?.data?.message || error?.message || "Upload checklist attachment failed");
       }
-
-      if (!href) throw new Error("Download url missing");
-
-      const res = await api.get(href, { responseType: "blob" });
-      const blob = res?.data instanceof Blob ? res.data : new Blob([res?.data]);
-      const headerName = parseFilenameFromContentDisposition(
-        res?.headers?.["content-disposition"] ??
-          res?.headers?.["Content-Disposition"],
-      );
-      triggerBrowserDownload({ blob, filename: headerName || name });
-    } catch (err) {
-      toastError(err?.message || "Download failed");
     } finally {
-      setPreviewDownloading(false);
+      if (controllerRef.current === controller) {
+        controllerRef.current = null;
+        cancelReason.current = null;
+      }
+      setUploading(0);
+      if (inputRef.current) inputRef.current.value = "";
     }
+  }, [blocked, checklistItemId, onChanged, projectId, taskId]);
+
+  useEffect(() => {
+    if (!uploadOpen) return undefined;
+    const onPaste = (event) => {
+      if (blocked) return;
+      const files = clipboardFiles(event.clipboardData);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      uploadFiles(files);
+    };
+    window.addEventListener("paste", onPaste, true);
+    return () => window.removeEventListener("paste", onPaste, true);
+  }, [blocked, uploadFiles, uploadOpen]);
+
+  const onDragEnter = (event) => {
+    if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (blocked) return;
+    dragDepth.current += 1;
+    setDragging(true);
+  };
+  const onDragOver = (event) => {
+    if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = blocked ? "none" : "copy";
+  };
+  const onDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (!dragDepth.current) setDragging(false);
+  };
+  const onDrop = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepth.current = 0;
+    setDragging(false);
+    if (!blocked) await uploadFiles(transferFiles(event.dataTransfer));
   };
 
-  const deleteAttachment = async (attachment) => {
-    const attachmentId = getAttachmentId(attachment);
-    if (!projectId || !taskId || !checklistItemId || attachmentId == null) {
-      return;
-    }
-
+  const remove = async (file) => {
+    const id = attachmentId(file);
+    if (id == null || unavailable) return;
+    const result = await alertConfirm({ title: "Delete attachment", text: "File will be deleted from this checklist item. Continue?", confirmText: "Delete", cancelText: "No" });
+    if (!result.isConfirmed) return;
     try {
-      const { isConfirmed } = await alertConfirm({
-        title: "Delete attachment",
-        text: "File will be deleted from this checklist item. Continue?",
-        confirmText: "Delete",
-        cancelText: "No",
-      });
-      if (!isConfirmed) return;
-
-      setDeletingId(String(attachmentId));
-      await api.delete(
-        buildChecklistAttachmentUrl({
-          projectId,
-          taskId,
-          checklistItemId,
-          attachmentId,
-        }),
-      );
-
-      setAttachments((prev) =>
-        (prev || []).filter(
-          (item) => String(getAttachmentId(item)) !== String(attachmentId),
-        ),
-      );
-      setMenuOpenId(null);
+      setDeleting(String(id));
+      await api.delete(endpoint({ projectId, taskId, checklistItemId, id }));
+      setAttachments((current) => current.filter((item) => String(attachmentId(item)) !== String(id)));
       toastSuccess("File deleted");
       onChanged?.();
-    } catch (err) {
-      toastError(err?.message || "Delete checklist attachment failed");
+    } catch (error) {
+      toastError(error?.response?.data?.message || error?.message || "Delete checklist attachment failed");
     } finally {
-      setDeletingId(null);
+      setDeleting(null);
     }
   };
 
-  return (
-    <div className="checklist-item-attachments">
-      {showTrigger ? (
-        <button
-          type="button"
-          className="btn px-0 text-info small f-s-12 checklist-item-attachments__trigger"
-          onClick={() => inputRef.current?.click()}
-          disabled={isDisabled}
-        >
-          <i className="ti ti-paperclip" aria-hidden="true"></i>
-          <span>Add attachment</span>
-        </button>
-      ) : null}
+  const download = async (file) => {
+    const id = attachmentId(file);
+    const href = resolveAttachmentHref(getAttachmentUrl(file));
+    const name = getAttachmentName(file);
+    if (id == null && !href) return;
+    try {
+      setDownloading(true);
+      let response;
+      try {
+        response = id == null ? null : await api.get(endpoint({ projectId, taskId, checklistItemId, id, action: "download" }), { responseType: "blob" });
+      } catch {
+        response = null;
+      }
+      if (!response && href) response = await api.get(href, { responseType: "blob" });
+      if (!response) throw new Error("Download url missing");
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
+      const header = response.headers?.["content-disposition"] ?? response.headers?.["Content-Disposition"];
+      triggerBrowserDownload({ blob, filename: parseFilenameFromContentDisposition(header) || name });
+    } catch (error) {
+      toastError(error?.message || "Download failed");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
-      <input
-        ref={inputRef}
-        id={resolvedInputId}
-        type="file"
-        multiple
-        className="d-none"
-        onChange={async (event) => {
-          const input = event.currentTarget;
-          const files = Array.from(input.files || []);
-          await uploadFiles(files);
-          if (input) input.value = "";
-        }}
-        disabled={isDisabled}
-      />
+  const previewIndex = useMemo(() => attachments.findIndex((file) => file === preview), [attachments, preview]);
+  const movePreview = (step) => {
+    if (attachments.length < 2 || previewIndex < 0) return;
+    setPreview(attachments[(previewIndex + step + attachments.length) % attachments.length]);
+  };
 
-      {isUploading ? (
-        <div className="checklist-item-attachments__uploading">
-          <Spinner size="sm" color="primary" />
-          <span>
-            Uploading {uploadingCount > 1 ? `${uploadingCount} files` : "file"}...
-          </span>
-          <button
-            type="button"
-            className="checklist-item-attachments__cancel"
-            onClick={cancelUpload}
-            title="Cancel upload"
-            aria-label="Cancel upload"
-          >
-            <i className="ti ti-x" aria-hidden="true"></i>
-            <span>Cancel</span>
+  return <div className="checklist-item-attachments">
+    {showTrigger && <button type="button" className="btn px-0 text-info small f-s-12 checklist-item-attachments__trigger" onClick={() => !unavailable && setUploadOpen(true)} disabled={unavailable}>
+      <i className="ti ti-paperclip" aria-hidden="true"></i><span>Add attachment</span>
+    </button>}
+    <input ref={inputRef} id={resolvedInputId} type="file" name="files[]" multiple className="d-none" aria-label="Choose checklist attachments" disabled={blocked} onChange={(event) => uploadFiles(event.currentTarget.files)} />
+
+    {attachments.length > 0 && <div className="checklist-item-attachments__grid">
+      {attachments.map((file, index) => {
+        const id = attachmentId(file);
+        const name = getAttachmentName(file);
+        const href = resolveAttachmentHref(getAttachmentUrl(file));
+        const image = isImageAttachment(file) && !!href;
+        const fallback = toPublicAsset("assets/images/icons/file.png");
+        return <div className="checklist-item-attachment-card" key={id ?? file?.url ?? `${name}-${index}`}>
+          <button type="button" className="checklist-item-attachment-card__button" title={name} onClick={() => setPreview(file)}>
+            <span className="checklist-item-attachment-card__preview">
+              {image ? <AttachmentImage attachment={file} href={href} alt={name} className="w-100 h-100" style={{ objectFit: "cover" }} fallbackIconSrc={fallback} /> : <img src={toPublicAsset(resolveAttachmentIcon(file))} alt={name} onError={(event) => { event.currentTarget.src = fallback; }} />}
+            </span>
+            <span className="checklist-item-attachment-card__meta"><span className="checklist-item-attachment-card__name">{name}</span><span className="checklist-item-attachment-card__size">{formatBytes(file?.size)}</span></span>
           </button>
+          {id != null && <button type="button" className="btn btn-sm text-danger position-absolute top-0 end-0" aria-label={`Delete ${name}`} disabled={deleting === String(id)} onClick={() => remove(file)}><i className="ti ti-trash"></i></button>}
+        </div>;
+      })}
+    </div>}
+
+    <Modal isOpen={uploadOpen} toggle={closeUpload} centered size="lg" backdrop={busy ? "static" : true} keyboard={!busy} onOpened={() => dropRef.current?.focus()}>
+      <ModalHeader toggle={busy ? undefined : closeUpload}>Add checklist attachments</ModalHeader>
+      <ModalBody>
+        <div ref={dropRef} role="button" tabIndex={blocked ? -1 : 0} className={`d-flex flex-column align-items-center justify-content-center rounded-3 text-center p-4 ${dragging ? "bg-light" : ""}`} style={{ minHeight: 220, border: `2px dashed ${dragging ? "var(--bs-primary)" : "var(--bs-border-color)"}`, cursor: blocked ? "not-allowed" : "pointer" }} onClick={() => !blocked && inputRef.current?.click()} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && !blocked) { event.preventDefault(); inputRef.current?.click(); } }} onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+          <i className="ti ti-cloud-upload text-primary mb-3" style={{ fontSize: 52 }}></i>
+          <h5>{dragging ? "Drop files here" : "Add attachments"}</h5>
+          <p className="text-muted mb-1">Drag and drop files here, paste copied files, or click to choose files.</p>
+          <p className="text-muted small mb-0">Multiple files can be uploaded at the same time.</p>
+          {busy && <div className="d-flex align-items-center gap-2 mt-4"><Spinner size="sm" color="primary" /><span>Uploading {uploading > 1 ? `${uploading} files` : "file"}...</span><button type="button" className="btn btn-sm btn-outline-danger" onClick={(event) => { event.stopPropagation(); cancelReason.current = "manual"; controllerRef.current?.abort(); }}>Cancel</button></div>}
         </div>
-      ) : null}
+        <div className="text-muted small mt-3">Paste works while this window is open. {attachments.length} attachment{attachments.length === 1 ? "" : "s"} currently added.</div>
+      </ModalBody>
+      <ModalFooter><button type="button" className="btn btn-light" disabled={busy} onClick={closeUpload}>Close</button><button type="button" className="btn btn-primary" disabled={blocked} onClick={() => inputRef.current?.click()}>Choose files</button></ModalFooter>
+    </Modal>
 
-      {attachments.length ? (
-        <div className="checklist-item-attachments__grid">
-          {attachments.map((attachment, index) => {
-            const name = getAttachmentName(attachment);
-            const href = resolveAttachmentHref(getAttachmentUrl(attachment));
-            const attachmentId = getAttachmentId(attachment);
-            const isImg = isImageAttachment(attachment) && !!href;
-            const iconSrc = toPublicAsset(resolveAttachmentIcon(attachment));
-            const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
-            const idKey =
-              attachmentId != null
-                ? String(attachmentId)
-                : `${name}-${index}`;
-            const menuOpen = attachmentId != null && menuOpenId === idKey;
-            const deleting = attachmentId != null && deletingId === idKey;
-
-            return (
-              <div
-                key={attachment?.id ?? attachment?.url ?? attachment?.path ?? idKey}
-                className="checklist-item-attachment-card"
-              >
-                {attachmentId != null ? (
-                  <div className="checklist-item-attachment-card__menu">
-                    <Dropdown
-                      direction="up"
-                      isOpen={menuOpen}
-                      toggle={() =>
-                        setMenuOpenId((prev) => (prev === idKey ? null : idKey))
-                      }
-                    >
-                      <DropdownToggle
-                        tag="button"
-                        type="button"
-                        className="btn p-0 text-muted"
-                        title="Options"
-                        aria-label="Options"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
-                        <i className="ti ti-dots-vertical fs-5"></i>
-                      </DropdownToggle>
-                      <DropdownMenu end>
-                        <DropdownItem
-                          className="text-danger"
-                          disabled={deleting}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            deleteAttachment(attachment);
-                          }}
-                        >
-                          <div className="d-flex align-items-center justify-content-between gap-2">
-                            <span>{deleting ? "Deleting..." : "Delete"}</span>
-                            <i className="ti ti-trash fs-5"></i>
-                          </div>
-                        </DropdownItem>
-                      </DropdownMenu>
-                    </Dropdown>
-                  </div>
-                ) : null}
-
-                <button
-                  type="button"
-                  className="checklist-item-attachment-card__button"
-                  title={name}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openPreview(index);
-                  }}
-                >
-                  <span className="checklist-item-attachment-card__preview">
-                    {isImg ? (
-                      <AttachmentImage
-                        attachment={attachment}
-                        href={href}
-                        alt={name}
-                        className="w-100 h-100"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                        fallbackIconSrc={fallbackIconSrc}
-                      />
-                    ) : (
-                      <img
-                        src={iconSrc}
-                        alt={name}
-                        onError={(e) => {
-                          if (e.currentTarget.src === fallbackIconSrc) return;
-                          e.currentTarget.src = fallbackIconSrc;
-                        }}
-                      />
-                    )}
-                  </span>
-                  <span className="checklist-item-attachment-card__meta">
-                    <span className="checklist-item-attachment-card__name">
-                      {name}
-                    </span>
-                    <span className="checklist-item-attachment-card__size">
-                      {formatBytes(attachment?.size)}
-                    </span>
-                  </span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <Modal
-        isOpen={previewOpen}
-        toggle={closePreview}
-        centered
-        size="lg"
-        className="task-attachment-preview-modal"
-      >
-        <ModalHeader toggle={closePreview}>
-          <div className="task-attachment-preview-modal__title">
-            <span>{getAttachmentName(previewAttachment)}</span>
-            {previewAttachmentCount ? (
-              <span className="task-attachment-preview-modal__counter">
-                {normalizedPreviewIndex + 1} / {previewAttachmentCount}
-              </span>
-            ) : null}
+    <Modal isOpen={!!preview} toggle={() => setPreview(null)} centered size="lg" className="task-attachment-preview-modal">
+      <ModalHeader toggle={() => setPreview(null)}>{getAttachmentName(preview)}</ModalHeader>
+      <ModalBody>
+        {preview && <div className="d-flex flex-column gap-3">
+          <div className="d-flex align-items-center gap-2">
+            {attachments.length > 1 && <button type="button" className="btn btn-light" aria-label="Previous attachment" onClick={() => movePreview(-1)}><i className="ti ti-chevron-left"></i></button>}
+            <div className="bg-light rounded-3 d-flex-center flex-grow-1 overflow-hidden" style={{ minHeight: 320 }}>
+              {isImageAttachment(preview) && resolveAttachmentHref(getAttachmentUrl(preview)) ? <AttachmentImage attachment={preview} href={resolveAttachmentHref(getAttachmentUrl(preview))} alt={getAttachmentName(preview)} style={{ maxWidth: "100%", maxHeight: 520, objectFit: "contain" }} fallbackIconSrc={toPublicAsset("assets/images/icons/file.png")} /> : <img src={toPublicAsset(resolveAttachmentIcon(preview))} alt={getAttachmentName(preview)} style={{ width: 84, height: 84, objectFit: "contain" }} />}
+            </div>
+            {attachments.length > 1 && <button type="button" className="btn btn-light" aria-label="Next attachment" onClick={() => movePreview(1)}><i className="ti ti-chevron-right"></i></button>}
           </div>
-        </ModalHeader>
-        <ModalBody className="task-attachment-preview-modal__body">
-          {previewAttachment ? (
-            (() => {
-              const name = getAttachmentName(previewAttachment);
-              const href = resolveAttachmentHref(getAttachmentUrl(previewAttachment));
-              const attachmentId = getAttachmentId(previewAttachment);
-              const isImg = isImageAttachment(previewAttachment) && !!href;
-              const iconSrc = toPublicAsset(resolveAttachmentIcon(previewAttachment));
-              const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
-
-              return (
-                <div className="d-flex flex-column gap-3">
-                  <div className="task-attachment-preview-modal__content">
-                    {canNavigatePreview ? (
-                      <button
-                        type="button"
-                        className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--prev"
-                        aria-label="Previous attachment"
-                        title="Previous attachment"
-                        onClick={showPreviousPreview}
-                      >
-                        <i className="ti ti-chevron-left" aria-hidden="true"></i>
-                        <span className="visually-hidden">
-                          Previous attachment
-                        </span>
-                      </button>
-                    ) : null}
-
-                    <div className="task-attachment-preview-modal__stage bg-light rounded-3 d-flex-center overflow-hidden">
-                      {isImg ? (
-                        <AttachmentImage
-                          attachment={previewAttachment}
-                          href={href}
-                          alt={name}
-                          style={{
-                            maxWidth: "100%",
-                            maxHeight: 520,
-                            objectFit: "contain",
-                          }}
-                          fallbackIconSrc={fallbackIconSrc}
-                        />
-                      ) : (
-                        <div className="d-flex flex-column align-items-center gap-2 py-4">
-                          <img
-                            src={iconSrc}
-                            alt={name}
-                            onError={(e) => {
-                              if (e.currentTarget.src === fallbackIconSrc) return;
-                              e.currentTarget.src = fallbackIconSrc;
-                            }}
-                            style={{
-                              width: 84,
-                              height: 84,
-                              objectFit: "contain",
-                            }}
-                          />
-                          <div className="text-muted small">
-                            {formatBytes(previewAttachment?.size)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {canNavigatePreview ? (
-                      <button
-                        type="button"
-                        className="task-attachment-preview-modal__nav task-attachment-preview-modal__nav--next"
-                        aria-label="Next attachment"
-                        title="Next attachment"
-                        onClick={showNextPreview}
-                      >
-                        <i className="ti ti-chevron-right" aria-hidden="true"></i>
-                        <span className="visually-hidden">Next attachment</span>
-                      </button>
-                    ) : null}
-                  </div>
-
-                  <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div className="text-muted small">
-                      {previewAttachment?.created_at
-                        ? `Uploaded: ${safeFormatDate(
-                            previewAttachment.created_at,
-                            formatDateTime,
-                          )}`
-                        : null}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      disabled={(!href && attachmentId == null) || previewDownloading}
-                      onClick={() => downloadAttachment(previewAttachment)}
-                    >
-                      {previewDownloading ? (
-                        <span className="d-inline-flex align-items-center gap-2">
-                          <Spinner size="sm" />
-                          <span>Downloading...</span>
-                        </span>
-                      ) : (
-                        <>
-                          <i className="ti ti-download me-1"></i>
-                          Download
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })()
-          ) : null}
-        </ModalBody>
-      </Modal>
-    </div>
-  );
+          <div className="d-flex justify-content-end"><button type="button" className="btn btn-primary" disabled={downloading} onClick={() => download(preview)}>{downloading ? <Spinner size="sm" /> : <><i className="ti ti-download me-1"></i>Download</>}</button></div>
+        </div>}
+      </ModalBody>
+    </Modal>
+  </div>;
 }
