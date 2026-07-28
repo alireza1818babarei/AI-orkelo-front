@@ -1,12 +1,18 @@
 export const APP_UPDATES = [
   {
-    id: "2026-07-25-project-board-filter-and-checklist-update",
-    version: "v1.4.0",
-    releasedAt: "2026-07-25",
+    id: "2026-07-27-project-board-filter-checklist-and-task-move-update",
+    version: "v1.5.0",
+    releasedAt: "2026-07-27",
     title: "Project Board Update",
     summary:
-      "This update makes the Project Board easier to search, filter, and manage by improving checklist actions and adding task filtering by tags, priorities, and assigned members.",
+      "This update makes the Project Board easier to search, filter, organize, and manage by improving checklist actions, adding task filters, and allowing tasks to move between compatible projects.",
     newFeatures: [
+      {
+        title: "Move Tasks Between Projects",
+        description:
+          "Tasks can now be moved from one project to another accessible project and placed in a compatible destination column.",
+        icon: "ph-duotone ph-arrows-left-right",
+      },
       {
         title: "Project Board Filters",
         description:
@@ -28,10 +34,12 @@ export const APP_UPDATES = [
     ],
     bugFixes: [
       "The checklist copy action is no longer hidden inside the three-dot actions menu.",
+      "The move-to-another-project action now opens the move dialog without refreshing the page.",
     ],
     improvements: [
       "The checklist copy action was moved out of the three-dot menu and placed directly in the checklist action row.",
       "The copy all checklists tooltip and existing copy modal behavior were preserved.",
+      "Moved tasks keep their descriptions, checklists, comments, attachments, assignees, watchers, and activity history.",
       "The filter drawer supports Reset, Apply Filters, backdrop closing, and Escape key closing.",
       "Selected member filters include hover, focus, active, keyboard, light mode, dark mode, and reduced-motion states.",
     ],
