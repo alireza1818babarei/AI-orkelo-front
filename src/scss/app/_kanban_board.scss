@@ -2586,6 +2586,15 @@ nav.dark-sidebar ~ .app-content .task-checklist-copy-modal__close {
   min-width: 0;
 }
 
+.checklist-item-attachments--action {
+  display: contents;
+}
+
+.checklist-item-attachments--action .checklist-item-attachments__uploading,
+.checklist-item-attachments--action .checklist-item-attachments__grid {
+  flex: 1 0 100%;
+}
+
 .checklist-item-attachments__uploading {
   display: inline-flex;
   align-items: center;
@@ -2699,6 +2708,79 @@ nav.dark-sidebar ~ .app-content .task-checklist-copy-modal__close {
   box-shadow: 0 4px 10px rgba(var(--dark), 0.1);
 }
 
+.checklist-item-attachment-upload-modal {
+  --td-surface: var(--white);
+  --td-panel-soft: #eef3f9;
+  --td-text: rgba(var(--dark), 0.94);
+  --td-muted: rgba(var(--dark), 0.62);
+  --td-line: rgba(var(--secondary), 0.24);
+}
+
+.checklist-item-attachment-upload-modal .modal-content {
+  border: 1px solid var(--td-line);
+  border-radius: 12px;
+  background: var(--td-surface);
+  color: var(--td-text);
+}
+
+.checklist-item-attachment-upload-modal__dropzone {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--td-line);
+  border-radius: 8px;
+  background: var(--td-panel-soft);
+  color: var(--td-text);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.checklist-item-attachment-upload-modal__dropzone:hover,
+.checklist-item-attachment-upload-modal__dropzone:focus-visible,
+.checklist-item-attachment-upload-modal__dropzone.is-drag-over {
+  border-color: rgba(var(--primary), 0.7);
+  background: rgba(var(--primary), 0.08);
+  outline: 0;
+}
+
+.checklist-item-attachment-upload-modal__dropzone.is-uploading {
+  cursor: wait;
+}
+
+.checklist-item-attachment-upload-modal__icon {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(var(--primary), 0.12);
+  color: rgba(var(--primary), 1);
+  font-size: 1.35rem;
+}
+
+.checklist-item-attachment-upload-modal__title {
+  color: var(--td-text);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.checklist-item-attachment-upload-modal__hint {
+  max-width: 300px;
+  color: var(--td-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 body.dark .checklist-item-attachment-card,
 nav.dark-sidebar ~ .app-content .checklist-item-attachment-card {
   border-color: rgba(255, 255, 255, 0.14);
@@ -2726,6 +2808,15 @@ body.dark .checklist-item-attachment-card__menu,
 nav.dark-sidebar ~ .app-content .checklist-item-attachment-card__menu {
   background: rgba(25, 28, 38, 0.9);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+}
+
+body.dark .checklist-item-attachment-upload-modal,
+nav.dark-sidebar ~ .app-content .checklist-item-attachment-upload-modal {
+  --td-surface: #171b24;
+  --td-panel-soft: #273142;
+  --td-text: rgba(243, 246, 251, 0.95);
+  --td-muted: rgba(190, 198, 211, 0.8);
+  --td-line: rgba(255, 255, 255, 0.12);
 }
 
 .task-detail-timer {

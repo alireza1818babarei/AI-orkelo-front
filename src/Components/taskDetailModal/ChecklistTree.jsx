@@ -213,15 +213,16 @@ const ChecklistTree = ({
               >
                 Add sub item
               </button>
-              <label
-                htmlFor={attachmentInputId}
-                className="btn px-0 text-info small f-s-12 checklist-item-action-link"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                <i className="ti ti-paperclip" aria-hidden="true"></i>
-                <span>Add attachment</span>
-              </label>
+              <ChecklistItemAttachments
+                projectId={projectId}
+                taskId={taskId}
+                checklistItem={item}
+                inputId={attachmentInputId}
+                className="checklist-item-attachments--action"
+                disabled={isItemBusy}
+                onChanged={onChecklistAttachmentChanged}
+                formatDateTime={formatDateTime}
+              />
             </div>
             {subInputById[item.id] !== undefined ? (
               <div className="mt-1">
@@ -290,16 +291,6 @@ const ChecklistTree = ({
                 />
               </div>
             ) : null}
-            <ChecklistItemAttachments
-              projectId={projectId}
-              taskId={taskId}
-              checklistItem={item}
-              inputId={attachmentInputId}
-              showTrigger={false}
-              disabled={isItemBusy}
-              onChanged={onChecklistAttachmentChanged}
-              formatDateTime={formatDateTime}
-            />
           </div>
         ) : null}
       </div>

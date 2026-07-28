@@ -69,6 +69,24 @@ const buildChecklistAttachmentUrl = ({
   return `${base}/${attachmentId}${action ? `/${action}` : ""}`;
 };
 
+const isFileDragEvent = (event) => {
+  const types = Array.from(event?.dataTransfer?.types || []);
+  return types.includes("Files");
+};
+
+const getDataTransferFiles = (dataTransfer) =>
+  Array.from(dataTransfer?.files || []).filter(
+    (file) => file && (typeof File === "undefined" || file instanceof File),
+  );
+
+const getClipboardFiles = (clipboardData) => {
+  const items = Array.from(clipboardData?.items || []);
+  return items
+    .filter((item) => item?.kind === "file")
+    .map((item) => item.getAsFile?.())
+    .filter(Boolean);
+};
+
 const safeFormatDate = (value, formatDateTime) => {
   if (typeof formatDateTime === "function") return formatDateTime(value);
   if (!value) return "";
@@ -90,6 +108,7 @@ export default function ChecklistItemAttachments({
   inputId,
   disabled = false,
   showTrigger = true,
+  className = "",
   onChanged,
   formatDateTime,
 }) {
@@ -110,18 +129,38 @@ export default function ChecklistItemAttachments({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewDownloading, setPreviewDownloading] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadDragActive, setUploadDragActive] = useState(false);
   const inputRef = useRef(null);
+  const uploadAreaRef = useRef(null);
+  const uploadDropDepthRef = useRef(0);
   const uploadAbortControllerRef = useRef(null);
   const uploadCancelReasonRef = useRef(null);
 
   const isUploading = uploadingCount > 0;
+  const isUploadUnavailable =
+    disabled || !projectId || !taskId || !checklistItemId;
   const isDisabled =
-    disabled || !projectId || !taskId || !checklistItemId || isUploading;
+    isUploadUnavailable || isUploading;
 
-  const cancelUpload = useCallback(() => {
+  const cancelUpload = useCallback((event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
     uploadCancelReasonRef.current = "manual";
     uploadAbortControllerRef.current?.abort();
   }, []);
+
+  const closeUploadModal = useCallback(() => {
+    setUploadModalOpen(false);
+    setUploadDragActive(false);
+    uploadDropDepthRef.current = 0;
+  }, []);
+
+  const openUploadModal = useCallback(() => {
+    if (isUploadUnavailable) return;
+    setUploadModalOpen(true);
+  }, [isUploadUnavailable]);
 
   useEffect(() => () => {
     uploadCancelReasonRef.current = "unmount";
@@ -219,7 +258,7 @@ export default function ChecklistItemAttachments({
   const uploadFiles = useCallback(
     async (files) => {
       const selectedFiles = Array.from(files || []).filter(Boolean);
-      if (!selectedFiles.length || isDisabled) return;
+      if (!selectedFiles.length || isDisabled) return 0;
 
       let uploadedCount = 0;
       let controller = null;
@@ -254,18 +293,26 @@ export default function ChecklistItemAttachments({
           toastSuccess(uploadedCount > 1 ? "Files attached" : "File attached");
           onChanged?.();
         }
+
+        return uploadedCount;
       } catch (err) {
         if (
           uploadCancelReasonRef.current === "manual" ||
           err?.message === "canceled"
         ) {
           if (uploadCancelReasonRef.current === "manual") {
-            toastInfo("Upload canceled");
-          }
-          return;
+              toastInfo("Upload canceled");
+            }
+          return 0;
         }
 
-        toastError(err?.message || "Upload checklist attachment failed");
+        const msg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Upload checklist attachment failed";
+        toastError(msg);
+        return 0;
       } finally {
         if (uploadAbortControllerRef.current === controller) {
           uploadAbortControllerRef.current = null;
@@ -277,6 +324,94 @@ export default function ChecklistItemAttachments({
     },
     [checklistItemId, isDisabled, onChanged, projectId, taskId],
   );
+
+  const handleUploadDragEnter = useCallback(
+    (event) => {
+      if (!isFileDragEvent(event)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = isDisabled ? "none" : "copy";
+      }
+
+      uploadDropDepthRef.current += 1;
+      setUploadDragActive(true);
+    },
+    [isDisabled],
+  );
+
+  const handleUploadDragOver = useCallback(
+    (event) => {
+      if (!isFileDragEvent(event)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = isDisabled ? "none" : "copy";
+      }
+    },
+    [isDisabled],
+  );
+
+  const handleUploadDragLeave = useCallback((event) => {
+    if (!isFileDragEvent(event)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    uploadDropDepthRef.current = Math.max(uploadDropDepthRef.current - 1, 0);
+    if (uploadDropDepthRef.current === 0) {
+      setUploadDragActive(false);
+    }
+  }, []);
+
+  const handleUploadDrop = useCallback(
+    async (event) => {
+      if (!isFileDragEvent(event)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      uploadDropDepthRef.current = 0;
+      setUploadDragActive(false);
+
+      if (isDisabled) return;
+
+      const files = getDataTransferFiles(event.dataTransfer);
+      if (!files.length) return;
+
+      const uploadedCount = await uploadFiles(files);
+      if (uploadedCount) closeUploadModal();
+    },
+    [closeUploadModal, isDisabled, uploadFiles],
+  );
+
+  const handleUploadPaste = useCallback(
+    async (event) => {
+      if (!uploadModalOpen || isDisabled) return;
+
+      const files = getClipboardFiles(event.clipboardData);
+      if (!files.length) return;
+
+      // Only file clipboard content is intercepted; text paste stays untouched.
+      event.preventDefault();
+      event.stopPropagation();
+
+      const uploadedCount = await uploadFiles(files);
+      if (uploadedCount) closeUploadModal();
+    },
+    [closeUploadModal, isDisabled, uploadFiles, uploadModalOpen],
+  );
+
+  useEffect(() => {
+    if (!uploadModalOpen) return undefined;
+
+    document.addEventListener("paste", handleUploadPaste, true);
+    return () => document.removeEventListener("paste", handleUploadPaste, true);
+  }, [handleUploadPaste, uploadModalOpen]);
 
   const downloadAttachment = async (attachment) => {
     const href = resolveAttachmentHref(getAttachmentUrl(attachment));
@@ -371,13 +506,17 @@ export default function ChecklistItemAttachments({
   };
 
   return (
-    <div className="checklist-item-attachments">
+    <div
+      className={`checklist-item-attachments${
+        className ? ` ${className}` : ""
+      }`}
+    >
       {showTrigger ? (
         <button
           type="button"
           className="btn px-0 text-info small f-s-12 checklist-item-attachments__trigger"
-          onClick={() => inputRef.current?.click()}
-          disabled={isDisabled}
+          onClick={openUploadModal}
+          disabled={isUploadUnavailable}
         >
           <i className="ti ti-paperclip" aria-hidden="true"></i>
           <span>Add attachment</span>
@@ -393,11 +532,75 @@ export default function ChecklistItemAttachments({
         onChange={async (event) => {
           const input = event.currentTarget;
           const files = Array.from(input.files || []);
-          await uploadFiles(files);
+          const uploadedCount = await uploadFiles(files);
           if (input) input.value = "";
+          if (uploadedCount) closeUploadModal();
         }}
         disabled={isDisabled}
       />
+
+      <Modal
+        isOpen={uploadModalOpen}
+        toggle={closeUploadModal}
+        centered
+        className="checklist-item-attachment-upload-modal"
+        onOpened={() => uploadAreaRef.current?.focus()}
+      >
+        <ModalHeader toggle={closeUploadModal}>
+          Checklist item attachment
+        </ModalHeader>
+        <ModalBody>
+          <label
+            ref={uploadAreaRef}
+            htmlFor={resolvedInputId}
+            tabIndex={isDisabled ? -1 : 0}
+            className={`checklist-item-attachment-upload-modal__dropzone${
+              uploadDragActive ? " is-drag-over" : ""
+            }${isUploading ? " is-uploading" : ""}`}
+            onDragEnter={handleUploadDragEnter}
+            onDragOver={handleUploadDragOver}
+            onDragLeave={handleUploadDragLeave}
+            onDrop={handleUploadDrop}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              if (isDisabled) return;
+
+              event.preventDefault();
+              inputRef.current?.click();
+            }}
+          >
+            <span className="checklist-item-attachment-upload-modal__icon">
+              {isUploading ? (
+                <Spinner size="sm" color="primary" />
+              ) : (
+                <i className="fa-solid fa-cloud-arrow-up fa-fw"></i>
+              )}
+            </span>
+            <span className="checklist-item-attachment-upload-modal__title">
+              {isUploading
+                ? uploadingCount > 1
+                  ? `Uploading ${uploadingCount} files...`
+                  : "Uploading file..."
+                : "Add attachment"}
+            </span>
+            <span className="checklist-item-attachment-upload-modal__hint">
+              Drag files here, paste copied files, or choose files
+            </span>
+            {isUploading ? (
+              <button
+                type="button"
+                className="checklist-item-attachments__cancel mt-1"
+                onClick={cancelUpload}
+                title="Cancel upload"
+                aria-label="Cancel upload"
+              >
+                <i className="ti ti-x" aria-hidden="true"></i>
+                <span>Cancel</span>
+              </button>
+            ) : null}
+          </label>
+        </ModalBody>
+      </Modal>
 
       {isUploading ? (
         <div className="checklist-item-attachments__uploading">
