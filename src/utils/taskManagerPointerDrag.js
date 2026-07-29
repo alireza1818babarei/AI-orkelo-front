@@ -12,6 +12,8 @@ import { isTaskApproved } from "./taskReviewStatus";
 const TASK_DRAG_ACTIVATION_DELAY = 500;
 const TASK_SELECTOR = "[data-board-task-id]";
 const BOARD_SELECTOR = ".board";
+const TOUCH_DRAG_HANDLE_SELECTOR = "[data-board-touch-drag-handle]";
+const TOUCH_DRAG_HANDLE_STYLE_ID = "task-manager-touch-drag-handle-styles";
 const INTERACTIVE_SELECTOR =
   "button, a, input, textarea, select, [contenteditable='true']";
 
@@ -118,6 +120,110 @@ const buildPayload = (
   };
 };
 
+const isTouchCapableDevice = () => {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return false;
+  }
+
+  return (
+    Number(navigator.maxTouchPoints || 0) > 0 ||
+    Boolean(window.matchMedia?.("(any-pointer: coarse)")?.matches)
+  );
+};
+
+const installTouchDragHandleStyles = () => {
+  if (document.getElementById(TOUCH_DRAG_HANDLE_STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = TOUCH_DRAG_HANDLE_STYLE_ID;
+  style.textContent = `
+    .board-touch-drag-handle {
+      min-height: 30px;
+      margin: 5px 8px 2px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid rgba(var(--primary), 0.24);
+      border-radius: 8px;
+      background: rgba(var(--primary), 0.08);
+      color: rgba(var(--primary), 0.95);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .board-touch-drag-handle i {
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .board-touch-drag-handle span {
+      pointer-events: none;
+    }
+
+    .board-touch-drag-handle.is-holding {
+      border-color: rgba(var(--primary), 0.46);
+      background: rgba(var(--primary), 0.14);
+    }
+
+    .board-touch-drag-handle.is-ready,
+    .pointer-list-drag-active .board-touch-drag-handle {
+      cursor: grabbing;
+      border-color: rgba(var(--primary), 0.72);
+      background: rgba(var(--primary), 0.2);
+      box-shadow: 0 0 0 3px rgba(var(--primary), 0.1);
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+const createTouchDragHandle = (taskElement) => {
+  const taskId = taskElement?.getAttribute?.("data-board-task-id");
+  if (!taskId || taskElement.querySelector(`:scope > ${TOUCH_DRAG_HANDLE_SELECTOR}`)) {
+    return;
+  }
+
+  const handle = document.createElement("div");
+  handle.className = "board-touch-drag-handle";
+  handle.setAttribute("data-board-touch-drag-handle", "true");
+  handle.setAttribute("data-board-task-id", taskId);
+  handle.setAttribute("role", "button");
+  handle.setAttribute("aria-label", "Hold to move task");
+  handle.setAttribute("title", "Hold to move");
+
+  const icon = document.createElement("i");
+  icon.className = "ti ti-grip-horizontal";
+  icon.setAttribute("aria-hidden", "true");
+
+  const label = document.createElement("span");
+  label.textContent = "Hold to move";
+
+  const suppressHandleAction = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  handle.addEventListener("click", suppressHandleAction);
+  handle.addEventListener("contextmenu", suppressHandleAction);
+  handle.addEventListener("dragstart", suppressHandleAction);
+  handle.append(icon, label);
+  taskElement.prepend(handle);
+};
+
+const ensureTouchDragHandles = () => {
+  document
+    .querySelectorAll(`${BOARD_SELECTOR} .board-item${TASK_SELECTOR}`)
+    .forEach(createTouchDragHandle);
+};
+
 export const installTaskManagerPointerDrag = (store) => {
   let persistenceQueue = Promise.resolve();
   let queuedOperations = 0;
@@ -127,6 +233,9 @@ export const installTaskManagerPointerDrag = (store) => {
   let activationPointerType = "mouse";
   let activationPoint = null;
   let activationTimer = null;
+  let activationHandle = null;
+  let touchHandleObserver = null;
+  let touchHandleFrame = null;
 
   const clearActivationTimer = () => {
     if (activationTimer) window.clearTimeout(activationTimer);
@@ -135,52 +244,99 @@ export const installTaskManagerPointerDrag = (store) => {
 
   const resetActivation = () => {
     clearActivationTimer();
+    activationHandle?.classList?.remove("is-holding", "is-ready");
     activationStartedAt = 0;
     activationPointerId = null;
     activationPointerType = "mouse";
     activationPoint = null;
+    activationHandle = null;
   };
 
-  const isTaskPointerTarget = (event) => {
-    if (event.button !== 0 || event.isPrimary === false) return false;
-    if (event.target?.closest?.(INTERACTIVE_SELECTOR)) return false;
+  const temporarilyDisableTaskDrag = (taskElement) => {
+    const taskId = taskElement?.getAttribute?.("data-board-task-id");
+    if (!taskId) return;
+
+    taskElement.removeAttribute("data-board-task-id");
+    queueMicrotask(() => {
+      if (taskElement.isConnected && !taskElement.hasAttribute("data-board-task-id")) {
+        taskElement.setAttribute("data-board-task-id", taskId);
+      }
+    });
+  };
+
+  const getTaskPointerTarget = (event) => {
+    if (event.button !== 0 || event.isPrimary === false) return null;
 
     const task = event.target?.closest?.(TASK_SELECTOR);
-    return Boolean(task?.closest?.(BOARD_SELECTOR));
+    if (!task?.closest?.(BOARD_SELECTOR)) return null;
+    return task;
   };
 
   const handlePointerDown = (event) => {
-    if (!isTaskPointerTarget(event)) return;
+    const task = getTaskPointerTarget(event);
+    if (!task) return;
+
+    const pointerType = event.pointerType || "mouse";
+    const touchHandle = event.target?.closest?.(TOUCH_DRAG_HANDLE_SELECTOR);
+
+    if (pointerType === "touch" && !touchHandle) {
+      resetActivation();
+      temporarilyDisableTaskDrag(task);
+      return;
+    }
+
+    if (event.target?.closest?.(INTERACTIVE_SELECTOR)) return;
 
     resetActivation();
     activationStartedAt = performance.now();
     activationPointerId = event.pointerId;
-    activationPointerType = event.pointerType || "mouse";
+    activationPointerType = pointerType;
     activationPoint = { x: event.clientX, y: event.clientY };
+    activationHandle = touchHandle || null;
 
     if (activationPointerType !== "touch") return;
 
+    activationHandle?.classList?.add("is-holding");
     activationTimer = window.setTimeout(() => {
       if (activationPointerId !== event.pointerId || !activationPoint) return;
-      if (typeof PointerEvent !== "function") return;
+
+      activationHandle?.classList?.add("is-ready");
+      try {
+        navigator.vibrate?.(18);
+      } catch {
+        // Vibration support is optional.
+      }
 
       const target =
         document.elementFromPoint(activationPoint.x, activationPoint.y) ||
         event.target;
+      const options = {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        pointerId: activationPointerId,
+        pointerType: activationPointerType,
+        isPrimary: true,
+        buttons: 1,
+        clientX: activationPoint.x,
+        clientY: activationPoint.y,
+      };
+      let syntheticMove;
 
-      target?.dispatchEvent?.(
-        new PointerEvent("pointermove", {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          pointerId: activationPointerId,
-          pointerType: activationPointerType,
-          isPrimary: true,
-          buttons: 1,
-          clientX: activationPoint.x,
-          clientY: activationPoint.y,
-        }),
-      );
+      if (typeof PointerEvent === "function") {
+        syntheticMove = new PointerEvent("pointermove", options);
+      } else {
+        syntheticMove = new Event("pointermove", options);
+        Object.entries(options).forEach(([key, value]) => {
+          try {
+            Object.defineProperty(syntheticMove, key, { value });
+          } catch {
+            // Ignore immutable event fields in older browsers.
+          }
+        });
+      }
+
+      target?.dispatchEvent?.(syntheticMove);
     }, TASK_DRAG_ACTIVATION_DELAY);
   };
 
@@ -193,6 +349,25 @@ export const installTaskManagerPointerDrag = (store) => {
     if (event.pointerId !== activationPointerId) return;
     resetActivation();
   };
+
+  const scheduleTouchDragHandles = () => {
+    if (touchHandleFrame) return;
+    touchHandleFrame = window.requestAnimationFrame(() => {
+      touchHandleFrame = null;
+      ensureTouchDragHandles();
+    });
+  };
+
+  if (isTouchCapableDevice()) {
+    installTouchDragHandleStyles();
+    ensureTouchDragHandles();
+
+    const observerRoot = document.body || document.documentElement;
+    if (observerRoot && typeof MutationObserver === "function") {
+      touchHandleObserver = new MutationObserver(scheduleTouchDragHandles);
+      touchHandleObserver.observe(observerRoot, { childList: true, subtree: true });
+    }
+  }
 
   window.addEventListener("pointerdown", handlePointerDown, true);
   window.addEventListener("pointermove", handlePointerMove, true);
@@ -282,6 +457,8 @@ export const installTaskManagerPointerDrag = (store) => {
 
   return () => {
     resetActivation();
+    touchHandleObserver?.disconnect();
+    if (touchHandleFrame) window.cancelAnimationFrame(touchHandleFrame);
     window.removeEventListener("pointerdown", handlePointerDown, true);
     window.removeEventListener("pointermove", handlePointerMove, true);
     window.removeEventListener("pointerup", handlePointerEnd, true);
