@@ -9,6 +9,12 @@ import { registerPointerListDragSurface } from "./pointerListDragEngine";
 import { toastError } from "./sweetAlert";
 import { isTaskApproved } from "./taskReviewStatus";
 
+const TASK_DRAG_ACTIVATION_DELAY = 500;
+const TASK_SELECTOR = "[data-board-task-id]";
+const BOARD_SELECTOR = ".board";
+const INTERACTIVE_SELECTOR =
+  "button, a, input, textarea, select, [contenteditable='true']";
+
 const findTaskRecord = (store, taskId) => {
   const columns = store.getState()?.projectColumns?.items || [];
 
@@ -116,6 +122,80 @@ export const installTaskManagerPointerDrag = (store) => {
   let persistenceQueue = Promise.resolve();
   let queuedOperations = 0;
   let persistenceError = null;
+  let activationStartedAt = 0;
+  let activationPointerId = null;
+  let activationPointerType = "mouse";
+  let activationPoint = null;
+  let activationTimer = null;
+
+  const clearActivationTimer = () => {
+    if (activationTimer) window.clearTimeout(activationTimer);
+    activationTimer = null;
+  };
+
+  const resetActivation = () => {
+    clearActivationTimer();
+    activationStartedAt = 0;
+    activationPointerId = null;
+    activationPointerType = "mouse";
+    activationPoint = null;
+  };
+
+  const isTaskPointerTarget = (event) => {
+    if (event.button !== 0 || event.isPrimary === false) return false;
+    if (event.target?.closest?.(INTERACTIVE_SELECTOR)) return false;
+
+    const task = event.target?.closest?.(TASK_SELECTOR);
+    return Boolean(task?.closest?.(BOARD_SELECTOR));
+  };
+
+  const handlePointerDown = (event) => {
+    if (!isTaskPointerTarget(event)) return;
+
+    resetActivation();
+    activationStartedAt = performance.now();
+    activationPointerId = event.pointerId;
+    activationPointerType = event.pointerType || "mouse";
+    activationPoint = { x: event.clientX, y: event.clientY };
+
+    activationTimer = window.setTimeout(() => {
+      if (activationPointerId !== event.pointerId || !activationPoint) return;
+      if (typeof PointerEvent !== "function") return;
+
+      const target =
+        document.elementFromPoint(activationPoint.x, activationPoint.y) ||
+        event.target;
+
+      target?.dispatchEvent?.(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: activationPointerId,
+          pointerType: activationPointerType,
+          isPrimary: true,
+          buttons: 1,
+          clientX: activationPoint.x,
+          clientY: activationPoint.y,
+        }),
+      );
+    }, TASK_DRAG_ACTIVATION_DELAY);
+  };
+
+  const handlePointerMove = (event) => {
+    if (event.pointerId !== activationPointerId) return;
+    activationPoint = { x: event.clientX, y: event.clientY };
+  };
+
+  const handlePointerEnd = (event) => {
+    if (event.pointerId !== activationPointerId) return;
+    resetActivation();
+  };
+
+  window.addEventListener("pointerdown", handlePointerDown, true);
+  window.addEventListener("pointermove", handlePointerMove, true);
+  window.addEventListener("pointerup", handlePointerEnd, true);
+  window.addEventListener("pointercancel", handlePointerEnd, true);
 
   const refreshBoardFromServer = async (projectId) => {
     try {
@@ -167,10 +247,10 @@ export const installTaskManagerPointerDrag = (store) => {
       });
   };
 
-  return registerPointerListDragSurface({
+  const unregisterSurface = registerPointerListDragSurface({
     id: "task-manager-tasks",
-    rootSelector: ".board",
-    itemSelector: "[data-board-task-id]",
+    rootSelector: BOARD_SELECTOR,
+    itemSelector: TASK_SELECTOR,
     containerSelector: "[data-board-column-id]",
     shellSelector: "[data-board-column-shell-id]",
     itemIdAttribute: "data-board-task-id",
@@ -179,6 +259,13 @@ export const installTaskManagerPointerDrag = (store) => {
     placeholderClass: "task-manager-pointer-placeholder",
     horizontal: true,
     vertical: true,
+    get activationDistance() {
+      if (activationPointerId == null) return Number.MAX_SAFE_INTEGER;
+
+      return performance.now() - activationStartedAt >= TASK_DRAG_ACTIVATION_DELAY
+        ? -1
+        : Number.MAX_SAFE_INTEGER;
+    },
     normalizeIndex: (args) => normalizeIndex(store, args),
     onDrop: (drop) => {
       const payload = buildPayload(store, drop);
@@ -189,6 +276,15 @@ export const installTaskManagerPointerDrag = (store) => {
       return true;
     },
   });
+
+  return () => {
+    resetActivation();
+    window.removeEventListener("pointerdown", handlePointerDown, true);
+    window.removeEventListener("pointermove", handlePointerMove, true);
+    window.removeEventListener("pointerup", handlePointerEnd, true);
+    window.removeEventListener("pointercancel", handlePointerEnd, true);
+    unregisterSurface();
+  };
 };
 
 export default installTaskManagerPointerDrag;
