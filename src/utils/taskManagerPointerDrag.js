@@ -158,6 +158,8 @@ export const installTaskManagerPointerDrag = (store) => {
     activationPointerType = event.pointerType || "mouse";
     activationPoint = { x: event.clientX, y: event.clientY };
 
+    if (activationPointerType !== "touch") return;
+
     activationTimer = window.setTimeout(() => {
       if (activationPointerId !== event.pointerId || !activationPoint) return;
       if (typeof PointerEvent !== "function") return;
@@ -261,6 +263,7 @@ export const installTaskManagerPointerDrag = (store) => {
     vertical: true,
     get activationDistance() {
       if (activationPointerId == null) return Number.MAX_SAFE_INTEGER;
+      if (activationPointerType !== "touch") return 5;
 
       return performance.now() - activationStartedAt >= TASK_DRAG_ACTIVATION_DELAY
         ? -1
