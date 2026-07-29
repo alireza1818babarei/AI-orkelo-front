@@ -195,12 +195,6 @@ body
         var(--project-skeleton-line)
       )
       14px 91px / 72px 9px no-repeat,
-    radial-gradient(
-        circle,
-        var(--project-skeleton-line) 0 13px,
-        transparent 14px
-      )
-      calc(100% - 14px) 88px / 28px 28px no-repeat,
     var(--project-skeleton-surface);
   animation: project-skeleton-pulse 1.15s ease-in-out infinite alternate;
 }
@@ -230,12 +224,6 @@ body
         var(--project-skeleton-line)
       )
       14px 91px / 88px 9px no-repeat,
-    radial-gradient(
-        circle,
-        var(--project-skeleton-line) 0 13px,
-        transparent 14px
-      )
-      calc(100% - 14px) 88px / 28px 28px no-repeat,
     var(--project-skeleton-surface);
   animation-delay: 0.16s;
 }
@@ -284,24 +272,18 @@ body .project-board-main__content .board-column-load-more__status::before {
         var(--project-skeleton-line)
       )
       14px 86px / 76px 9px no-repeat,
-    radial-gradient(
-        circle,
-        var(--project-skeleton-line) 0 12px,
-        transparent 13px
-      )
-      calc(100% - 14px) 82px / 26px 26px no-repeat,
     var(--project-skeleton-surface);
   animation: project-skeleton-pulse 1.15s ease-in-out infinite alternate;
 }
 
-/* Replace the project-member panel spinner with avatar/name skeleton rows. */
+/* Replace the project-member spinner with centered avatar/name skeletons. */
 body .project-members-panel__loading {
   position: relative;
   display: block !important;
   box-sizing: border-box;
   width: 100%;
-  min-height: 314px;
-  padding: 6px 4px !important;
+  min-height: 350px;
+  padding: 8px 4px !important;
   overflow: hidden;
 }
 
@@ -312,34 +294,36 @@ body .project-members-panel__loading > iconify-icon {
 body .project-members-panel__loading::before {
   content: "";
   position: absolute;
-  top: 10px;
-  left: 8px;
+  top: 12px;
+  left: 50%;
   width: 42px;
   height: 42px;
   border-radius: 50%;
+  transform: translateX(-50%);
   background: var(--project-skeleton-line);
   box-shadow:
-    0 60px 0 var(--project-skeleton-line),
-    0 120px 0 var(--project-skeleton-line),
-    0 180px 0 var(--project-skeleton-line),
-    0 240px 0 var(--project-skeleton-line);
+    0 68px 0 var(--project-skeleton-line),
+    0 136px 0 var(--project-skeleton-line),
+    0 204px 0 var(--project-skeleton-line),
+    0 272px 0 var(--project-skeleton-line);
   animation: project-skeleton-pulse 1.15s ease-in-out infinite alternate;
 }
 
 body .project-members-panel__loading::after {
   content: "";
   position: absolute;
-  top: 24px;
-  left: 62px;
-  width: calc(100% - 76px);
-  height: 11px;
+  top: 58px;
+  left: 50%;
+  width: 58px;
+  height: 9px;
   border-radius: 999px;
+  transform: translateX(-50%);
   background: var(--project-skeleton-line);
   box-shadow:
-    0 60px 0 var(--project-skeleton-line),
-    0 120px 0 var(--project-skeleton-line),
-    0 180px 0 var(--project-skeleton-line),
-    0 240px 0 var(--project-skeleton-line);
+    0 68px 0 var(--project-skeleton-line),
+    0 136px 0 var(--project-skeleton-line),
+    0 204px 0 var(--project-skeleton-line),
+    0 272px 0 var(--project-skeleton-line);
   animation: project-skeleton-pulse 1.15s ease-in-out 0.12s infinite alternate;
 }
 
@@ -356,28 +340,28 @@ body .project-members-panel__loading::after {
   }
 
   body .project-members-panel__loading {
-    min-height: 286px;
+    min-height: 322px;
   }
 
   body .project-members-panel__loading::before {
+    top: 10px;
     width: 38px;
     height: 38px;
     box-shadow:
-      0 55px 0 var(--project-skeleton-line),
-      0 110px 0 var(--project-skeleton-line),
-      0 165px 0 var(--project-skeleton-line),
-      0 220px 0 var(--project-skeleton-line);
+      0 62px 0 var(--project-skeleton-line),
+      0 124px 0 var(--project-skeleton-line),
+      0 186px 0 var(--project-skeleton-line),
+      0 248px 0 var(--project-skeleton-line);
   }
 
   body .project-members-panel__loading::after {
-    top: 22px;
-    left: 58px;
-    width: calc(100% - 70px);
+    top: 52px;
+    width: 52px;
     box-shadow:
-      0 55px 0 var(--project-skeleton-line),
-      0 110px 0 var(--project-skeleton-line),
-      0 165px 0 var(--project-skeleton-line),
-      0 220px 0 var(--project-skeleton-line);
+      0 62px 0 var(--project-skeleton-line),
+      0 124px 0 var(--project-skeleton-line),
+      0 186px 0 var(--project-skeleton-line),
+      0 248px 0 var(--project-skeleton-line);
   }
 }
 
