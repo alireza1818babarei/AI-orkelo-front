@@ -107,3 +107,293 @@ body .project-board-header__actions {
     flex-basis: 28px;
   }
 }
+
+/* Project board and member-panel skeleton loaders. */
+body .project-board-main,
+body .project-members-panel {
+  --project-skeleton-surface: rgba(255, 255, 255, 0.78);
+  --project-skeleton-line: rgba(148, 163, 184, 0.28);
+  --project-skeleton-line-soft: rgba(148, 163, 184, 0.18);
+  --project-skeleton-border: rgba(148, 163, 184, 0.2);
+}
+
+body.dark .project-board-main,
+body.dark .project-members-panel,
+nav.dark-sidebar ~ .app-content .project-board-main,
+nav.dark-sidebar ~ .app-content .project-members-panel {
+  --project-skeleton-surface: rgba(30, 41, 59, 0.72);
+  --project-skeleton-line: rgba(148, 163, 184, 0.24);
+  --project-skeleton-line-soft: rgba(148, 163, 184, 0.14);
+  --project-skeleton-border: rgba(148, 163, 184, 0.16);
+}
+
+@keyframes project-skeleton-pulse {
+  0% {
+    opacity: 0.58;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Replace the initial task spinner inside each board column with task cards. */
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.25rem 0.35rem 0.75rem !important;
+}
+
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)
+  > iconify-icon {
+  display: none !important;
+}
+
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::before,
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::after {
+  content: "";
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 116px;
+  border: 1px solid var(--project-skeleton-border);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+        var(--project-skeleton-line),
+        var(--project-skeleton-line)
+      )
+      14px 16px / 64% 12px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line-soft),
+        var(--project-skeleton-line-soft)
+      )
+      14px 42px / 84% 9px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line-soft),
+        var(--project-skeleton-line-soft)
+      )
+      14px 61px / 70% 9px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line),
+        var(--project-skeleton-line)
+      )
+      14px 91px / 72px 9px no-repeat,
+    radial-gradient(
+        circle,
+        var(--project-skeleton-line) 0 13px,
+        transparent 14px
+      )
+      calc(100% - 14px) 88px / 28px 28px no-repeat,
+    var(--project-skeleton-surface);
+  animation: project-skeleton-pulse 1.15s ease-in-out infinite alternate;
+}
+
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::after {
+  background:
+    linear-gradient(
+        var(--project-skeleton-line),
+        var(--project-skeleton-line)
+      )
+      14px 16px / 52% 12px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line-soft),
+        var(--project-skeleton-line-soft)
+      )
+      14px 42px / 78% 9px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line-soft),
+        var(--project-skeleton-line-soft)
+      )
+      14px 61px / 58% 9px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line),
+        var(--project-skeleton-line)
+      )
+      14px 91px / 88px 9px no-repeat,
+    radial-gradient(
+        circle,
+        var(--project-skeleton-line) 0 13px,
+        transparent 14px
+      )
+      calc(100% - 14px) 88px / 28px 28px no-repeat,
+    var(--project-skeleton-surface);
+  animation-delay: 0.16s;
+}
+
+/* Replace the infinite-load spinner with one additional task-card skeleton. */
+body .project-board-main__content .board-column-load-more {
+  width: 100%;
+}
+
+body .project-board-main__content .board-column-load-more__status {
+  display: block !important;
+  width: 100%;
+  padding: 0.15rem 0.35rem 0.75rem;
+}
+
+body .project-board-main__content .board-column-load-more__status > iconify-icon {
+  display: none !important;
+}
+
+body .project-board-main__content .board-column-load-more__status::before {
+  content: "";
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 108px;
+  border: 1px solid var(--project-skeleton-border);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+        var(--project-skeleton-line),
+        var(--project-skeleton-line)
+      )
+      14px 16px / 58% 12px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line-soft),
+        var(--project-skeleton-line-soft)
+      )
+      14px 42px / 82% 9px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line-soft),
+        var(--project-skeleton-line-soft)
+      )
+      14px 61px / 66% 9px no-repeat,
+    linear-gradient(
+        var(--project-skeleton-line),
+        var(--project-skeleton-line)
+      )
+      14px 86px / 76px 9px no-repeat,
+    radial-gradient(
+        circle,
+        var(--project-skeleton-line) 0 12px,
+        transparent 13px
+      )
+      calc(100% - 14px) 82px / 26px 26px no-repeat,
+    var(--project-skeleton-surface);
+  animation: project-skeleton-pulse 1.15s ease-in-out infinite alternate;
+}
+
+/* Replace the project-member panel spinner with avatar/name skeleton rows. */
+body .project-members-panel__loading {
+  position: relative;
+  display: block !important;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 314px;
+  padding: 6px 4px !important;
+  overflow: hidden;
+}
+
+body .project-members-panel__loading > iconify-icon {
+  display: none !important;
+}
+
+body .project-members-panel__loading::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--project-skeleton-line);
+  box-shadow:
+    0 60px 0 var(--project-skeleton-line),
+    0 120px 0 var(--project-skeleton-line),
+    0 180px 0 var(--project-skeleton-line),
+    0 240px 0 var(--project-skeleton-line);
+  animation: project-skeleton-pulse 1.15s ease-in-out infinite alternate;
+}
+
+body .project-members-panel__loading::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  left: 62px;
+  width: calc(100% - 76px);
+  height: 11px;
+  border-radius: 999px;
+  background: var(--project-skeleton-line);
+  box-shadow:
+    0 60px 0 var(--project-skeleton-line),
+    0 120px 0 var(--project-skeleton-line),
+    0 180px 0 var(--project-skeleton-line),
+    0 240px 0 var(--project-skeleton-line);
+  animation: project-skeleton-pulse 1.15s ease-in-out 0.12s infinite alternate;
+}
+
+@media (max-width: 600px) {
+  body
+    .project-board-main__content
+    .board-column-content
+    > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::before,
+  body
+    .project-board-main__content
+    .board-column-content
+    > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::after {
+    height: 108px;
+  }
+
+  body .project-members-panel__loading {
+    min-height: 286px;
+  }
+
+  body .project-members-panel__loading::before {
+    width: 38px;
+    height: 38px;
+    box-shadow:
+      0 55px 0 var(--project-skeleton-line),
+      0 110px 0 var(--project-skeleton-line),
+      0 165px 0 var(--project-skeleton-line),
+      0 220px 0 var(--project-skeleton-line);
+  }
+
+  body .project-members-panel__loading::after {
+    top: 22px;
+    left: 58px;
+    width: calc(100% - 70px);
+    box-shadow:
+      0 55px 0 var(--project-skeleton-line),
+      0 110px 0 var(--project-skeleton-line),
+      0 165px 0 var(--project-skeleton-line),
+      0 220px 0 var(--project-skeleton-line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body
+    .project-board-main__content
+    .board-column-content
+    > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::before,
+  body
+    .project-board-main__content
+    .board-column-content
+    > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::after,
+  body .project-board-main__content .board-column-load-more__status::before,
+  body .project-members-panel__loading::before,
+  body .project-members-panel__loading::after {
+    animation: none;
+    opacity: 0.82;
+  }
+}
