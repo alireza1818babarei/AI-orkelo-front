@@ -381,3 +381,79 @@ body .project-members-panel__loading::after {
     opacity: 0.82;
   }
 }
+
+/* Display five task-card skeletons while a column's first page is loading. */
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted) {
+  position: relative;
+  display: block !important;
+  min-height: 640px;
+}
+
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::before {
+  height: 116px;
+  border: 1px solid var(--project-skeleton-border);
+  border-radius: 12px;
+  background: var(--project-skeleton-surface);
+  box-shadow:
+    0 128px 0 var(--project-skeleton-surface),
+    0 256px 0 var(--project-skeleton-surface),
+    0 384px 0 var(--project-skeleton-surface),
+    0 512px 0 var(--project-skeleton-surface);
+}
+
+body
+  .project-board-main__content
+  .board-column-content
+  > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::after {
+  position: absolute;
+  inset: 0.25rem 0.35rem auto;
+  width: auto;
+  height: 628px;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 16px / 64% 12px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 42px / 84% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 61px / 70% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 91px / 72px 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 144px / 52% 12px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 170px / 78% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 189px / 58% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 219px / 88px 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 272px / 60% 12px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 298px / 82% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 317px / 67% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 347px / 76px 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 400px / 56% 12px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 426px / 80% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 445px / 62% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 475px / 84px 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 528px / 62% 12px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 554px / 86% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line-soft), var(--project-skeleton-line-soft)) 14px 573px / 71% 9px no-repeat,
+    linear-gradient(var(--project-skeleton-line), var(--project-skeleton-line)) 14px 603px / 80px 9px no-repeat;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  body
+    .project-board-main__content
+    .board-column-content
+    > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::before {
+    height: 116px;
+  }
+
+  body
+    .project-board-main__content
+    .board-column-content
+    > .d-flex.align-items-center.justify-content-center.py-3:not(.text-muted)::after {
+    height: 628px;
+  }
+}
