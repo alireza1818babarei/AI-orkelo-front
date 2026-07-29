@@ -320,19 +320,23 @@ const ProjectBoardHeader = ({
 	return (
 		<>
 			<Row className="project-board-header m-1 gx-2 align-items-center">
-				<Col lg={7} md={6} xs={12} className="mt-1">
+				<Col lg={5} xs={12} className="mt-1">
 					<div className="project-board-header__meta">
-						<h4 className="main-title mb-1 text-primary">{title}</h4>
+						<h4 className="main-title mb-1 text-primary project-board-header__title" title={title}>
+							{title}
+						</h4>
 					</div>
 				</Col>
 
-				<Col lg={5} md={6} xs={12} className="mt-1">
+				<Col lg={7} xs={12} className="mt-1">
 					<div className="project-board-header__actions-wrap">
 						<div className="project-board-header__actions">
 							<Button
 								className="btn project-board-header__add-btn"
 								onClick={onAddColumn}
 								disabled={disableAddColumn}
+								aria-label="Add column"
+								title="Add column"
 							>
 								<i className="ph ph-plus-circle" />
 								<span>Add Column</span>

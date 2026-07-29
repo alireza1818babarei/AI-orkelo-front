@@ -164,5 +164,6 @@ button{
 .main-title {
   font-weight: 600;
   text-transform: capitalize;
+  font-size: clamp(.6rem, 3vw, 1rem);
 }
 // >>-- 09 Button css end --<<
