@@ -331,3 +331,30 @@ body .task-detail-modal-dialog .dropdown-menu {
     opacity: 1 !important;
   }
 }
+
+@media (min-width: 768px) {
+  body .task-detail-modal-dialog .task-attachment-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  body .task-detail-modal-dialog .task-attachment-actions .task-attachment-dropzone {
+    width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-voice-panel--task {
+    display: contents;
+  }
+
+  body .task-detail-modal-dialog .task-voice-panel--task .task-voice-add-button {
+    grid-column: 2;
+    width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-voice-panel--task .task-voice-box {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
