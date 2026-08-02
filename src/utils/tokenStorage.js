@@ -1,20 +1,20 @@
 const TOKEN_KEY = "access_token";
+const SESSION_TOKEN_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 const REMEMBERED_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
-const getRememberedTokenExpiresAt = () =>
-  Date.now() + REMEMBERED_TOKEN_MAX_AGE_MS;
+const getFallbackExpiresAt = (maxAgeMs) => Date.now() + maxAgeMs;
 
-const normalizeExpiresAt = (expiresAt) => {
+const normalizeExpiresAt = (expiresAt, maxAgeMs) => {
   const parsed = expiresAt ? new Date(expiresAt).getTime() : NaN;
-  return Number.isFinite(parsed) ? parsed : getRememberedTokenExpiresAt();
+  return Number.isFinite(parsed) ? parsed : getFallbackExpiresAt(maxAgeMs);
 };
 
-const storeRememberedToken = (token, expiresAt = null) => {
+const storeSharedToken = (token, expiresAt = null, maxAgeMs) => {
   localStorage.setItem(
     TOKEN_KEY,
     JSON.stringify({
       token,
-      expiresAt: normalizeExpiresAt(expiresAt),
+      expiresAt: normalizeExpiresAt(expiresAt, maxAgeMs),
     }),
   );
 };
@@ -25,7 +25,7 @@ const parseStoredToken = (rawValue) => {
   try {
     const parsed = JSON.parse(rawValue);
     if (typeof parsed === "string") {
-      storeRememberedToken(parsed);
+      storeSharedToken(parsed, null, SESSION_TOKEN_MAX_AGE_MS);
       return parsed;
     }
     if (!parsed || typeof parsed !== "object") return null;
@@ -35,7 +35,7 @@ const parseStoredToken = (rawValue) => {
     if (!token) return null;
 
     if (!Number.isFinite(expiresAt)) {
-      storeRememberedToken(token);
+      storeSharedToken(token, null, SESSION_TOKEN_MAX_AGE_MS);
       return token;
     }
 
@@ -46,28 +46,35 @@ const parseStoredToken = (rawValue) => {
 
     return token;
   } catch {
-    storeRememberedToken(rawValue);
+    storeSharedToken(rawValue, null, SESSION_TOKEN_MAX_AGE_MS);
     return rawValue;
   }
 };
 
 export const getToken = () => {
-  return (
-    parseStoredToken(localStorage.getItem(TOKEN_KEY)) ||
-    sessionStorage.getItem(TOKEN_KEY)
-  );
+  const sharedToken = parseStoredToken(localStorage.getItem(TOKEN_KEY));
+  if (sharedToken) return sharedToken;
+
+  // Migrate existing per-tab sessions so the next opened tab can reuse them.
+  const legacySessionToken = sessionStorage.getItem(TOKEN_KEY);
+  if (!legacySessionToken) return null;
+
+  storeSharedToken(legacySessionToken, null, SESSION_TOKEN_MAX_AGE_MS);
+  sessionStorage.removeItem(TOKEN_KEY);
+  return legacySessionToken;
 };
 
 export const setToken = (token, rememberMe, expiresAt = null) => {
   localStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
 
-  if (rememberMe) {
-    // Remembered sessions are intentionally bounded instead of staying in localStorage forever.
-    storeRememberedToken(token, expiresAt);
-  } else {
-    sessionStorage.setItem(TOKEN_KEY, token);
-  }
+  const maxAgeMs = rememberMe
+    ? REMEMBERED_TOKEN_MAX_AGE_MS
+    : SESSION_TOKEN_MAX_AGE_MS;
+
+  // localStorage is shared by tabs. Expiry preserves the difference between
+  // a regular browser session and a long-lived "Remember me" session.
+  storeSharedToken(token, expiresAt, maxAgeMs);
 };
 
 export const clearTokenEveryWhere = () => {
