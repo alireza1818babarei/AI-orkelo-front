@@ -17,16 +17,24 @@ import {
   toastSuccess,
 } from "../../utils/sweetAlert";
 import {
+  AttachmentAudio,
+  AttachmentAudioThumbnail,
   AttachmentImage,
+  AttachmentVideo,
+  AttachmentVideoThumbnail,
   formatBytes,
   getAttachmentName,
   getAttachmentUrl,
+  isAudioAttachment,
   isImageAttachment,
+  isRecordedVoiceAttachment,
+  isVideoAttachment,
   parseFilenameFromContentDisposition,
   resolveAttachmentHref,
   resolveAttachmentIcon,
   toPublicAsset,
   triggerBrowserDownload,
+  VoiceAttachmentsPanel,
 } from "./TaskAttachments";
 
 const getAttachmentId = (attachment) =>
@@ -142,6 +150,14 @@ export default function ChecklistItemAttachments({
     disabled || !projectId || !taskId || !checklistItemId;
   const isDisabled =
     isUploadUnavailable || isUploading;
+  const voiceAttachments = useMemo(
+    () => (attachments || []).filter(isRecordedVoiceAttachment),
+    [attachments],
+  );
+  const fileAttachments = useMemo(
+    () => (attachments || []).filter((attachment) => !isRecordedVoiceAttachment(attachment)),
+    [attachments],
+  );
 
   const cancelUpload = useCallback((event) => {
     event?.preventDefault?.();
@@ -167,13 +183,13 @@ export default function ChecklistItemAttachments({
     uploadAbortControllerRef.current?.abort();
   }, []);
 
-  const previewAttachmentCount = attachments.length;
+  const previewAttachmentCount = fileAttachments.length;
   const normalizedPreviewIndex = previewAttachmentCount
     ? Math.min(Math.max(previewIndex, 0), previewAttachmentCount - 1)
     : 0;
   const previewAttachment =
     previewOpen && previewAttachmentCount
-      ? attachments[normalizedPreviewIndex] ?? null
+      ? fileAttachments[normalizedPreviewIndex] ?? null
       : null;
   const canNavigatePreview = previewAttachmentCount > 1;
 
@@ -256,7 +272,7 @@ export default function ChecklistItemAttachments({
   }, [previewOpen, showNextPreview, showPreviousPreview]);
 
   const uploadFiles = useCallback(
-    async (files) => {
+    async (files, options = {}) => {
       const selectedFiles = Array.from(files || []).filter(Boolean);
       if (!selectedFiles.length || isDisabled) return 0;
 
@@ -286,11 +302,25 @@ export default function ChecklistItemAttachments({
         const uploaded = normalizeResponseAttachments(res?.data);
         if (uploaded.length) {
           uploadedCount = uploaded.length;
-          setAttachments((prev) => [...uploaded, ...(prev || [])]);
+          const enhancedUploaded = options.voiceDurationSeconds
+            ? uploaded.map((attachment) =>
+                isAudioAttachment(attachment)
+                  ? {
+                      ...attachment,
+                      voiceDurationSeconds: options.voiceDurationSeconds,
+                    }
+                  : attachment,
+              )
+            : uploaded;
+          setAttachments((prev) => [...enhancedUploaded, ...(prev || [])]);
         }
 
         if (uploadedCount) {
-          toastSuccess(uploadedCount > 1 ? "Files attached" : "File attached");
+          toastSuccess(
+            uploadedCount > 1
+              ? options.successMessagePlural || "Files attached"
+              : options.successMessage || "File attached",
+          );
           onChanged?.();
         }
 
@@ -323,6 +353,16 @@ export default function ChecklistItemAttachments({
       }
     },
     [checklistItemId, isDisabled, onChanged, projectId, taskId],
+  );
+
+  const uploadVoiceAttachment = useCallback(
+    (file, metadata) =>
+      uploadFiles([file], {
+        successMessage: "Voice attached",
+        successMessagePlural: "Voice recordings attached",
+        voiceDurationSeconds: metadata?.durationSeconds,
+      }),
+    [uploadFiles],
   );
 
   const handleUploadDragEnter = useCallback(
@@ -470,11 +510,14 @@ export default function ChecklistItemAttachments({
     if (!projectId || !taskId || !checklistItemId || attachmentId == null) {
       return;
     }
+    const isVoice = isAudioAttachment(attachment);
 
     try {
       const { isConfirmed } = await alertConfirm({
-        title: "Delete attachment",
-        text: "File will be deleted from this checklist item. Continue?",
+        title: isVoice ? "Delete voice" : "Delete attachment",
+        text: isVoice
+          ? "Voice recording will be deleted from this checklist item. Continue?"
+          : "File will be deleted from this checklist item. Continue?",
         confirmText: "Delete",
         cancelText: "No",
       });
@@ -496,7 +539,7 @@ export default function ChecklistItemAttachments({
         ),
       );
       setMenuOpenId(null);
-      toastSuccess("File deleted");
+      toastSuccess(isVoice ? "Voice deleted" : "File deleted");
       onChanged?.();
     } catch (err) {
       toastError(err?.message || "Delete checklist attachment failed");
@@ -522,6 +565,17 @@ export default function ChecklistItemAttachments({
           <span>Add attachment</span>
         </button>
       ) : null}
+
+      <VoiceAttachmentsPanel
+        className="checklist-item-voice-panel"
+        attachments={voiceAttachments}
+        disabled={isUploadUnavailable}
+        uploading={isUploading}
+        showTrigger={showTrigger}
+        onUpload={uploadVoiceAttachment}
+        onDelete={deleteAttachment}
+        deletingId={deletingId}
+      />
 
       <input
         ref={inputRef}
@@ -621,13 +675,15 @@ export default function ChecklistItemAttachments({
         </div>
       ) : null}
 
-      {attachments.length ? (
+      {fileAttachments.length ? (
         <div className="checklist-item-attachments__grid">
-          {attachments.map((attachment, index) => {
+          {fileAttachments.map((attachment, index) => {
             const name = getAttachmentName(attachment);
             const href = resolveAttachmentHref(getAttachmentUrl(attachment));
             const attachmentId = getAttachmentId(attachment);
             const isImg = isImageAttachment(attachment) && !!href;
+            const isAudio = isAudioAttachment(attachment) && !!href;
+            const isVideo = isVideoAttachment(attachment) && !!href;
             const iconSrc = toPublicAsset(resolveAttachmentIcon(attachment));
             const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
             const idKey =
@@ -708,6 +764,10 @@ export default function ChecklistItemAttachments({
                         }}
                         fallbackIconSrc={fallbackIconSrc}
                       />
+                    ) : isAudio ? (
+                      <AttachmentAudioThumbnail />
+                    ) : isVideo ? (
+                      <AttachmentVideoThumbnail />
                     ) : (
                       <img
                         src={iconSrc}
@@ -758,6 +818,8 @@ export default function ChecklistItemAttachments({
               const href = resolveAttachmentHref(getAttachmentUrl(previewAttachment));
               const attachmentId = getAttachmentId(previewAttachment);
               const isImg = isImageAttachment(previewAttachment) && !!href;
+              const isAudio = isAudioAttachment(previewAttachment) && !!href;
+              const isVideo = isVideoAttachment(previewAttachment) && !!href;
               const iconSrc = toPublicAsset(resolveAttachmentIcon(previewAttachment));
               const fallbackIconSrc = toPublicAsset("assets/images/icons/file.png");
 
@@ -790,6 +852,20 @@ export default function ChecklistItemAttachments({
                             maxHeight: 520,
                             objectFit: "contain",
                           }}
+                          fallbackIconSrc={fallbackIconSrc}
+                        />
+                      ) : isAudio ? (
+                        <AttachmentAudio
+                          attachment={previewAttachment}
+                          href={href}
+                          className="task-attachment-preview-modal__audio"
+                          fallbackIconSrc={fallbackIconSrc}
+                        />
+                      ) : isVideo ? (
+                        <AttachmentVideo
+                          attachment={previewAttachment}
+                          href={href}
+                          className="task-attachment-preview-modal__video"
                           fallbackIconSrc={fallbackIconSrc}
                         />
                       ) : (

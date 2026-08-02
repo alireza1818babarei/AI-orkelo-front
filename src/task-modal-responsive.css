@@ -10,7 +10,11 @@ body .task-detail-modal-dialog .task-detail-modal__main,
 body .task-detail-modal-dialog .task-detail-modal__sidebar,
 body .task-detail-modal-dialog .task-detail-editor,
 body .task-detail-modal-dialog .task-detail-checklist-actions,
+body .task-detail-modal-dialog .task-attachment-actions,
 body .task-detail-modal-dialog .task-attachment-dropzone,
+body .task-detail-modal-dialog .task-voice-panel,
+body .task-detail-modal-dialog .task-voice-box,
+body .task-detail-modal-dialog .task-voice-card,
 body .task-detail-modal-dialog .dropdown,
 body .task-detail-modal-dialog .dropdown-menu {
   box-sizing: border-box;
@@ -56,7 +60,9 @@ body .task-detail-modal-dialog .task-review-summary,
 body .task-detail-modal-dialog .task-review-summary__top,
 body .task-detail-modal-dialog .task-detail-checklist-actions,
 body .task-detail-modal-dialog .checklist-item-actions,
-body .task-detail-modal-dialog .task-attachment-dropzone__text {
+body .task-detail-modal-dialog .task-attachment-dropzone__text,
+body .task-detail-modal-dialog .task-voice-add-button__text,
+body .task-detail-modal-dialog .task-voice-card__body {
   min-width: 0;
 }
 
@@ -64,6 +70,9 @@ body .task-detail-modal-dialog .task-review-summary__meta,
 body .task-detail-modal-dialog .task-detail-due-toggle__value,
 body .task-detail-modal-dialog .task-attachment-dropzone__title,
 body .task-detail-modal-dialog .task-attachment-dropzone__hint,
+body .task-detail-modal-dialog .task-voice-add-button__title,
+body .task-detail-modal-dialog .task-voice-add-button__hint,
+body .task-detail-modal-dialog .task-voice-card__name,
 body .task-detail-modal-dialog .checklist-textarea,
 body .task-detail-modal-dialog .autogrow-textarea,
 body .task-detail-modal-dialog .task-title-textarea {
@@ -206,6 +215,17 @@ body .task-detail-modal-dialog .dropdown-menu {
   body .task-detail-modal-dialog .task-detail-checklist-copy-button,
   body .task-detail-modal-dialog .icon-btn {
     flex: 0 0 auto;
+  }
+
+  body .task-detail-modal-dialog .task-attachment-actions {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  body .task-detail-modal-dialog .task-attachment-actions .task-attachment-dropzone,
+  body .task-detail-modal-dialog .task-voice-panel--task {
+    flex: 1 1 auto;
+    width: 100%;
   }
 
   body .task-detail-modal-dialog .task-attachment-dropzone {

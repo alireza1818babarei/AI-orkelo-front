@@ -101,7 +101,7 @@ const ChecklistTree = ({
         {...(dragProvided?.draggableProps || {})}
         {...(dragProvided?.dragHandleProps || {})}
         style={dragProvided ? { ...(dragStyle || {}), cursor: checklistBusyId ? "default" : "grab" } : undefined}
-        className={`mb-2 ${
+        className={` taskmodal-checklist mb-2 ${
           depth === 0 ? "border rounded-3 p-2" : ""
         } ${
           item.is_completed && depth === 0

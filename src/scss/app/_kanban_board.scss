@@ -1947,6 +1947,17 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
   background: var(--td-panel-soft);
 }
 
+.task-detail-modal-dialog .task-attachment-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.task-detail-modal-dialog .task-attachment-actions .task-attachment-dropzone {
+  flex: 1 1 280px;
+}
+
 .task-detail-modal-dialog .task-attachment-dropzone {
   display: flex;
   align-items: center;
@@ -2033,6 +2044,422 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
   border-color: rgba(var(--danger), 0.7);
 }
 
+.task-detail-modal-dialog .task-voice-panel {
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-panel--task {
+  flex: 0 1 280px;
+}
+
+.task-detail-modal-dialog .task-voice-add-button {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 61px;
+  padding: 0.98rem 0.75rem;
+  border: 1px dashed rgba(var(--primary), 0.36);
+  border-radius: 8px;
+  color: var(--td-text);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--primary), 0.08),
+    rgba(var(--success), 0.08)
+  );
+  text-align: left;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.task-detail-modal-dialog .task-voice-add-button:hover:not(:disabled),
+.task-detail-modal-dialog .task-voice-add-button:focus-visible:not(:disabled) {
+  border-color: rgba(var(--primary), 0.74);
+  background: rgba(var(--primary), 0.1);
+  box-shadow: 0 8px 18px rgba(var(--primary), 0.1);
+}
+
+.task-detail-modal-dialog .task-voice-add-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.task-detail-modal-dialog .task-voice-add-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(var(--primary), 0.92);
+  box-shadow: 0 8px 18px rgba(var(--primary), 0.2);
+}
+
+.task-detail-modal-dialog .task-voice-add-button__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.task-detail-modal-dialog .task-voice-add-button__title {
+  color: var(--td-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.task-detail-modal-dialog .task-voice-add-button__hint {
+  color: var(--td-muted);
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.task-detail-modal-dialog .task-voice-box {
+  margin-top: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(var(--secondary), 0.18);
+  border-radius: 8px;
+}
+.taskmodal-checklist {
+    background: rgba(var(--light), 0.4);
+}
+.task-detail-modal-dialog .task-voice-recorder {
+  padding: 0.65rem;
+  border: 1px solid rgba(var(--primary), 0.24);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: 0 8px 18px rgba(var(--dark), 0.08);
+}
+
+.task-detail-modal-dialog .task-voice-recorder__head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-recorder__icon,
+.task-detail-modal-dialog .task-voice-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: rgba(var(--primary), 1);
+  background: rgba(var(--primary), 0.12);
+}
+
+.task-detail-modal-dialog .task-voice-recorder.is-recording .task-voice-recorder__icon {
+  color: #ffffff;
+  background: rgba(var(--danger), 0.9);
+  box-shadow: 0 0 0 5px rgba(var(--danger), 0.1);
+}
+
+.task-detail-modal-dialog .task-voice-recorder__meta {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-recorder__title,
+.task-detail-modal-dialog .task-voice-card__name {
+  color: var(--td-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-detail-modal-dialog .task-voice-recorder__status,
+.task-detail-modal-dialog .task-voice-card__size,
+.task-detail-modal-dialog .task-voice-card__date,
+.task-detail-modal-dialog .task-voice-card__missing {
+  color: var(--td-muted);
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.task-detail-modal-dialog .task-voice-recorder__time {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  color: rgba(var(--dark), 0.84);
+  background: rgba(var(--secondary), 0.12);
+  font-family: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.task-detail-modal-dialog .task-voice-recorder__meter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 30px;
+  margin: 0.5rem 0;
+  overflow: hidden;
+}
+
+.task-detail-modal-dialog .task-voice-recorder__meter span {
+  width: 4px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(var(--primary), 0.78);
+}
+
+.task-detail-modal-dialog .task-voice-recorder.is-recording .task-voice-recorder__meter span {
+  animation: task-voice-meter 780ms ease-in-out infinite;
+  animation-delay: calc(var(--voice-bar) * 80ms);
+}
+
+.task-detail-modal-dialog .task-voice-recorder.is-paused .task-voice-recorder__meter span,
+.task-detail-modal-dialog .task-voice-recorder.is-saving .task-voice-recorder__meter span {
+  opacity: 0.5;
+}
+
+@keyframes task-voice-meter {
+  0%,
+  100% {
+    height: 8px;
+  }
+
+  50% {
+    height: 24px;
+  }
+}
+
+.task-detail-modal-dialog .task-voice-recorder__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.task-detail-modal-dialog .task-voice-recorder__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 31px;
+  border-radius: 7px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.task-detail-modal-dialog .task-voice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 174px;
+  overflow-y: auto;
+  padding-right: 0.18rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--primary), 0.58) transparent;
+}
+
+.task-detail-modal-dialog .task-voice-recorder + .task-voice-list {
+  margin-top: 0.55rem;
+}
+
+.task-detail-modal-dialog .task-voice-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-detail-modal-dialog .task-voice-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-detail-modal-dialog .task-voice-list::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary), 0.58);
+  border-radius: 999px;
+}
+
+.task-detail-modal-dialog .task-voice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid rgba(var(--secondary), 0.16);
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.task-detail-modal-dialog .task-voice-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-card__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-card__size {
+  flex: 0 0 auto;
+}
+
+.task-detail-modal-dialog .task-voice-player {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-player audio {
+  display: none;
+}
+
+.task-detail-modal-dialog .task-voice-player__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-player__play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(var(--primary), 0.94);
+  box-shadow: 0 8px 16px rgba(var(--primary), 0.16);
+}
+
+.task-detail-modal-dialog .task-voice-player__track-wrap {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.task-detail-modal-dialog .task-voice-player__track {
+  --voice-play-progress: 0%;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.task-detail-modal-dialog .task-voice-player__track::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      to right,
+      rgba(var(--primary), 0.95) 0 var(--voice-play-progress),
+      rgba(var(--secondary), 0.18) var(--voice-play-progress) 100%
+    );
+}
+
+.task-detail-modal-dialog .task-voice-player__track::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -4px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: rgba(var(--primary), 1);
+  box-shadow: 0 3px 8px rgba(var(--dark), 0.18);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.task-detail-modal-dialog .task-voice-player__track::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--secondary), 0.18);
+}
+
+.task-detail-modal-dialog .task-voice-player__track::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--primary), 0.95);
+}
+
+.task-detail-modal-dialog .task-voice-player__track::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: rgba(var(--primary), 1);
+  box-shadow: 0 3px 8px rgba(var(--dark), 0.18);
+}
+
+.task-detail-modal-dialog .task-voice-player__track:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.task-detail-modal-dialog .task-voice-player__time {
+  flex: 0 0 auto;
+  min-width: 76px;
+  color: rgba(var(--dark), 0.72);
+  font-family: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: right;
+}
+
+.task-detail-modal-dialog .task-voice-card__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(var(--danger), 0.24);
+  border-radius: 7px;
+  color: rgba(var(--danger), 1);
+  background: rgba(var(--danger), 0.08);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.task-detail-modal-dialog .task-voice-card__delete:hover:not(:disabled),
+.task-detail-modal-dialog .task-voice-card__delete:focus-visible:not(:disabled) {
+  border-color: rgba(var(--danger), 0.54);
+  background: rgba(var(--danger), 0.14);
+}
+
+.task-detail-modal-dialog .task-voice-card__delete:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
 .task-attachment-preview-modal {
   position: relative;
 }
@@ -2078,6 +2505,105 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
 .task-attachment-preview-modal__stage {
   min-height: 360px;
   padding: 0.75rem;
+}
+
+.task-attachment-video-thumb,
+.task-attachment-audio-thumb {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 60px;
+  color: rgba(255, 255, 255, 0.96);
+  background: linear-gradient(135deg, #172033 0%, #0f172a 100%);
+}
+
+.task-attachment-audio-thumb {
+  gap: 0.45rem;
+  background:
+    radial-gradient(circle at 24% 24%, rgba(var(--primary), 0.36), transparent 34%),
+    linear-gradient(135deg, #102033 0%, #123026 100%);
+}
+
+.task-attachment-video-thumb > i {
+  font-size: 2rem;
+  opacity: 0.92;
+}
+
+.task-attachment-audio-thumb__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.task-attachment-video-thumb__play,
+.task-attachment-audio-thumb__play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(var(--primary), 0.92);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.24);
+}
+
+.task-attachment-video-thumb__play i,
+.task-attachment-audio-thumb__play i {
+  font-size: 0.72rem;
+  transform: translateX(1px);
+}
+
+.task-attachment-preview-modal__video {
+  width: 100%;
+  max-height: min(68vh, 560px);
+  border-radius: 0.5rem;
+  background: #000;
+  object-fit: contain;
+}
+
+.task-attachment-preview-modal__audio-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: min(100%, 560px);
+  min-height: 220px;
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(var(--primary), 0.18), transparent 36%),
+    linear-gradient(135deg, rgba(var(--dark), 0.92), rgba(var(--secondary), 0.82));
+}
+
+.task-attachment-preview-modal__audio-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.task-attachment-preview-modal__audio-icon i {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.task-attachment-preview-modal__audio {
+  width: min(100%, 460px);
+  max-width: 100%;
 }
 
 .task-attachment-preview-modal__nav {
@@ -2634,6 +3160,61 @@ nav.dark-sidebar ~ .app-content .task-checklist-copy-modal__close {
   display: contents;
 }
 
+.checklist-item-attachments--action .task-voice-panel {
+  display: contents;
+}
+
+.checklist-item-attachments--action .task-voice-add-button {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  color: #70ADFF !important;
+  background: transparent;
+  box-shadow: none;
+  gap: 0.28rem;
+  line-height: 1.2;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    color: #70ADFF !important;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.checklist-item-attachments--action .task-voice-add-button__icon {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  color: #70ADFF;
+  background: transparent;
+  box-shadow: none;
+
+  i {
+    font-size: 0.98rem;
+    line-height: 1;
+  }
+}
+
+.checklist-item-attachments--action .task-voice-add-button__title {
+  color: #70ADFF !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.checklist-item-attachments--action .task-voice-add-button__hint {
+  display: none;
+}
+
+.checklist-item-attachments--action .task-voice-box {
+  flex: 1 0 100%;
+  margin-top: 0.35rem;
+}
+
 .checklist-item-attachments--action .checklist-item-attachments__uploading,
 .checklist-item-attachments--action .checklist-item-attachments__grid {
   flex: 1 0 100%;
@@ -2863,6 +3444,93 @@ nav.dark-sidebar ~ .app-content .checklist-item-attachment-upload-modal {
   --td-line: rgba(255, 255, 255, 0.12);
 }
 
+body.dark .task-detail-modal-dialog .task-voice-add-button,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-add-button {
+  color: rgba(243, 246, 251, 0.95);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+body.dark .task-detail-modal-dialog .task-voice-add-button__title,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-add-button__title,
+body.dark .task-detail-modal-dialog .task-voice-recorder__title,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-recorder__title,
+body.dark .task-detail-modal-dialog .task-voice-card__name,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-card__name {
+  color: rgba(244, 246, 250, 0.95);
+}
+
+body.dark .task-detail-modal-dialog .task-voice-add-button__hint,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-add-button__hint,
+body.dark .task-detail-modal-dialog .task-voice-recorder__status,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-recorder__status,
+body.dark .task-detail-modal-dialog .task-voice-card__size,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-card__size,
+body.dark .task-detail-modal-dialog .task-voice-card__date,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-card__date,
+body.dark .task-detail-modal-dialog .task-voice-card__missing,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-card__missing {
+  color: rgba(202, 207, 218, 0.82);
+}
+
+body.dark .task-detail-modal-dialog .task-voice-box,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-box {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark .task-detail-modal-dialog .task-voice-recorder,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-recorder,
+body.dark .task-detail-modal-dialog .task-voice-card,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+body.dark .task-detail-modal-dialog .task-voice-recorder__time,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-recorder__time {
+  color: rgba(243, 246, 251, 0.95);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .task-detail-modal-dialog .task-voice-player__time,
+nav.dark-sidebar ~ .app-content .task-detail-modal-dialog .task-voice-player__time {
+  color: rgba(243, 246, 251, 0.95);
+}
+
+body.dark .task-detail-modal-dialog .task-voice-player__track::-webkit-slider-runnable-track,
+nav.dark-sidebar
+  ~ .app-content
+  .task-detail-modal-dialog
+  .task-voice-player__track::-webkit-slider-runnable-track {
+  background:
+    linear-gradient(
+      to right,
+      rgba(var(--primary), 0.98) 0 var(--voice-play-progress),
+      rgba(255, 255, 255, 0.16) var(--voice-play-progress) 100%
+    );
+}
+
+body.dark .task-detail-modal-dialog .task-voice-player__track::-moz-range-track,
+nav.dark-sidebar
+  ~ .app-content
+  .task-detail-modal-dialog
+  .task-voice-player__track::-moz-range-track {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+body.dark .task-detail-modal-dialog .checklist-item-attachments--action .task-voice-add-button,
+nav.dark-sidebar
+  ~ .app-content
+  .task-detail-modal-dialog
+  .checklist-item-attachments--action
+  .task-voice-add-button {
+  color: #70ADFF !important;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .task-detail-timer {
   min-width: 216px;
   padding: 0.5rem 0.65rem 0.6rem;
@@ -3008,6 +3676,34 @@ nav.dark-sidebar ~ .app-content .task-detail-timer__reset {
 }
 
 @media (max-width: 767.98px) {
+  .task-detail-modal-dialog .task-attachment-actions {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .task-detail-modal-dialog .task-attachment-actions .task-attachment-dropzone,
+  .task-detail-modal-dialog .task-voice-panel--task {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .task-detail-modal-dialog .task-voice-card {
+    align-items: stretch;
+  }
+
+  .task-detail-modal-dialog .task-voice-card__top {
+    flex-wrap: wrap;
+    gap: 0.2rem 0.45rem;
+  }
+
+  .task-detail-modal-dialog .task-voice-recorder__actions {
+    gap: 0.35rem;
+  }
+
+  .task-detail-modal-dialog .task-voice-recorder__control {
+    flex: 1 1 auto;
+  }
+
   .task-attachment-preview-modal__body {
     padding: 0.75rem;
   }

@@ -40,6 +40,7 @@ const normalizePublicDiskPath = (value) => {
       cleaned.startsWith("company_images/") ||
       cleaned.startsWith("project_images/") ||
       cleaned.startsWith("task_attachments/") ||
+      cleaned.startsWith("task_checklist_item_attachments/") ||
       cleaned.startsWith("attachments/")
     ) {
       return cleaned;
