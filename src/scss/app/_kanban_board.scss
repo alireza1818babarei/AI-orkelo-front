@@ -1617,6 +1617,10 @@ nav.dark-sidebar ~ .app-content .task-review-note-alert__title {
   justify-content: flex-end;
 }
 
+.task-checklist-section {
+  margin-bottom: 48px;
+}
+
 .task-detail-modal__quick-actions {
   align-items: center;
 }
@@ -2543,8 +2547,7 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
   background: rgba(255, 255, 255, 0.12);
 }
 
-.task-attachment-video-thumb__play,
-.task-attachment-audio-thumb__play {
+.task-attachment-video-thumb__play {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2556,8 +2559,7 @@ nav.dark-sidebar ~ .app-content .task-detail-modal__sidebar .dropdown-toggle {
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.24);
 }
 
-.task-attachment-video-thumb__play i,
-.task-attachment-audio-thumb__play i {
+.task-attachment-video-thumb__play i {
   font-size: 0.72rem;
   transform: translateX(1px);
 }

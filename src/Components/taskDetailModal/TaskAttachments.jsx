@@ -1936,9 +1936,6 @@ export function AttachmentAudioThumbnail() {
       <span className="task-attachment-audio-thumb__icon">
         <i className="ti ti-music"></i>
       </span>
-      <span className="task-attachment-audio-thumb__play">
-        <i className="fa-solid fa-play"></i>
-      </span>
     </div>
   );
 }

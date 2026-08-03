@@ -1902,7 +1902,7 @@ const TaskDetailModal = ({
                   ) : null}
                 </div>
 
-                <div className="py-3">
+                <div className="py-2  ">
                   <div className="task-detail-checklist-actions">
                     <button
                       type="button"
