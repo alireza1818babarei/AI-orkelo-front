@@ -56,7 +56,7 @@ const Login = () => {
                 <Link
                   to="/login"
                   className={`signin-btn text-decoration-none ${
-                    isLogin ? "bg-white text-muted" : "bg-orkelo text-white"
+                    isLogin ? "bg-white color-orkelo" : "bg-orkelo text-white"
                   }`}
                 >
                   Sign In
@@ -65,7 +65,7 @@ const Login = () => {
                 <Link
                   to="/signup"
                   className={`signup-btn text-decoration-none ${
-                    isSignup ? "bg-white text-muted" : "bg-orkelo text-white"
+                    isSignup ? "bg-white color-orkelo" : "bg-orkelo text-white"
                   }`}
                 >
                   Sign Up
@@ -87,7 +87,7 @@ const Login = () => {
                   <form onSubmit={handleSubmit(onSubmit)} className="app-form">
                     <Row>
                       <Col xs={12}>
-                        <div className="mb-5 text-center text-lg-start">
+                        <div className="login-intro mb-5 text-center text-lg-start">
                           <h2 className="f-w-600 text-muted">
                             Welcome back To{" "}
                             <span className="color-orkelo fw-bold">Orkelo!</span>
@@ -141,23 +141,24 @@ const Login = () => {
                       </Col>
 
                       <Col xs={12}>
-                        <div className="form-check mb-3">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="rememberMe"
-                            {...register("rememberMe")}
-                          />
-                          <label
-                            className="form-check-label text-secondary"
-                            htmlFor="rememberMe"
-                          >
-                            Remember me
-                          </label>
-
+                        <div className="login-options mb-3">
+                          <div className="form-check mb-0">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              id="rememberMe"
+                              {...register("rememberMe")}
+                            />
+                            <label
+                              className="form-check-label text-secondary"
+                              htmlFor="rememberMe"
+                            >
+                              Remember me
+                            </label>
+                          </div>
                           <Link
                             to="/auth/password-reset"
-                            className="color-orkelo float-end"
+                            className="color-orkelo"
                           >
                             Forgot Password ?
                           </Link>
@@ -184,7 +185,7 @@ const Login = () => {
                       </Col>
 
                       <Col xs={12}>
-                        <div className="text-center text-lg-start">
+                        <div className="login-switch text-center text-lg-start">
                           Don&apos;t Have Your Account yet?{" "}
                           <Link
                             to="/signup"

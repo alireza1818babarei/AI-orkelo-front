@@ -76,7 +76,7 @@ const SignUp = () => {
                 <Link
                   to="/login"
                   className={`signin-btn text-decoration-none ${
-                    isLogin ? "bg-white text-muted" : "bg-orkelo text-white"
+                    isLogin ? "bg-white color-orkelo" : "bg-orkelo text-white"
                   }`}
                 >
                   Sign In
@@ -85,7 +85,7 @@ const SignUp = () => {
                 <Link
                   to="/signup"
                   className={`signup-btn text-decoration-none ${
-                    isSignup ? "bg-white text-muted" : "bg-orkelo text-white"
+                    isSignup ? "bg-white color-orkelo" : "bg-orkelo text-white"
                   }`}
                 >
                   Sign Up
@@ -107,7 +107,7 @@ const SignUp = () => {
                   <form className="app-form" onSubmit={handleSubmit(onSubmit)}>
                     <Row>
                       <Col xs={12}>
-                        <div className="mb-5 text-center text-lg-start">
+                        <div className="login-intro mb-5 text-center text-lg-start">
                           <h2 className="f-w-600 text-muted">
                             Create Your{" "}
                             <span className="color-orkelo fw-bold">Account</span>
@@ -206,7 +206,7 @@ const SignUp = () => {
                       </Col>
 
                       <Col xs={12}>
-                        <div className="form-check mb-3">
+                        <div className="d-flex gap-2 align-items-center mb-3">
                           <input
                             className="form-check-input"
                             type="checkbox"
@@ -259,7 +259,7 @@ const SignUp = () => {
                       </Col>
 
                       <Col xs={12}>
-                        <div className="text-center text-lg-start">
+                        <div className="login-switch text-center text-lg-start">
                           Already have an account?{" "}
                           <Link
                             to="/login"
