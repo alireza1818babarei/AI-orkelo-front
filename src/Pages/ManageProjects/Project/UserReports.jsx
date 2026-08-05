@@ -280,9 +280,9 @@ function UserReports() {
         </Card.Body>
 
         {lastPage > 1 ? (
-          <Card.Footer>
+          <Card.Footer className="manage-projects-page__table-footer">
             <AppPagination
-              className="mt-2"
+              className="mt-2 manage-projects-page__pagination"
               currentPage={currentPage}
               lastPage={lastPage}
               summary={paginationSummary}

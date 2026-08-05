@@ -21,6 +21,25 @@
   border-color: var(--manage-projects-border);
 }
 
+.manage-projects-page__table-footer {
+  padding-bottom: clamp(1.25rem, 5vw, 4rem);
+}
+
+.manage-projects-page__table-footer .seller-table-footer,
+.manage-projects-page__pagination {
+  min-width: 0;
+}
+
+.manage-projects-page__table-footer .seller-table-footer > p,
+.manage-projects-page__pagination > p {
+  min-width: 0;
+}
+
+.manage-projects-page__table-footer .app-pagination {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .manage-projects-page__member-card {
   min-width: 0;
 }
@@ -229,6 +248,38 @@ nav.dark-sidebar ~ .app-content .manage-projects-page .table th {
 }
 
 @media (max-width: 767.98px) {
+  .manage-projects-page__table-footer {
+    padding-bottom: 5.5rem;
+  }
+
+  .manage-projects-page__table-footer .seller-table-footer,
+  .manage-projects-page__pagination {
+    align-items: center !important;
+    gap: 0.75rem !important;
+  }
+
+  .manage-projects-page__table-footer .seller-table-footer > p,
+  .manage-projects-page__pagination > p {
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .manage-projects-page__table-footer .app-pagination {
+    gap: 0.45rem;
+    max-width: 100%;
+  }
+
+  .manage-projects-page__table-footer .page-next,
+  .manage-projects-page__table-footer .disabled {
+    display: list-item;
+  }
+
+  .manage-projects-page__table-footer .page-link {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
   .project-reports-table-wrapper {
     overflow: visible;
     padding: 0.75rem;

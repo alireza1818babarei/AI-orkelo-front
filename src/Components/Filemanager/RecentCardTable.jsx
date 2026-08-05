@@ -157,7 +157,7 @@ const RecentCardTable = () => {
                     </div>
                 </CardBody>
 
-                <div className="card-footer">
+                <div className="card-footer file-manager-recent-table-footer">
                     <div className="seller-table-footer d-flex gap-2 justify-content-between align-items-center">
                         <p className="text-secondary text-truncate">Showing 1 to 6 of 24 order entries</p>
                         <ul className="pagination app-pagination">

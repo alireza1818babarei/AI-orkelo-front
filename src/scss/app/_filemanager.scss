@@ -111,6 +111,16 @@
   padding: 0.5rem 0.875rem 1rem;
 }
 
+.daily-reports-table-wrapper,
+.file-manager-recent-table-wrapper {
+  min-width: 0;
+}
+
+.daily-reports-table-footer,
+.file-manager-recent-table-footer {
+  padding-bottom: clamp(1.25rem, 5vw, 4rem);
+}
+
 .daily-reports-table {
   table-layout: fixed;
   width: 100%;
@@ -329,6 +339,45 @@
 }
 
 @media (max-width: 767.98px) {
+  .daily-reports-table-footer,
+  .file-manager-recent-table-footer {
+    padding-bottom: 5.5rem;
+  }
+
+  .file-manager-recent-table-footer .seller-table-footer {
+    align-items: center !important;
+    flex-wrap: wrap;
+    gap: 0.75rem !important;
+    justify-content: center !important;
+  }
+
+  .file-manager-recent-table-footer .seller-table-footer > p {
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .file-manager-recent-table-footer .app-pagination,
+  .daily-reports-table-footer .app-pagination {
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    justify-content: center;
+    max-width: 100%;
+  }
+
+  .file-manager-recent-table-footer .page-next,
+  .file-manager-recent-table-footer .disabled,
+  .daily-reports-table-footer .page-next,
+  .daily-reports-table-footer .disabled {
+    display: list-item;
+  }
+
+  .file-manager-recent-table-footer .page-link,
+  .daily-reports-table-footer .page-link {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
   .daily-reports-table-wrapper,
   .file-manager-recent-table-wrapper {
     overflow: visible;

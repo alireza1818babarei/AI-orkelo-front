@@ -273,7 +273,7 @@ const FileTable = ({ projectId, onChanged }) => {
         </div>
       </CardBody>
       {meta.lastPage > 1 ? (
-        <CardFooter>
+        <CardFooter className='daily-reports-table-footer'>
           <AppPagination
             currentPage={meta.currentPage}
             lastPage={meta.lastPage}

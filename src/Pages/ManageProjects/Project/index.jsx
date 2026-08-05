@@ -448,7 +448,7 @@ function ProjectManager() {
           </CardBody>
 
           {!projectReportsLoading && !projectReportsError && (
-            <div className='card-footer'>
+            <div className='card-footer manage-projects-page__table-footer'>
               <div className='seller-table-footer d-flex gap-2 justify-content-between align-items-center flex-wrap'>
                 <p className='text-secondary text-truncate mb-0'>
                   Showing page {currentPage} of {lastPage} — total{' '}
