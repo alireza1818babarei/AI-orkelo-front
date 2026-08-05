@@ -171,13 +171,19 @@ export default function TaskAssigneeDropdown({
   };
 
   return (
-    <Dropdown isOpen={open} toggle={toggle}>
+    <Dropdown
+      isOpen={open}
+      toggle={toggle}
+      className={`task-assignee-dropdown ${
+        variant === "header" ? "task-assignee-dropdown--header" : ""
+      }`.trim()}
+    >
       {variant === "header" ? (
         <DropdownToggle
           tag="button"
           type="button"
           disabled={disabled}
-          className="btn text-muted d-inline-flex align-items-center gap-2"
+          className="btn text-muted d-inline-flex align-items-center gap-2 task-assignee-dropdown__toggle task-assignee-dropdown__toggle--header"
           style={{
             position: "relative",
             overflow: "hidden",
@@ -214,8 +220,14 @@ export default function TaskAssigneeDropdown({
           ) : null}
 
           <i className="ti ti-user-plus fs-4" />
-          <span className="d-inline-flex align-items-center gap-2" style={{ minWidth: 0 }}>
-            <span className="text-truncate" style={{ maxWidth: 220 }}>
+          <span
+            className="d-inline-flex align-items-center gap-2 task-assignee-dropdown__label"
+            style={{ minWidth: 0 }}
+          >
+            <span
+              className="text-truncate task-assignee-dropdown__label-text"
+              style={{ maxWidth: "min(220px, 100%)" }}
+            >
               {assignee ? `Assigned to ${getUserLabel(assignee)}` : "Assign to"}
             </span>
             <i className="ti ti-chevron-down" />

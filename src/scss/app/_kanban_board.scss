@@ -1555,6 +1555,8 @@ nav.dark-sidebar ~ .app-content .project-todo-list__task.is-completed {
   border-color: var(--td-line) !important;
   gap: 0.75rem;
   align-items: flex-start;
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
 
 .task-detail-modal-dialog {
@@ -1613,8 +1615,40 @@ nav.dark-sidebar ~ .app-content .task-review-note-alert__title {
 }
 
 .task-detail-modal__header-right {
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  margin-left: auto;
+}
+
+@media (min-width: 768px) {
+  .task-detail-modal__meta-row {
+  flex: 1 1 320px;
+  }
+}
+.task-detail-modal__meta-row {
+  min-width: 0;
+  justify-content: space-between;
+}
+
+.task-assignee-dropdown--header {
+  min-width: 190px;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.task-assignee-dropdown--header .task-assignee-dropdown__toggle {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.task-assignee-dropdown--header .task-assignee-dropdown__label {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.task-assignee-dropdown--header .task-assignee-dropdown__label-text {
+  min-width: 0;
 }
 
 .task-checklist-section {
@@ -1623,6 +1657,7 @@ nav.dark-sidebar ~ .app-content .task-review-note-alert__title {
 
 .task-detail-modal__quick-actions {
   align-items: center;
+  flex-wrap: nowrap;
 }
 
 .task-review-summary {
@@ -3728,14 +3763,13 @@ nav.dark-sidebar ~ .app-content .task-detail-timer__reset {
   }
 
   .task-detail-modal__header {
-    flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
   .task-detail-modal__header-right {
-    margin-left: 0 !important;
-    width: 100%;
-    justify-content: space-between;
+    margin-left: auto !important;
+    width: auto;
+    justify-content: flex-end;
   }
 
   .task-detail-modal__sidebar {

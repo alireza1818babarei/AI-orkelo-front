@@ -1619,82 +1619,82 @@ const TaskDetailModal = ({
         size="lg"
         className="task-detail-modal-dialog byekan-font"
       >
-        <div className="d-flex justify-content-between p-4 border border-bottom-1 rounded-top task-detail-modal__header">
-          <div className="d-flex align-items-start gap-2 flex-wrap">
-            {reviewStatusView ? (
-              <div className="task-review-summary">
-                <div className="task-review-summary__top">
-                  <span
-                    className={`task-review-status-pill ${reviewStatusView.className}`}
-                  >
-                    <i className={reviewStatusView.icon}></i>
-                    {reviewStatusView.label}
-                  </span>
-                  {isTaskApproved && canRateTask ? (
-                    <TaskRatingDropdown
-                      value={rating}
-                      saving={ratingSaving}
-                      disabled={
-                        !effectiveProjectId ||
-                        !taskId ||
-                        detailLoading ||
-                        !detailTask
-                      }
-                      onChange={updateTaskRating}
-                    />
-                  ) : isTaskApproved && rating ? (
-                    <span className="task-rating-pill">{rating}/5</span>
-                  ) : null}
-                </div>
-                <span className="task-review-summary__meta">
-                  {reviewStatusView.meta}
-                  {reviewStatusView.date ? (
-                    <>
-                      {" "}
-                      <span>{formatDateTime(reviewStatusView.date)}</span>
-                    </>
-                  ) : null}
+        <div className="d-flex flex-wrap p-4 border border-bottom-1 rounded-top task-detail-modal__header">
+          {reviewStatusView ? (
+            <div className="task-review-summary">
+              <div className="task-review-summary__top">
+                <span
+                  className={`task-review-status-pill ${reviewStatusView.className}`}
+                >
+                  <i className={reviewStatusView.icon}></i>
+                  {reviewStatusView.label}
                 </span>
+                {isTaskApproved && canRateTask ? (
+                  <TaskRatingDropdown
+                    value={rating}
+                    saving={ratingSaving}
+                    disabled={
+                      !effectiveProjectId ||
+                      !taskId ||
+                      detailLoading ||
+                      !detailTask
+                    }
+                    onChange={updateTaskRating}
+                  />
+                ) : isTaskApproved && rating ? (
+                  <span className="task-rating-pill">{rating}/5</span>
+                ) : null}
               </div>
-            ) : null}
+              <span className="task-review-summary__meta">
+                {reviewStatusView.meta}
+                {reviewStatusView.date ? (
+                  <>
+                    {" "}
+                    <span>{formatDateTime(reviewStatusView.date)}</span>
+                  </>
+                ) : null}
+              </span>
+            </div>
+          ) : null}
 
-            {canSubmitForReview ? (
+          {canSubmitForReview ? (
+            <button
+              type="button"
+              className={`btn ${
+                isTaskRejected ? "btn-outline-danger" : "btn-outline-primary"
+              }`}
+              onClick={handleCompleteTask}
+              disabled={taskCompleting}
+            >
+              <i className="ti ti-send me-1"></i>
+              {isTaskRejected ? "Resubmit For Review" : "Submit For Review"}
+            </button>
+          ) : null}
+
+          {!usesTodoCompletion && isTaskPendingReview && canReviewTask ? (
+            <div className="d-flex align-items-center gap-2">
               <button
                 type="button"
-                className={`btn ${
-                  isTaskRejected ? "btn-outline-danger" : "btn-outline-primary"
-                }`}
-                onClick={handleCompleteTask}
-                disabled={taskCompleting}
+                className="btn btn-success"
+                onClick={handleApproveTask}
+                disabled={taskReviewing}
               >
-                <i className="ti ti-send me-1"></i>
-                {isTaskRejected ? "Resubmit For Review" : "Submit For Review"}
+                <i className="ti ti-check me-1"></i>
+                Approve
               </button>
-            ) : null}
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => setRejectReasonOpen((value) => !value)}
+                disabled={taskReviewing}
+              >
+                <i className="ti ti-x me-1"></i>
+                Reject
+              </button>
+            </div>
+          ) : null}
 
-            {!usesTodoCompletion && isTaskPendingReview && canReviewTask ? (
-              <div className="d-flex align-items-center gap-2">
-                <button
-                  type="button"
-                  className="btn btn-success"
-                  onClick={handleApproveTask}
-                  disabled={taskReviewing}
-                >
-                  <i className="ti ti-check me-1"></i>
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={() => setRejectReasonOpen((value) => !value)}
-                  disabled={taskReviewing}
-                >
-                  <i className="ti ti-x me-1"></i>
-                  Reject
-                </button>
-              </div>
-            ) : null}
-
+          <div className="d-flex align-items-center flex-wrap gap-2 task-detail-modal__meta-row">
             {!isTaskApproved ? (
               <TaskAssigneeDropdown
                 projectId={effectiveProjectId}
@@ -1705,9 +1705,8 @@ const TaskDetailModal = ({
                 variant="header"
               />
             ) : null}
-          </div>
-          <div className="ms-auto d-flex gap-2 align-items-start task-detail-modal__header-right">
-            <div className="d-flex gap-2 task-detail-modal__quick-actions">
+            <div className="d-flex gap-2 align-items-center task-detail-modal__header-right">
+              <div className="d-flex gap-2 task-detail-modal__quick-actions">
               {checklistLoading ? (
                 <div className="d-flex align-items-center px-2">
                   <Spinner size="sm" color="primary" />
@@ -1775,6 +1774,7 @@ const TaskDetailModal = ({
               >
                 <i className="fa-solid fa-times fa-fw fs-5"></i>
               </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2032,7 +2032,7 @@ const TaskDetailModal = ({
                       onStateChanged={handleTimerStateChanged}
                       onChanged={refreshDetail}
                     />
-                    <Dropdown
+                    <Dropdown 
                       isOpen={dueDropdownOpen}
                       toggle={toggleDueDropdown}
                     >

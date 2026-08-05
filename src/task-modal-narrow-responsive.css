@@ -12,6 +12,23 @@
     width: 100%;
   }
 
+  body .task-detail-modal-dialog .task-detail-modal__meta-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.45rem 0.6rem !important;
+    width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__meta-row > .task-assignee-dropdown--header {
+    flex: 1 1 190px !important;
+    width: auto !important;
+    min-width: min(190px, 100%) !important;
+    max-width: 100% !important;
+  }
+
   body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .btn,
   body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown,
   body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > div:not(.task-review-summary) {
@@ -82,11 +99,41 @@
     flex: 0 0 2rem;
   }
 
+  body .task-detail-modal-dialog .task-detail-modal__header > .task-detail-modal__meta-row {
+    display: flex !important;
+    grid-template-columns: none !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.45rem 0.6rem !important;
+    width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > .task-detail-modal__meta-row > .task-assignee-dropdown--header {
+    flex: 1 1 190px !important;
+    width: auto !important;
+    min-width: min(190px, 100%) !important;
+    max-width: 100% !important;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > .task-detail-modal__meta-row > .task-assignee-dropdown--header > .dropdown-toggle {
+    width: auto !important;
+    max-width: 100% !important;
+  }
+
   body .task-detail-modal-dialog .task-detail-modal__header-right {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    margin-left: auto !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
     gap: 0.35rem !important;
   }
 
   body .task-detail-modal-dialog .task-detail-modal__quick-actions {
+    flex-wrap: nowrap !important;
+    margin-left: 0 !important;
     gap: 0.25rem !important;
   }
 

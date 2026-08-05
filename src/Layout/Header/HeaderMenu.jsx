@@ -421,7 +421,7 @@ const HeaderMenu = () => {
 								aria-label="Close"
 							></button>
 						</div>
-						<div className="px-3 pb-2 d-flex align-items-center gap-2">
+						<div className="px-3 pb-2 d-flex align-items-center gap-2 header-notification-canvas__actions">
 							<Button
 								type="button"
 								color="light"

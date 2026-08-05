@@ -448,6 +448,7 @@ header {
             right: 10px;
             border: 0;
             height: fit-content;
+            max-width: calc(100vw - 20px);
 
             .offcanvas-body {
               height: 453px;
@@ -547,6 +548,14 @@ header {
               font-size: 11px;
               line-height: 22px;
               font-weight: 500;
+            }
+          }
+
+          .header-notification-canvas__actions {
+            flex-wrap: wrap;
+
+            .btn {
+              flex: 0 1 auto;
             }
           }
         }
@@ -1001,6 +1010,24 @@ nav.dark-sidebar ~ .app-content header.header-main .header-left .header-toggle i
   .header-cart,
   .header-apps {
     display: none;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .app-wrapper {
+    nav.vertical-sidebar.semi-nav ~ .app-content {
+      header.header-main {
+        .header-notification-canvas {
+          --bs-offcanvas-width: calc(100vw - #{$semi-nav});
+
+          right: 0 !important;
+          width: var(--bs-offcanvas-width);
+          max-width: var(--bs-offcanvas-width);
+          border-top-right-radius: 0;
+          border-bottom-right-radius: 0;
+        }
+      }
+    }
   }
 }
 

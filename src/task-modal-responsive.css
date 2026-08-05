@@ -163,16 +163,35 @@ body .task-detail-modal-dialog .dropdown-menu {
     align-items: stretch !important;
   }
 
-  body .task-detail-modal-dialog .task-detail-modal__header-right {
-    width: 100%;
-    margin-left: 0 !important;
+  body .task-detail-modal-dialog .task-detail-modal__meta-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
-    justify-content: space-between;
+    justify-content: space-between !important;
+    width: 100%;
+    min-width: 0;
+    gap: 0.5rem 0.75rem !important;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__meta-row > .task-assignee-dropdown--header {
+    flex: 1 1 190px !important;
+    width: auto !important;
+    min-width: min(190px, 100%) !important;
+    max-width: 320px !important;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header-right {
+    flex: 0 0 auto;
+    width: auto;
+    margin-left: auto !important;
+    align-items: center !important;
+    justify-content: flex-end;
   }
 
   body .task-detail-modal-dialog .task-detail-modal__quick-actions {
-    margin-left: auto;
-    flex-wrap: wrap;
+    margin-left: 0;
+    flex-wrap: nowrap;
     justify-content: flex-end;
   }
 
@@ -256,6 +275,10 @@ body .task-detail-modal-dialog .dropdown-menu {
     min-width: min(280px, calc(100vw - 1.5rem)) !important;
     max-width: calc(100vw - 1.5rem) !important;
   }
+
+  body .task-detail-modal-dialog .task-assignee-dropdown--header > .dropdown-menu.show {
+    transform: translate3d(20px, 40px, 0px) !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -277,10 +300,26 @@ body .task-detail-modal-dialog .dropdown-menu {
     padding: 0.625rem !important;
   }
 
+  body .task-detail-modal-dialog .task-detail-modal__meta-row {
+    gap: 0.45rem 0.6rem !important;
+  }
+
   body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .btn,
   body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > .dropdown,
   body .task-detail-modal-dialog .task-detail-modal__header > div:first-child > div:not(.task-review-summary) {
     max-width: 100%;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > .task-detail-modal__meta-row > .task-assignee-dropdown--header {
+    flex: 1 1 190px !important;
+    width: auto !important;
+    min-width: min(190px, 100%) !important;
+    max-width: 100% !important;
+  }
+
+  body .task-detail-modal-dialog .task-detail-modal__header > .task-detail-modal__meta-row > .task-assignee-dropdown--header > .dropdown-toggle {
+    width: auto !important;
+    max-width: 100% !important;
   }
 
   body .task-detail-modal-dialog .task-detail-modal__body {
