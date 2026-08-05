@@ -157,3 +157,90 @@ body .daily-reports-table__description {
     gap: 0.25rem;
   }
 }
+
+/* Loaded after the theme responsive SCSS: keep report pagination usable near the fixed go-top button. */
+body .manage-projects-page__table-footer,
+body .daily-reports-table-footer,
+body .file-manager-recent-table-footer {
+  padding-inline-end: 5.75rem !important;
+  padding-bottom: 6.5rem !important;
+}
+
+
+body .manage-projects-page__table-footer .seller-table-footer,
+body .manage-projects-page__pagination,
+body .daily-reports-table-footer > .d-flex,
+body .file-manager-recent-table-footer .seller-table-footer {
+  min-width: 0;
+}
+
+body .manage-projects-page__table-footer .app-pagination,
+body .manage-projects-page__pagination .app-pagination,
+body .daily-reports-table-footer .app-pagination,
+body .file-manager-recent-table-footer .app-pagination {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+}
+
+body .manage-projects-page__table-footer .page-next,
+body .manage-projects-page__table-footer .disabled,
+body .manage-projects-page__pagination .page-next,
+body .manage-projects-page__pagination .disabled,
+body .daily-reports-table-footer .page-next,
+body .daily-reports-table-footer .disabled,
+body .file-manager-recent-table-footer .page-next,
+body .file-manager-recent-table-footer .disabled {
+  display: list-item !important;
+}
+
+body .manage-projects-page__table-footer .page-link,
+body .manage-projects-page__pagination .page-link,
+body .daily-reports-table-footer .page-link,
+body .file-manager-recent-table-footer .page-link {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (max-width: 767.98px) {
+  body .manage-projects-page__table-footer,
+  body .daily-reports-table-footer,
+  body .file-manager-recent-table-footer {
+    padding-inline: 0.5rem !important;
+
+  }
+
+  body .manage-projects-page__table-footer .seller-table-footer,
+  body .manage-projects-page__pagination,
+  body .daily-reports-table-footer > .d-flex,
+  body .file-manager-recent-table-footer .seller-table-footer {
+    align-items: center !important;
+    gap: 0.75rem !important;
+    justify-content: center !important;
+  }
+
+  body .manage-projects-page__table-footer .seller-table-footer > p,
+  body .manage-projects-page__pagination > p,
+  body .daily-reports-table-footer > .d-flex > p,
+  body .file-manager-recent-table-footer .seller-table-footer > p {
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  body .manage-projects-page__table-footer .app-pagination,
+  body .manage-projects-page__pagination .app-pagination,
+  body .daily-reports-table-footer .app-pagination,
+  body .file-manager-recent-table-footer .app-pagination {
+    gap: 0.25rem;
+    justify-content: center;
+  }
+
+  body .manage-projects-page__table-footer .page-link,
+  body .manage-projects-page__pagination .page-link,
+  body .daily-reports-table-footer .page-link,
+  body .file-manager-recent-table-footer .page-link {
+    font-size: 0.86rem;
+    padding-inline: 0.65rem;
+  }
+}

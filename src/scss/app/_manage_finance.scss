@@ -754,6 +754,14 @@
     min-width: 0;
     width: 100%;
   }
+
+  .manage-finance__operations-pane,
+  .manage-finance__operation-detail,
+  .manage-finance__upload-box,
+  .manage-finance__upload-dropzone {
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 
 /* Finance tabs reuse the template tab classes and keep the layout responsive. */
@@ -914,6 +922,48 @@ nav.dark-sidebar ~ .app-content .manage-finance__counterparty-table .table th {
 }
 
 @media (max-width: 575.98px) {
+  .manage-finance__operations-card .card-body {
+    padding: 0.85rem;
+  }
+
+  .manage-finance__operations-pane,
+  .manage-finance__operation-detail-header,
+  .manage-finance__upload-box {
+    border-radius: 0.75rem;
+    padding: 0.85rem;
+  }
+
+  .manage-finance__upload-dropzone {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.95rem;
+    text-align: center;
+  }
+
+  .manage-finance__upload-dropzone-icon {
+    align-self: center;
+  }
+
+  .manage-finance__upload-dropzone-text,
+  .manage-finance__upload-dropzone-title,
+  .manage-finance__upload-dropzone-hint {
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .manage-finance__upload-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manage-finance__upload-controls .btn {
+    width: 100%;
+  }
+
   .manage-finance__tabs .nav-item {
     flex-basis: 100%;
   }

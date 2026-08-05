@@ -244,24 +244,29 @@ export default function ActiveTrackers({ scope = 'company' }) {
                 ) : trackers.length > 0 ? (
                   trackers.map((tracker) => (
                     <tr key={tracker.id}>
-                      <td>
+                      <td data-label='Project'>
                         <span className='active-trackers-page__strong-cell'>
                           {tracker.projectName}
                         </span>
                       </td>
-                      <td>
+                      <td data-label='Task'>
                         <span className='active-trackers-page__truncate'>
                           {tracker.taskName}
                         </span>
                       </td>
-                      <td>{tracker.userName}</td>
-                      <td>{formatMonthDayTime(tracker.startedAt)}</td>
-                      <td>
+                      <td data-label='User'>{tracker.userName}</td>
+                      <td data-label='Started at'>
+                        {formatMonthDayTime(tracker.startedAt)}
+                      </td>
+                      <td data-label='Running time'>
                         {formatRunningDuration(
                           getRunningDurationSeconds(tracker.startedAt, nowMs)
                         )}
                       </td>
-                      <td className='active-trackers-page__action-cell'>
+                      <td
+                        className='active-trackers-page__action-cell'
+                        data-label='Action'
+                      >
                         {tracker.projectId && tracker.taskId ? (
                           <Button
                             as={Link}

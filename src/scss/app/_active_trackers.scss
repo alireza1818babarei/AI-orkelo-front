@@ -187,3 +187,113 @@ nav.dark-sidebar ~ .app-content .active-trackers-page__table-wrap table th {
     max-width: 14rem;
   }
 }
+
+@media (max-width: 767.98px) {
+  .active-trackers-page {
+    max-width: 100%;
+  }
+
+  .active-trackers-page__panel .card-body {
+    padding: 0.85rem;
+  }
+
+  .active-trackers-page__table-wrap {
+    background: transparent;
+    border: 0;
+    overflow: visible;
+  }
+
+  .active-trackers-page__table-wrap .table-responsive {
+    overflow: visible;
+  }
+
+  .active-trackers-page__table-wrap table,
+  .active-trackers-page__table-wrap tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .active-trackers-page__table-wrap table {
+    table-layout: auto;
+  }
+
+  .active-trackers-page__table-wrap thead {
+    display: none;
+  }
+
+  .active-trackers-page__table-wrap tbody tr {
+    display: block;
+    width: 100%;
+    padding: 0.2rem 0.8rem;
+    border: 1px solid var(--active-trackers-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.35);
+  }
+
+  .active-trackers-page__table-wrap tbody tr + tr {
+    margin-top: 0.75rem;
+  }
+
+  .active-trackers-page__table-wrap table td {
+    display: grid;
+    grid-template-columns: minmax(6rem, 34%) minmax(0, 1fr);
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.65rem 0;
+    border-bottom: 1px dashed var(--active-trackers-border);
+    color: var(--active-trackers-copy);
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .active-trackers-page__table-wrap table td:last-child {
+    border-bottom: 0;
+  }
+
+  .active-trackers-page__table-wrap table td[colspan] {
+    display: block;
+    border-bottom: 0;
+    text-align: center;
+  }
+
+  .active-trackers-page__table-wrap table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--active-trackers-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.35;
+    text-transform: uppercase;
+  }
+
+  .active-trackers-page__truncate {
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .active-trackers-page__action-cell {
+    width: 100%;
+    text-align: left;
+  }
+
+  .active-trackers-page__action-cell .btn {
+    width: 100%;
+    max-width: 12rem;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .active-trackers-page__table-wrap table td {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .active-trackers-page__action-cell .btn {
+    max-width: none;
+  }
+}

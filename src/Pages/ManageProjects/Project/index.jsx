@@ -160,6 +160,10 @@ function ProjectManager() {
 
   const currentPage = Number(projectReportsMeta?.current_page) || 1;
   const lastPage = Number(projectReportsMeta?.last_page) || 1;
+  const pageNumbers = Array.from(
+    { length: Math.max(lastPage, 1) },
+    (_, index) => index + 1,
+  );
 
   return (
     <Row className='g-4 manage-projects-page manage-projects-page--detail'>
@@ -471,9 +475,26 @@ function ProjectManager() {
                     </button>
                   </li>
 
-                  <li className='page-item active' aria-current='page'>
-                    <span className='page-link'>{currentPage}</span>
-                  </li>
+                  {pageNumbers.map((pageNumber) => (
+                    <li
+                      key={pageNumber}
+                      className={`page-item ${
+                        pageNumber === currentPage ? 'active' : ''
+                      }`}
+                      aria-current={
+                        pageNumber === currentPage ? 'page' : undefined
+                      }
+                    >
+                      <button
+                        type='button'
+                        className='page-link'
+                        onClick={() => setPage(pageNumber)}
+                        disabled={pageNumber === currentPage}
+                      >
+                        {pageNumber}
+                      </button>
+                    </li>
+                  ))}
 
                   <li
                     className={`page-item page-next ${
