@@ -977,10 +977,39 @@ nav.dark-sidebar ~ .app-content .manage-finance__counterparty-table .table th {
     justify-content: flex-start;
   }
 
+  .manage-finance__operation-detail-main,
+  .manage-finance__operation-detail-actions,
+  .manage-finance__operation-amount-strip,
+  .manage-finance__status-dropdown {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .manage-finance__operation-detail-actions,
+  .manage-finance__operation-amount-strip {
+    padding-inline-end: 0.35rem;
+  }
+
+  .manage-finance__operation-amount {
+    max-width: 100%;
+  }
+
+  .manage-finance__operation-amount-copy {
+    max-width: 100%;
+  }
+
+  .manage-finance__operation-amount-label {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
   .manage-finance__operation-detail-actions > .dropdown,
   .manage-finance__operation-detail-actions .btn,
   .manage-finance__operation-detail-actions .dropdown-toggle {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .manage-finance__counterparty-toolbar,
@@ -990,5 +1019,17 @@ nav.dark-sidebar ~ .app-content .manage-finance__counterparty-table .table th {
 
   .manage-finance__counterparty-toolbar .manage-finance__operations-search {
     width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .manage-finance__operation-amount {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .manage-finance__operation-amount strong {
+    font-size: 1.32rem;
+    white-space: nowrap;
   }
 }
