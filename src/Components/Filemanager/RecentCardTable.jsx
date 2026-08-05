@@ -103,8 +103,8 @@ const RecentCardTable = () => {
                     </div>
                 </CardHeader>
                 <CardBody className="p-0">
-                    <div className="table-responsive">
-                        <Table id="recentdatatable" className="table table-bottom-border recent-table align-middle table-hover mb-0">
+                    <div className="table-responsive file-manager-recent-table-wrapper">
+                        <Table id="recentdatatable" className="table table-bottom-border recent-table file-manager-recent-table align-middle table-hover mb-0">
                             <thead>
                             <tr>
                                 <th>Name</th>
@@ -117,16 +117,16 @@ const RecentCardTable = () => {
                             <tbody>
                             {files.map((item) => (
                                 <tr key={item.id}>
-                                    <td>
+                                    <td data-label="Name">
                                         <div>
                                             <img src={item.icon} className="w-20 h-20" alt="file-icon" /> {/* Updated to image */}
                                             <span className="ms-2 table-text">{item.name}</span>
                                         </div>
                                     </td>
-                                    <td className="text-success f-w-500">{item.totalItems}</td>
-                                    <td>{item.size}</td>
-                                    <td className="text-danger f-w-500">{item.lastModified}</td>
-                                    <td className="d-flex">
+                                    <td className="text-success f-w-500" data-label="Total Items">{item.totalItems}</td>
+                                    <td data-label="Size">{item.size}</td>
+                                    <td className="text-danger f-w-500" data-label="Last Modified">{item.lastModified}</td>
+                                    <td className="d-flex" data-label="Actions">
                                         <div className="dropdown folder-dropdown">
                                             <a className="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="true">
                                                 <i className="ti ti-dots-vertical"></i>

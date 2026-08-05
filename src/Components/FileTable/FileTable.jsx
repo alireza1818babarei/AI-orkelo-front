@@ -192,7 +192,7 @@ const FileTable = ({ projectId, onChanged }) => {
 
                   return (
                     <tr key={item.id}>
-                      <td>
+                      <td data-label='Name'>
                         <div className='d-flex align-items-center gap-2'>
                           <img
                             src={getReportFileIcon(item.originalName)}
@@ -207,7 +207,7 @@ const FileTable = ({ projectId, onChanged }) => {
                           </span>
                         </div>
                       </td>
-                      <td>
+                      <td data-label='Description'>
                         <span
                           className='daily-reports-table__description'
                           title={item.description || ''}
@@ -215,9 +215,9 @@ const FileTable = ({ projectId, onChanged }) => {
                           {item.description || '-'}
                         </span>
                       </td>
-                      <td>{formatBytes(item.size)}</td>
-                      <td>{formatDateTime(item.createdAt)}</td>
-                      <td>
+                      <td data-label='Size'>{formatBytes(item.size)}</td>
+                      <td data-label='Uploaded At'>{formatDateTime(item.createdAt)}</td>
+                      <td data-label='Actions'>
                         <div className='daily-reports-table__actions'>
                           <Button
                             size='sm'

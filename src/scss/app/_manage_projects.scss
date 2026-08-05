@@ -228,6 +228,88 @@ nav.dark-sidebar ~ .app-content .manage-projects-page .table th {
   }
 }
 
+@media (max-width: 767.98px) {
+  .project-reports-table-wrapper {
+    overflow: visible;
+    padding: 0.75rem;
+  }
+
+  .project-reports-table {
+    display: block;
+    min-width: 0;
+
+    colgroup,
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: grid;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    tr {
+      background: rgba(255, 255, 255, 0.48);
+      border: 1px solid var(--manage-projects-border);
+      border-radius: 8px;
+      display: block;
+      padding: 0.35rem 0.75rem;
+      width: 100%;
+    }
+
+    td {
+      align-items: start;
+      border: 0;
+      border-bottom: 1px dashed var(--manage-projects-border);
+      display: grid;
+      gap: 0.65rem;
+      grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+      min-width: 0;
+      padding: 0.65rem 0 !important;
+      text-align: left !important;
+      white-space: normal;
+      width: 100%;
+    }
+
+    td:last-child {
+      border-bottom: 0;
+    }
+
+    td[data-label]::before {
+      color: var(--manage-projects-muted);
+      content: attr(data-label);
+      font-size: 0.75rem;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    td[colspan] {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 104px;
+      text-align: center !important;
+    }
+  }
+
+  .project-reports-table__user,
+  .project-reports-table__actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .project-reports-table__text,
+  .project-reports-table__size,
+  .project-reports-table__date {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
 .manage-user-reports-table-wrapper {
   width: 100%;
   overflow-x: visible;
@@ -364,5 +446,107 @@ nav.dark-sidebar ~ .app-content .manage-projects-page .table th {
 
   .manage-user-reports-table {
     min-width: 960px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .manage-user-reports-table-wrapper {
+    overflow: visible;
+    padding: 0.75rem;
+  }
+
+  .manage-user-reports-table {
+    display: block;
+    min-width: 0;
+
+    colgroup,
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: grid;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    tr {
+      background: rgba(255, 255, 255, 0.48);
+      border: 1px solid var(--manage-projects-border);
+      border-radius: 8px;
+      display: block;
+      padding: 0.35rem 0.75rem;
+      width: 100%;
+    }
+
+    td {
+      align-items: start;
+      border: 0;
+      border-bottom: 1px dashed var(--manage-projects-border);
+      display: grid;
+      gap: 0.65rem;
+      grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+      min-width: 0;
+      padding: 0.65rem 0 !important;
+      text-align: left;
+      white-space: normal;
+      width: 100%;
+    }
+
+    td:last-child {
+      border-bottom: 0;
+    }
+
+    td[data-label]::before {
+      color: var(--manage-projects-muted);
+      content: attr(data-label);
+      font-size: 0.75rem;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    td[colspan] {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 104px;
+      text-align: center;
+    }
+  }
+
+  .manage-user-reports-table__file,
+  .manage-user-reports-table__actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .manage-user-reports-table__text,
+  .manage-user-reports-table__date,
+  .manage-user-reports-table__description {
+    display: block;
+    max-height: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    -webkit-line-clamp: unset;
+  }
+}
+
+@media (max-width: 420px) {
+  .project-reports-table td,
+  .manage-user-reports-table td {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
+body.dark .project-reports-table tr,
+body.dark .manage-user-reports-table tr,
+nav.dark-sidebar ~ .app-content .project-reports-table tr,
+nav.dark-sidebar ~ .app-content .manage-user-reports-table tr {
+  @media (max-width: 767.98px) {
+    background: rgba(255, 255, 255, 0.05);
   }
 }

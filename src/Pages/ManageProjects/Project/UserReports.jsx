@@ -197,7 +197,7 @@ function UserReports() {
 
                     return (
                       <tr key={item.id}>
-                        <td>
+                        <td data-label="Name">
                           <div className="manage-user-reports-table__file">
                             <img
                               src={getReportFileIcon(item.reportName)}
@@ -208,7 +208,7 @@ function UserReports() {
                           </div>
                         </td>
 
-                        <td>
+                        <td data-label="Description">
                           <span
                             className="manage-user-reports-table__description"
                             title={item.description || ''}
@@ -216,23 +216,23 @@ function UserReports() {
                             {item.description || '-'}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Project">
                           <span className="manage-user-reports-table__text">
                             {item.projectName || '-'}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Size">
                           <span className="manage-user-reports-table__text">
                             {formatBytes(item.reportSize)}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Uploaded At">
                           <span className="manage-user-reports-table__date">
                             {formatFullDate(item.createdAt)}
                           </span>
                         </td>
 
-                        <td>
+                        <td data-label="Actions">
                           <div className="manage-user-reports-table__actions">
                             <Button
                               size="sm"

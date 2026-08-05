@@ -328,4 +328,108 @@
   word-break: break-word;
 }
 
+@media (max-width: 767.98px) {
+  .daily-reports-table-wrapper,
+  .file-manager-recent-table-wrapper {
+    overflow: visible;
+    padding: 0.75rem;
+  }
+
+  .daily-reports-table,
+  .file-manager-recent-table {
+    display: block;
+    min-width: 0;
+
+    colgroup,
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: grid;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    tr {
+      background: rgba(255, 255, 255, 0.48);
+      border: 1px solid var(--border_color);
+      border-radius: 8px;
+      display: block;
+      padding: 0.35rem 0.75rem;
+      width: 100%;
+    }
+
+    td {
+      align-items: start;
+      border: 0;
+      border-bottom: 1px dashed var(--border_color);
+      display: grid;
+      gap: 0.65rem;
+      grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+      min-width: 0;
+      padding: 0.65rem 0 !important;
+      text-align: left;
+      white-space: normal;
+      width: 100%;
+    }
+
+    td:last-child {
+      border-bottom: 0;
+    }
+
+    td[data-label]::before {
+      color: rgba(var(--secondary), 0.94);
+      content: attr(data-label);
+      font-size: 0.75rem;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    td[colspan] {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 104px;
+      text-align: center;
+    }
+  }
+
+  .daily-reports-table__actions,
+  .file-manager-recent-table td[data-label='Actions'] {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .daily-reports-table__name,
+  .daily-reports-table__description,
+  .file-manager-recent-table .table-text {
+    display: block;
+    max-height: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    -webkit-line-clamp: unset;
+  }
+}
+
+@media (max-width: 420px) {
+  .daily-reports-table td,
+  .file-manager-recent-table td {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
+body.dark .daily-reports-table tr,
+body.dark .file-manager-recent-table tr,
+nav.dark-sidebar ~ .app-content .daily-reports-table tr,
+nav.dark-sidebar ~ .app-content .file-manager-recent-table tr {
+  @media (max-width: 767.98px) {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
 // >>-- 48 Filemanager css start --<<

@@ -311,7 +311,7 @@ function ProjectManager() {
 
                         return (
                           <tr key={item.id}>
-                            <td>
+                            <td data-label='Name'>
                               <div className='project-reports-table__user'>
                                 {avatarSrc ? (
                                   <img
@@ -333,12 +333,12 @@ function ProjectManager() {
                               </div>
                             </td>
 
-                            <td>
+                            <td data-label='File name'>
                               <span className='project-reports-table__text'>
                                 {item.reportName || '-'}
                               </span>
                             </td>
-                            <td>
+                            <td data-label='Description'>
                               <span
                                 className='project-reports-table__text project-reports-table__description'
                                 title={item.description || ''}
@@ -346,16 +346,22 @@ function ProjectManager() {
                                 {item.description || '-'}
                               </span>
                             </td>
-                            <td className='project-reports-table__size'>
+                            <td
+                              className='project-reports-table__size'
+                              data-label='Size'
+                            >
                               {formatBytes(item.reportSize)}
                             </td>
-                            <td className='project-reports-table__date text-danger f-w-500'>
+                            <td
+                              className='project-reports-table__date text-danger f-w-500'
+                              data-label='Uploaded At'
+                            >
                               {item.createdAt
                                 ? formatFullDate(item.createdAt)
                                 : '-'}
                             </td>
 
-                            <td>
+                            <td data-label='Actions'>
                               <div className='project-reports-table__actions'>
                                 <Button
                                   type='button'
