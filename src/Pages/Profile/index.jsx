@@ -16,6 +16,8 @@ import {
 import { getMyProjects } from '../../store/Profile/MyProjects/myProjects.thunk';
 import { resolvePublicMediaUrl } from '../../utils/mediaUrl';
 import { formatFullDate } from '../../utils/date';
+import TelegramConnection from '../../Components/Profileapp/TelegramConnection';
+import { hasTelegramConnection } from '../../services/telegram';
 
 const Profile = () => {
   const dispatch = useDispatch();
@@ -24,7 +26,17 @@ const Profile = () => {
   const myProjectsMeta = useSelector(selectMyProjectsMeta);
   const location = useLocation();
   const navigate = useNavigate();
-  const activeTab = location.pathname === '/profile/projects' ? 'tab3' : 'tab1';
+  const user = useSelector((state) => state.auth?.user ?? null);
+  const profile = useSelector(
+    (state) => state.auth?.profile ?? state.auth?.user?.profile ?? null,
+  );
+  const activeTab =
+    location.pathname === '/profile/projects'
+      ? 'tab3'
+      : location.pathname === '/profile/integrations'
+        ? 'tab5'
+        : 'tab1';
+  const telegramConnected = hasTelegramConnection(profile, user);
   const projectsStart = myProjectsMeta.total
     ? (myProjectsMeta.currentPage - 1) * myProjectsMeta.perPage + 1
     : 0;
@@ -48,6 +60,11 @@ const Profile = () => {
   const handleTabChange = (nextTab) => {
     if (nextTab === 'tab3') {
       navigate('/profile/projects');
+      return;
+    }
+
+    if (nextTab === 'tab5') {
+      navigate('/profile/integrations');
       return;
     }
 
@@ -218,6 +235,9 @@ const Profile = () => {
                 onPageChange={(page) => dispatch(getMyProjects({ page }))}
               />
             </>
+          )}
+          {activeTab === 'tab5' && (
+            <TelegramConnection connected={telegramConnected} />
           )}
           {activeTab === 'tab4' && (
             <Row>

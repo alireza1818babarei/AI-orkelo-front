@@ -110,6 +110,16 @@ header {
           }
         }
 
+        .header-telegram {
+          .head-icon i.ti {
+            color: #229ed9;
+
+            &:hover {
+              color: #168ac4;
+            }
+          }
+        }
+
         body.dark & {
           .header-theme-settings {
             .head-icon i.ti {

@@ -49,6 +49,7 @@ export const routesConfig = [
           { path: '/projects/:id/task/:taskId', element: <ProjectBoard /> },
           { path: '/profile', element: <Profile /> },
           { path: '/profile/projects', element: <Profile /> },
+          { path: '/profile/integrations', element: <Profile /> },
           { path: '/my-projects/:projectId', element: <MyProjects /> },
         ],
       },

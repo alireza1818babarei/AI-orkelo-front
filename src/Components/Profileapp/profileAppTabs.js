@@ -25,6 +25,15 @@ const ProfileAppTabs = ({ data, setData, activeTab, onTabChange }) => {
               <i className='ti ti-clipboard-data fw-bold'></i>{' '}
               Projects
             </li>
+            <li
+              className={`${
+                currentTab === 'tab5' ? 'active' : ''
+              } tab-link fw-medium f-s-16 f-w-600`}
+              onClick={() => handleTabChange('tab5')}
+            >
+              <i className='ti ti-plug-connected fw-bold'></i>{' '}
+              Integrations
+            </li>
           </ul>
         </div>
       </div>

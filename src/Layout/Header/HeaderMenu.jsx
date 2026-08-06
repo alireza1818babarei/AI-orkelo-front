@@ -36,6 +36,7 @@ import {
 	markNotificationAsReadThunk,
 } from "../../store/notifications/notificationsSlice.js";
 import { resolveNotificationTarget } from "../../utils/notificationNavigation.js";
+import TelegramHeaderButton from "./TelegramHeaderButton.jsx";
 
 const resolveNotificationTableName = (notification) => {
 	const tableName = String(notification?.task?.column?.title ?? "").trim();
@@ -599,6 +600,8 @@ const HeaderMenu = () => {
 					</div>
 				</li>
 
+				<TelegramHeaderButton />
+
 				<li className="header-theme-settings">
 					<button
 						type="button"
@@ -696,7 +699,7 @@ const HeaderMenu = () => {
 									</Link>
 								</li>
 								<li>
-									<Link className="f-w-500" href="/apps/profile-page/setting">
+									<Link className="f-w-500" to="/profile/integrations">
 										<i className="ph-duotone  ph-gear pe-1 f-s-20"></i> Settings
 									</Link>
 								</li>
