@@ -374,6 +374,7 @@ const ProjectBoardHeader = ({
 								className={`btn project-board-header__icon-btn ${
 									hasActiveFilters ? "filter-active" : ""
 								}`}
+								data-orkelo-tour="project-task-filter"
 								onClick={openFilterDrawer}
 								disabled={filterDisabled}
 								aria-label="Filter tasks"

@@ -48,6 +48,7 @@ import TaskRatingDropdown, {
 } from "./TaskRatingDropdown";
 import ChecklistTree from "./ChecklistTree";
 import TaskTimer from "./TaskTimer";
+import TaskChecklistCopyTour from "./TaskChecklistCopyTour";
 import { restoreArchivedTasks } from "../../store/projects/projectArchivedTasksSlice";
 import { resolveUserAvatarWithFallback } from "../../utils/mediaUrl";
 import { getTextDirectionProps } from "../../utils/textDirection";
@@ -1922,6 +1923,7 @@ const TaskDetailModal = ({
                       <button
                         type="button"
                         className="btn text-muted icon-btn b-r-100 task-detail-checklist-copy-button"
+                        data-orkelo-tour="task-checklist-copy"
                         aria-label="copy all checklists"
                         disabled={!hasCopyableChecklist}
                         onClick={() => setChecklistCopyModalOpen(true)}
@@ -1996,6 +1998,17 @@ const TaskDetailModal = ({
                     />
                   </div>
                 </div>
+
+                <TaskChecklistCopyTour
+                  enabled={
+                    isOpen &&
+                    !checklistLoading &&
+                    hasCopyableChecklist &&
+                    !checklistCopyModalOpen
+                  }
+                  taskId={taskId}
+                  userId={currentUserId}
+                />
 
                 <TaskAttachments
                   projectId={effectiveProjectId}

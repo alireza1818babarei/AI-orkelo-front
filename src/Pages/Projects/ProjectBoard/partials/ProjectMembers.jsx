@@ -347,7 +347,7 @@ const ProjectMembers = ({
               <iconify-icon icon='line-md:loading-loop' />
             </div>
           ) : (
-            data.map((member) => {
+            data.map((member, index) => {
               const canRemoveMember = canRemoveProjectMember(
                 companyRole,
                 actorProjectRole,
@@ -414,7 +414,12 @@ const ProjectMembers = ({
                       </DropdownMenu>
                     </UncontrolledDropdown>
                   ) : null}
-                  <div className='project-members-panel__avatar'>
+                  <div
+                    className='project-members-panel__avatar'
+                    data-orkelo-tour={
+                      index === 0 ? 'project-member-filter' : undefined
+                    }
+                  >
                     {member.avatar ? (
                       <img src={member.avatar} alt={member.name} />
                     ) : (

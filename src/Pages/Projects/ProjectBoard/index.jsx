@@ -63,6 +63,7 @@ import ProjectTodoList from "./partials/ProjectTodoList";
 import ProjectColumnModal from "./partials/ProjectColumnModal";
 import ProjectMembers from "./partials/ProjectMembers";
 import ProjectAddMemberModal from "./partials/ProjectAddMemberModal";
+import ProjectBoardTour from "./partials/ProjectBoardTour";
 
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -1189,6 +1190,15 @@ const ProjectBoard = () => {
     setDesktopMembersPanelCollapsed((prev) => !prev);
   };
 
+  const showMembersPanelForTour = useCallback(() => {
+    if (membersMobileViewport) {
+      setMobileMembersPanelOpen(true);
+      return;
+    }
+
+    setDesktopMembersPanelCollapsed(false);
+  }, [membersMobileViewport]);
+
   return (
     <section
       className={`project-board-layout ${
@@ -1289,6 +1299,20 @@ const ProjectBoard = () => {
           />
         </>
       ) : null}
+
+      <ProjectBoardTour
+        enabled={
+          showMembersPanel &&
+          !!project?.id &&
+          !membersLoading &&
+          members.length > 0 &&
+          !taskId
+        }
+        locationSearch={location.search}
+        onShowMembersPanel={showMembersPanelForTour}
+        projectId={project.id}
+        userId={currentUser?.id}
+      />
 
       <ProjectEditModal
         isOpen={editModal}

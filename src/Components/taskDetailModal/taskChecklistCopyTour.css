@@ -1,0 +1,152 @@
+.driver-active-element[data-orkelo-tour="task-checklist-copy"] {
+  position: relative !important;
+  z-index: 10001 !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 0 0 4px rgba(77, 202, 218, 0.28),
+    0 0 0 10px rgba(255, 255, 255, 0.95),
+    0 18px 40px rgba(6, 21, 47, 0.22) !important;
+}
+
+.orkelo-task-copy-tour-popover {
+  display: block;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 18px 18px 16px;
+  color: #13234a;
+  border: 1px solid rgba(77, 202, 218, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(6, 21, 47, 0.22);
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-title {
+  padding-right: 54px;
+  color: #10245a;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-description {
+  color: #526079;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-footer {
+  position: static !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  display: flex !important;
+  justify-content: flex-end;
+  width: auto !important;
+  min-height: 0 !important;
+  margin-top: 18px;
+  padding: 0 !important;
+  padding-left: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  z-index: auto !important;
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-navigation-btns {
+  gap: 8px;
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-navigation-btns button + button {
+  margin-left: 0;
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-footer-btn {
+  min-width: 86px;
+  padding: 9px 16px;
+  color: #fff;
+  background: rgb(var(--primary));
+  border: 1px solid rgb(var(--primary));
+  border-radius: 9px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  box-shadow: 0 10px 22px rgba(var(--primary), 0.24);
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-footer-btn:hover,
+.orkelo-task-copy-tour-popover .driver-popover-footer-btn:focus-visible {
+  color: #fff;
+  background: color-mix(in srgb, rgb(var(--primary)) 88%, #000);
+  border-color: color-mix(in srgb, rgb(var(--primary)) 88%, #000);
+  outline: none;
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-close-btn {
+  top: 14px;
+  right: 14px;
+  width: auto;
+  height: auto;
+  padding: 6px 10px;
+  color: #526079;
+  background: #f3f7fb;
+  border: 1px solid rgba(82, 96, 121, 0.16);
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.orkelo-task-copy-tour-popover .driver-popover-close-btn:hover,
+.orkelo-task-copy-tour-popover .driver-popover-close-btn:focus-visible {
+  color: #10245a;
+  background: #eaf1f9;
+  outline: none;
+}
+
+body.dark .orkelo-task-copy-tour-popover,
+nav.dark-sidebar ~ .app-content .orkelo-task-copy-tour-popover {
+  color: #f3f6fb;
+  background: #202531;
+  border-color: rgba(77, 202, 218, 0.3);
+}
+
+body.dark .orkelo-task-copy-tour-popover .driver-popover-title,
+nav.dark-sidebar ~ .app-content .orkelo-task-copy-tour-popover .driver-popover-title {
+  color: #f3f6fb;
+}
+
+body.dark .orkelo-task-copy-tour-popover .driver-popover-description,
+nav.dark-sidebar ~ .app-content .orkelo-task-copy-tour-popover .driver-popover-description {
+  color: #c6cfdd;
+}
+
+body.dark .orkelo-task-copy-tour-popover .driver-popover-close-btn,
+nav.dark-sidebar ~ .app-content .orkelo-task-copy-tour-popover .driver-popover-close-btn {
+  color: #dbe4ef;
+  background: #2a303d;
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+@media (max-width: 420px) {
+  .orkelo-task-copy-tour-popover {
+    padding: 16px;
+  }
+
+  .orkelo-task-copy-tour-popover .driver-popover-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .orkelo-task-copy-tour-popover .driver-popover-navigation-btns,
+  .orkelo-task-copy-tour-popover .driver-popover-footer-btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orkelo-task-copy-tour-popover,
+  .orkelo-task-copy-tour-popover * {
+    transition: none !important;
+  }
+}
