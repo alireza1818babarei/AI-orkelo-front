@@ -71,18 +71,10 @@ const AppUpdateModal = () => {
 
   if (!latestUpdate || !updateId || !shouldShowOnThisPage) return null;
 
-  const bugFixes = Array.isArray(latestUpdate.bugFixes)
-    ? latestUpdate.bugFixes
-    : [];
   const newFeatures = Array.isArray(latestUpdate.newFeatures)
     ? latestUpdate.newFeatures
     : [];
-  const improvements = Array.isArray(latestUpdate.improvements)
-    ? latestUpdate.improvements
-    : [];
-  const totalItems = bugFixes.length + improvements.length + newFeatures.length;
   const featuredNewFeature = newFeatures[0] ?? null;
-  const moreNewFeatures = newFeatures.slice(1);
 
   const closeForNow = () => {
     setOpen(false);
@@ -145,9 +137,9 @@ const AppUpdateModal = () => {
                     <span className="app-update-modal__feature-kicker-icon">
                       <i className="ph-duotone ph-stars-three" aria-hidden="true" />
                     </span>
-                    <span>New Feature</span>
+                    <span>Main Update</span>
                   </div>
-                  <span className="app-update-modal__feature-pill">Just Shipped</span>
+                  <span className="app-update-modal__feature-pill">Available Now</span>
                 </div>
 
                 <div className="app-update-modal__feature-spotlight-body">
@@ -172,60 +164,8 @@ const AppUpdateModal = () => {
                   </div>
                 </div>
 
-                {moreNewFeatures.length ? (
-                  <div className="app-update-modal__feature-mini-list">
-                    {moreNewFeatures.map((feature, index) => {
-                      const title = String(feature?.title || `Feature ${index + 2}`).trim();
-                      const icon = String(
-                        feature?.icon || "ph-duotone ph-stars-three",
-                      ).trim();
-                      const featureKey = `${title}-${index}`;
-
-                      return (
-                        <div key={featureKey} className="app-update-modal__feature-mini-item">
-                          <span className="app-update-modal__feature-mini-icon">
-                            <i className={icon} aria-hidden="true" />
-                          </span>
-                          <span>{title}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
               </div>
             ) : null}
-
-            <div className="app-update-modal__stats">
-              <div className="app-update-modal__stat">
-                <span className="app-update-modal__stat-icon bg-danger-subtle text-danger">
-                  <i className="ph-duotone ph-bug-beetle" aria-hidden="true" />
-                </span>
-                <div>
-                  <div className="app-update-modal__stat-value">{bugFixes.length}</div>
-                  <div className="app-update-modal__stat-label">Bug fixes</div>
-                </div>
-              </div>
-
-              <div className="app-update-modal__stat">
-                <span className="app-update-modal__stat-icon bg-success-subtle text-success">
-                  <i className="ph-duotone ph-magic-wand" aria-hidden="true" />
-                </span>
-                <div>
-                  <div className="app-update-modal__stat-value">{improvements.length}</div>
-                  <div className="app-update-modal__stat-label">Improvements</div>
-                </div>
-              </div>
-
-              <div className="app-update-modal__stat">
-                <span className="app-update-modal__stat-icon bg-warning-subtle text-warning">
-                  <i className="ph-duotone ph-confetti" aria-hidden="true" />
-                </span>
-                <div>
-                  <div className="app-update-modal__stat-value">{totalItems}</div>
-                  <div className="app-update-modal__stat-label">Highlights</div>
-                </div>
-              </div>
-            </div>
 
             <div className="app-update-modal__actions">
               <Button color="light" className="app-update-modal__later" onClick={closeForNow}>
@@ -240,15 +180,15 @@ const AppUpdateModal = () => {
 
           <section className="app-update-modal__details">
             {newFeatures.length ? (
-              <div className="app-update-modal__panel">
+              <div className="app-update-modal__panel app-update-modal__panel--main">
                 <div className="app-update-modal__panel-head">
                   <span className="app-update-modal__panel-badge text-primary bg-primary-subtle">
                     <i className="ph-duotone ph-sparkle" aria-hidden="true" />
                   </span>
                   <div>
-                    <div className="app-update-modal__panel-title">New Features</div>
+                    <div className="app-update-modal__panel-title">What's New</div>
                     <div className="app-update-modal__panel-subtitle">
-                      New tools and workflows included in this release
+                      Key changes now available in Orkelo
                     </div>
                   </div>
                 </div>
@@ -283,60 +223,6 @@ const AppUpdateModal = () => {
                 </ul>
               </div>
             ) : null}
-
-            {bugFixes.length ? (
-              <div className="app-update-modal__panel">
-                <div className="app-update-modal__panel-head">
-                  <span className="app-update-modal__panel-badge text-danger bg-danger-subtle">
-                    <i className="ph-duotone ph-bug-beetle" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <div className="app-update-modal__panel-title">Bug Fixes</div>
-                    <div className="app-update-modal__panel-subtitle">
-                      Issues that were fixed in this release
-                    </div>
-                  </div>
-                </div>
-
-                <ul className="app-update-modal__list">
-                  {bugFixes.map((item) => (
-                    <li key={item} className="app-update-modal__list-item">
-                      <span className="app-update-modal__list-icon text-danger">
-                        <i className="ph-fill ph-check-circle" aria-hidden="true" />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {improvements.length ? (
-              <div className="app-update-modal__panel">
-                <div className="app-update-modal__panel-head">
-                  <span className="app-update-modal__panel-badge text-success bg-success-subtle">
-                    <i className="ph-duotone ph-trend-up" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <div className="app-update-modal__panel-title">Improvements</div>
-                    <div className="app-update-modal__panel-subtitle">
-                      Quality and usability changes included in the update
-                    </div>
-                  </div>
-                </div>
-
-                <ul className="app-update-modal__list">
-                  {improvements.map((item) => (
-                    <li key={item} className="app-update-modal__list-item">
-                      <span className="app-update-modal__list-icon text-success">
-                        <i className="ph-fill ph-sparkle" aria-hidden="true" />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
           </section>
         </div>
       </ModalBody>
@@ -345,5 +231,4 @@ const AppUpdateModal = () => {
 };
 
 export default AppUpdateModal;
-
 
