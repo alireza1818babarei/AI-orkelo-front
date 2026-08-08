@@ -2,8 +2,28 @@ import { useEffect, useMemo, useRef } from "react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import "./taskChecklistCopyTour.css";
+import {
+  RELEASE_SURFACES,
+  getReleaseSurfaceVersion,
+  isReleaseSurfaceEnabledForVersion,
+  normalizeAppVersion,
+} from "../../config/appVersion";
+import {
+  buildVersionedFeatureStorageKey,
+  hasSeenVersionedFeature,
+  markVersionedFeatureSeen,
+  normalizeStorageKeyPart,
+} from "../../utils/releaseFeatureStorage";
 
-const COPY_TOUR_STORAGE_PREFIX = "orkelo_task_checklist_copy_tour_seen_v1";
+const COPY_TOUR_STORAGE_PREFIX = "orkelo_task_checklist_copy_tour_seen";
+const LEGACY_COPY_TOUR_STORAGE_PREFIX = "orkelo_task_checklist_copy_tour_seen_v1";
+const LEGACY_COPY_TOUR_RELEASE_VERSION = "v1.6.0";
+const COPY_TOUR_RELEASE_VERSION = getReleaseSurfaceVersion(
+  RELEASE_SURFACES.TASK_CHECKLIST_COPY_TOUR,
+);
+const shouldReadLegacyCopyTourStorage =
+  normalizeAppVersion(COPY_TOUR_RELEASE_VERSION) ===
+  normalizeAppVersion(LEGACY_COPY_TOUR_RELEASE_VERSION);
 const COPY_TOUR_TARGET_SELECTOR = '[data-orkelo-tour="task-checklist-copy"]';
 const COPY_TOUR_QUERY_VALUE = "task-copy";
 const BOARD_TOUR_QUERY_VALUE = "project-board";
@@ -15,40 +35,16 @@ const normalizeKeyPart = (value, fallback = "guest") => {
 };
 
 const buildStorageKey = (userId) =>
-  `${COPY_TOUR_STORAGE_PREFIX}:${normalizeKeyPart(userId)}`;
+  buildVersionedFeatureStorageKey({
+    prefix: COPY_TOUR_STORAGE_PREFIX,
+    userId,
+    featureVersion: COPY_TOUR_RELEASE_VERSION,
+  });
 
-const canUseLocalStorage = () => {
-  if (typeof window === "undefined") return false;
-
-  try {
-    const probeKey = `${COPY_TOUR_STORAGE_PREFIX}:probe`;
-    window.localStorage.setItem(probeKey, "1");
-    window.localStorage.removeItem(probeKey);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const hasSeenTour = (storageKey) => {
-  if (!canUseLocalStorage()) return false;
-
-  try {
-    return window.localStorage.getItem(storageKey) === "1";
-  } catch {
-    return false;
-  }
-};
-
-const markTourSeen = (storageKey) => {
-  if (!canUseLocalStorage()) return;
-
-  try {
-    window.localStorage.setItem(storageKey, "1");
-  } catch {
-    // Storage failures should not block the tour UI.
-  }
-};
+const buildLegacyStorageKeys = (userId) =>
+  shouldReadLegacyCopyTourStorage
+    ? [`${LEGACY_COPY_TOUR_STORAGE_PREFIX}:${normalizeStorageKeyPart(userId)}`]
+    : [];
 
 const getTourQueryValue = () => {
   if (typeof window === "undefined" || typeof URLSearchParams === "undefined") {
@@ -131,7 +127,7 @@ const createChecklistCopyTour = (storageKey) =>
     stagePadding: 10,
     stageRadius: 999,
     waitForElement: 1500,
-    onDestroyed: () => markTourSeen(storageKey),
+    onDestroyed: () => markVersionedFeatureSeen(storageKey),
     onPopoverRender: formatTourPopover,
     steps: [
       {
@@ -152,15 +148,26 @@ const TaskChecklistCopyTour = ({ enabled, taskId, userId }) => {
   const driverRef = useRef(null);
   const launchedKeyRef = useRef("");
   const storageKey = useMemo(() => buildStorageKey(userId), [userId]);
+  const legacyStorageKeys = useMemo(() => buildLegacyStorageKeys(userId), [userId]);
 
   useEffect(() => {
     if (!enabled) return undefined;
+    if (
+      !isReleaseSurfaceEnabledForVersion(
+        RELEASE_SURFACES.TASK_CHECKLIST_COPY_TOUR,
+      )
+    ) {
+      return undefined;
+    }
 
     const forceTour = hasForcedTourRequest();
-    if (!forceTour && hasSeenTour(storageKey)) return undefined;
+    if (!forceTour && hasSeenVersionedFeature(storageKey, legacyStorageKeys)) {
+      return undefined;
+    }
 
     const launchKey = [
       storageKey,
+      COPY_TOUR_RELEASE_VERSION,
       normalizeKeyPart(taskId, "task"),
       forceTour ? "forced" : "auto",
     ].join(":");
@@ -183,7 +190,7 @@ const TaskChecklistCopyTour = ({ enabled, taskId, userId }) => {
 
       driverRef.current = null;
     };
-  }, [enabled, storageKey, taskId]);
+  }, [enabled, legacyStorageKeys, storageKey, taskId]);
 
   return null;
 };

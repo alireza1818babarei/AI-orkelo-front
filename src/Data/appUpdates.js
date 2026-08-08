@@ -1,3 +1,5 @@
+import { APP_VERSION, normalizeAppVersion } from "../config/appVersion";
+
 export const APP_UPDATES = [
   {
     id: "2026-08-06-task-media-mobile-and-project-board-update",
@@ -66,5 +68,16 @@ export const APP_UPDATES = [
   },
 ];
 
-export const getLatestActiveAppUpdate = () =>
-  APP_UPDATES.find((item) => item?.active) ?? null;
+export const getActiveAppUpdateForVersion = (appVersion = APP_VERSION) => {
+  const normalizedAppVersion = normalizeAppVersion(appVersion);
+
+  return (
+    APP_UPDATES.find(
+      (item) =>
+        item?.active &&
+        normalizeAppVersion(item?.version) === normalizedAppVersion,
+    ) ?? null
+  );
+};
+
+export const getLatestActiveAppUpdate = getActiveAppUpdateForVersion;

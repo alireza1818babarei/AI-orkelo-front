@@ -1,5 +1,6 @@
 {
     "app": "orkelo",
+    "version": "v1.6.0",
     "information": "Deployed on Thursday, August 6, 2026.",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }

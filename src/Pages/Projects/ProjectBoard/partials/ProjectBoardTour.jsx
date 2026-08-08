@@ -2,8 +2,28 @@ import { useEffect, useMemo, useRef } from "react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import "../projectBoardTour.css";
+import {
+  RELEASE_SURFACES,
+  getReleaseSurfaceVersion,
+  isReleaseSurfaceEnabledForVersion,
+  normalizeAppVersion,
+} from "../../../../config/appVersion";
+import {
+  buildVersionedFeatureStorageKey,
+  hasSeenVersionedFeature,
+  markVersionedFeatureSeen,
+  normalizeStorageKeyPart,
+} from "../../../../utils/releaseFeatureStorage";
 
-const TOUR_STORAGE_PREFIX = "orkelo_project_board_tour_seen_v1";
+const TOUR_STORAGE_PREFIX = "orkelo_project_board_tour_seen";
+const LEGACY_TOUR_STORAGE_PREFIX = "orkelo_project_board_tour_seen_v1";
+const LEGACY_TOUR_RELEASE_VERSION = "v1.6.0";
+const TOUR_RELEASE_VERSION = getReleaseSurfaceVersion(
+  RELEASE_SURFACES.PROJECT_BOARD_TOUR,
+);
+const shouldReadLegacyTourStorage =
+  normalizeAppVersion(TOUR_RELEASE_VERSION) ===
+  normalizeAppVersion(LEGACY_TOUR_RELEASE_VERSION);
 const TOUR_QUERY_VALUE = "project-board";
 const FILTER_TARGET_SELECTOR = '[data-orkelo-tour="project-task-filter"]';
 const MEMBER_TARGET_SELECTOR = '[data-orkelo-tour="project-member-filter"]';
@@ -15,40 +35,16 @@ const normalizeKeyPart = (value, fallback = "guest") => {
 };
 
 const buildStorageKey = (userId) =>
-  `${TOUR_STORAGE_PREFIX}:${normalizeKeyPart(userId)}`;
+  buildVersionedFeatureStorageKey({
+    prefix: TOUR_STORAGE_PREFIX,
+    userId,
+    featureVersion: TOUR_RELEASE_VERSION,
+  });
 
-const canUseLocalStorage = () => {
-  if (typeof window === "undefined") return false;
-
-  try {
-    const probeKey = `${TOUR_STORAGE_PREFIX}:probe`;
-    window.localStorage.setItem(probeKey, "1");
-    window.localStorage.removeItem(probeKey);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const hasSeenTour = (storageKey) => {
-  if (!canUseLocalStorage()) return false;
-
-  try {
-    return window.localStorage.getItem(storageKey) === "1";
-  } catch {
-    return false;
-  }
-};
-
-const markTourSeen = (storageKey) => {
-  if (!canUseLocalStorage()) return;
-
-  try {
-    window.localStorage.setItem(storageKey, "1");
-  } catch {
-    // Storage failures should not block the tour UI.
-  }
-};
+const buildLegacyStorageKeys = (userId) =>
+  shouldReadLegacyTourStorage
+    ? [`${LEGACY_TOUR_STORAGE_PREFIX}:${normalizeStorageKeyPart(userId)}`]
+    : [];
 
 const hasForcedTourRequest = (locationSearch) => {
   if (typeof URLSearchParams === "undefined") return false;
@@ -124,7 +120,7 @@ const createProjectBoardTour = (storageKey) =>
     stagePadding: 12,
     stageRadius: 999,
     waitForElement: 1500,
-    onDestroyed: () => markTourSeen(storageKey),
+    onDestroyed: () => markVersionedFeatureSeen(storageKey),
     onPopoverRender: formatTourPopover,
     steps: [
       {
@@ -162,6 +158,7 @@ const ProjectBoardTour = ({
   const launchedKeyRef = useRef("");
   const onShowMembersPanelRef = useRef(onShowMembersPanel);
   const storageKey = useMemo(() => buildStorageKey(userId), [userId]);
+  const legacyStorageKeys = useMemo(() => buildLegacyStorageKeys(userId), [userId]);
 
   useEffect(() => {
     onShowMembersPanelRef.current = onShowMembersPanel;
@@ -169,12 +166,20 @@ const ProjectBoardTour = ({
 
   useEffect(() => {
     if (!enabled) return undefined;
+    if (
+      !isReleaseSurfaceEnabledForVersion(RELEASE_SURFACES.PROJECT_BOARD_TOUR)
+    ) {
+      return undefined;
+    }
 
     const forceTour = hasForcedTourRequest(locationSearch);
-    if (!forceTour && hasSeenTour(storageKey)) return undefined;
+    if (!forceTour && hasSeenVersionedFeature(storageKey, legacyStorageKeys)) {
+      return undefined;
+    }
 
     const launchKey = [
       storageKey,
+      TOUR_RELEASE_VERSION,
       normalizeKeyPart(projectId, "project"),
       forceTour ? "forced" : "auto",
     ].join(":");
@@ -199,7 +204,7 @@ const ProjectBoardTour = ({
 
       driverRef.current = null;
     };
-  }, [enabled, locationSearch, projectId, storageKey]);
+  }, [enabled, legacyStorageKeys, locationSearch, projectId, storageKey]);
 
   return null;
 };

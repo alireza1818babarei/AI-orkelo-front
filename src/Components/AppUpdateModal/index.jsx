@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Modal, ModalBody } from "reactstrap";
 import { useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
-import { getLatestActiveAppUpdate } from "../../data/appUpdates";
+import { getActiveAppUpdateForVersion } from "../../Data/appUpdates";
+import { APP_VERSION } from "../../config/appVersion";
 
 const UPDATE_READ_STORAGE_PREFIX = "orkelo_app_update_read";
 
@@ -37,7 +38,10 @@ const AppUpdateModal = () => {
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  const latestUpdate = useMemo(() => getLatestActiveAppUpdate(), []);
+  const latestUpdate = useMemo(
+    () => getActiveAppUpdateForVersion(APP_VERSION),
+    [],
+  );
   const updateId = normalizeUpdateId(latestUpdate?.version || latestUpdate?.id);
   const userId = String(user?.id ?? "guest");
   const normalizedPathname = normalizePathname(location?.pathname);
@@ -231,4 +235,3 @@ const AppUpdateModal = () => {
 };
 
 export default AppUpdateModal;
-
