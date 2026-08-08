@@ -1,6 +1,5 @@
 {
     "app": "orkelo",
-    "back-commit": "fix(task-manager): use dependency-free project mutation locks",
-    "front-commit": "Edit Filter",
+    "information": "Deployed on Thursday, August 6, 2026.",
     "Be sure to test this way so that you don't see cache": "https://orkelo.com/build-info.json?t=2"
 }
