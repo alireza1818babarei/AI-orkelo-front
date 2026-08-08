@@ -1830,7 +1830,7 @@ const TaskDetailModal = ({
           {checklistLoading ? (
             <TaskModalPlaceHolder />
           ) : (
-            <div className="row g-4">
+            <div className="row flex-wrap-reverse g-4">
               <div
                 className="col-12 col-lg-8 pt-2 pb-5 task-detail-modal__main"
                 style={{ paddingRight: 0 }}

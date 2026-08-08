@@ -19,9 +19,13 @@ import {
   reorderProjectTasksLocal,
   reorderProjectTaskThunk,
   removeTaskFromColumn,
+  setTaskFilters,
   updateProjectColumnThunk,
   archiveCompletedColumnTasksThunk,
+  hasTaskFilters,
+  normalizeTaskFilters,
   PROJECT_COLUMN_TASK_PAGE_SIZE,
+  serializeTaskFilters,
 } from "../../../store/projects/projectColumnsSlice";
 import {
   TODO_BOARD_TYPE,
@@ -45,6 +49,7 @@ import {
   updateProjectMemberRoleThunk,
 } from "../../../store/projects/projectMembersSlice";
 import { getCompanyMembersThunk } from "../../../store/company/companyMembersSlice";
+import { getProjectTagsThunk } from "../../../store/tags/tagsSlice";
 
 import ProjectDetailsModal from "../../../Components/projectDetailModal";
 import TaskDetailModal from "../../../Components/taskDetailModal";
@@ -174,6 +179,7 @@ const ProjectBoard = () => {
     tasksLoadingByColumnId,
     taskPaginationByColumnId,
     archivingCompletedByColumnId,
+    taskFilters,
   } = useSelector((s) => s.projectColumns);
   const {
     items: todoColumns,
@@ -195,6 +201,11 @@ const ProjectBoard = () => {
     status: companyMembersStatus,
     error: companyMembersError,
   } = useSelector((s) => s.companyMembers || {});
+  const {
+    items: projectTags,
+    projectId: tagsProjectId,
+    status: tagsStatus,
+  } = useSelector((s) => s.tags || {});
 
   const fromList = useMemo(() => {
     const numId = Number(id);
@@ -223,6 +234,20 @@ const ProjectBoard = () => {
     membersStatus === "loading" &&
     membersProjectId != null &&
     String(membersProjectId) === String(id);
+  const activeProjectTags =
+    tagsProjectId && String(tagsProjectId) === String(id) ? projectTags : [];
+  const projectTagsLoading =
+    tagsStatus === "loading" &&
+    tagsProjectId != null &&
+    String(tagsProjectId) === String(id);
+  const normalizedTaskFilters = useMemo(
+    () => normalizeTaskFilters(taskFilters),
+    [taskFilters],
+  );
+  const taskFiltersKey = useMemo(
+    () => serializeTaskFilters(normalizedTaskFilters),
+    [normalizedTaskFilters],
+  );
   const columnsFromSlice =
     columnsProjectId && String(columnsProjectId) === String(id)
       ? projectColumns
@@ -345,9 +370,12 @@ const ProjectBoard = () => {
 
   useEffect(() => {
     if (!id) return;
+    tasksForcedProjectRef.current = null;
+    dispatch(setTaskFilters({}));
     dispatch(getProjectDetailsThunk(id));
     dispatch(getProjectColumnsThunk(id));
     dispatch(getProjectMembersThunk(id));
+    dispatch(getProjectTagsThunk(id));
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -443,7 +471,8 @@ const ProjectBoard = () => {
     if (!columnIdsKey) return;
 
     const ids = columnIdsKey.split("|").filter(Boolean);
-    const shouldForce = String(tasksForcedProjectRef.current) !== String(id);
+    const forcedKey = `${String(id)}:${taskFiltersKey}`;
+    const shouldForce = String(tasksForcedProjectRef.current) !== forcedKey;
     ids.forEach((columnId) => {
       dispatch(
         getColumnTasksThunk({
@@ -452,11 +481,12 @@ const ProjectBoard = () => {
           page: 1,
           perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
           force: shouldForce,
+          filters: normalizedTaskFilters,
         }),
       );
     });
-    if (shouldForce) tasksForcedProjectRef.current = String(id);
-  }, [dispatch, id, columnsProjectId, columnIdsKey]);
+    if (shouldForce) tasksForcedProjectRef.current = forcedKey;
+  }, [dispatch, id, columnsProjectId, columnIdsKey, normalizedTaskFilters, taskFiltersKey]);
 
   const todoColumnIdsKey = useMemo(() => {
     if (!id || !isTodoListView) return "";
@@ -493,6 +523,25 @@ const ProjectBoard = () => {
   const tasksLoading =
     !columnsReadyForActiveProject || tasksNeedLoad;
 
+  const handleTaskFiltersChange = useCallback(
+    (nextFilters) => {
+      dispatch(setTaskFilters(nextFilters));
+    },
+    [dispatch],
+  );
+
+  const handleAssigneeFilterChange = useCallback(
+    (assigneeIds) => {
+      dispatch(
+        setTaskFilters({
+          ...normalizedTaskFilters,
+          assigneeIds,
+        }),
+      );
+    },
+    [dispatch, normalizedTaskFilters],
+  );
+
   const handleLoadMoreColumnTasks = useCallback(
     (column) => {
       const projectId = Number(id);
@@ -510,10 +559,11 @@ const ProjectBoard = () => {
           page: Number(pagination.currentPage || 1) + 1,
           perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
           append: true,
+          filters: normalizedTaskFilters,
         }),
       );
     },
-    [dispatch, id, taskPaginationByColumnId, tasksLoadingByColumnId],
+    [dispatch, id, normalizedTaskFilters, taskPaginationByColumnId, tasksLoadingByColumnId],
   );
 
   const {
@@ -788,6 +838,7 @@ const ProjectBoard = () => {
           page: 1,
           perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
           force: true,
+          filters: normalizedTaskFilters,
         }),
       );
       dispatch(getArchivedTasks({ projectId }));
@@ -825,6 +876,19 @@ const ProjectBoard = () => {
           },
         }),
       ).unwrap();
+
+      if (hasTaskFilters(normalizedTaskFilters)) {
+        dispatch(
+          getColumnTasksThunk({
+            projectId: project.id,
+            columnId: column.id,
+            page: 1,
+            perPage: PROJECT_COLUMN_TASK_PAGE_SIZE,
+            force: true,
+            filters: normalizedTaskFilters,
+          }),
+        );
+      }
     } catch (err) {
       const msg = err?.message || err?.data?.message || "Task create failed";
       toastError(msg);
@@ -1219,6 +1283,10 @@ const ProjectBoard = () => {
             disableEdit={!id}
             disableInfo={!project}
             showDelete={canDeleteProject}
+            projectTags={activeProjectTags}
+            tagsLoading={projectTagsLoading}
+            filters={normalizedTaskFilters}
+            onFiltersChange={handleTaskFiltersChange}
           />
 
           <div className="project-board-main__content">
@@ -1295,6 +1363,8 @@ const ProjectBoard = () => {
             removingByMemberId={projectMemberRemovingByMemberId}
             onUpdateMemberRole={handleUpdateProjectMemberRole}
             roleUpdatingByMemberId={projectMemberRoleUpdatingByMemberId}
+            selectedAssigneeIds={normalizedTaskFilters.assigneeIds}
+            onAssigneeFilterChange={handleAssigneeFilterChange}
             collapsed={membersPanelCollapsed}
           />
         </>

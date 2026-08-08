@@ -1,5 +1,5 @@
 import { Button, Col, Row } from "reactstrap";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../projectTaskFilter.css";
 
 const TAG_COLORS = [
@@ -25,78 +25,52 @@ const normalizeText = (value) =>
 		.trim()
 		.toLowerCase();
 
-const getTaskElements = () =>
-	Array.from(
-		document.querySelectorAll(".project-board-main__content .board-item-shell"),
-	);
+const normalizeIdArray = (value) => {
+	const source = Array.isArray(value) ? value : value == null ? [] : [value];
+	const seen = new Set();
 
-const getTaskSearchContent = (taskElement) => {
-	const title =
-		taskElement.querySelector(".board-item-title")?.textContent ?? "";
-	const description =
-		taskElement.querySelector(".board-item-desc")?.textContent ?? "";
-	const tags = Array.from(
-		taskElement.querySelectorAll(".board-item-tags-row .badge"),
-	).map((tag) => tag.textContent ?? "");
-
-	return normalizeText([title, description, ...tags].join(" "));
+	return source
+		.map((id) => Number(id))
+		.filter((id) => Number.isInteger(id) && id > 0)
+		.filter((id) => {
+			if (seen.has(id)) return false;
+			seen.add(id);
+			return true;
+		});
 };
 
-const normalizeTagColor = (value) => {
-	const color = String(value ?? "").trim();
-	if (!color || color.includes("var(--primary)")) return "";
-	return color;
+const normalizePriorityArray = (value) => {
+	const source = Array.isArray(value) ? value : value == null ? [] : [value];
+	const allowed = new Set(PRIORITY_OPTIONS.map((priority) => priority.value));
+	const seen = new Set();
+
+	return source
+		.map(normalizeText)
+		.filter((priority) => allowed.has(priority))
+		.filter((priority) => {
+			if (seen.has(priority)) return false;
+			seen.add(priority);
+			return true;
+		});
 };
 
-const getTaskTags = (taskElement) =>
-	Array.from(taskElement.querySelectorAll(".board-item-tags-row .badge"))
-		.map((tag) => ({
-			name: String(tag.textContent ?? "").trim(),
-			color: normalizeTagColor(
-				tag.style.backgroundColor || tag.style.background,
-			),
-		}))
-		.filter((tag) => Boolean(tag.name));
+const normalizeProjectTags = (tags) =>
+	(Array.isArray(tags) ? tags : [])
+		.map((tag, index) => {
+			const id = Number(tag?.id);
+			const name = String(tag?.name ?? "").trim();
+			if (!Number.isInteger(id) || id <= 0 || !name) return null;
+			if (tag?.is_active === false) return null;
 
-const getTaskTagNames = (taskElement) =>
-	getTaskTags(taskElement).map((tag) => tag.name);
-
-const getTaskPriority = (taskElement) => {
-	const priorityDataElement = taskElement.hasAttribute("data-task-priority")
-		? taskElement
-		: taskElement.querySelector("[data-task-priority]");
-	const explicitPriority = normalizeText(
-		priorityDataElement?.getAttribute("data-task-priority"),
-	);
-
-	if (
-		PRIORITY_OPTIONS.some((priority) => priority.value === explicitPriority)
-	) {
-		return explicitPriority;
-	}
-
-	const priorityCue = taskElement.querySelector(".board-item-priority-cue");
-	if (!priorityCue) return "";
-
-	const className = String(priorityCue.className ?? "");
-	const priorityFromClass = PRIORITY_OPTIONS.find((priority) =>
-		className.includes(`board-item-priority-cue--${priority.value}`),
-	);
-
-	if (priorityFromClass) return priorityFromClass.value;
-
-	const accessibleLabel = normalizeText(
-		priorityCue.getAttribute("aria-label") ||
-			priorityCue.getAttribute("title") ||
-			priorityCue.textContent,
-	);
-
-	return (
-		PRIORITY_OPTIONS.find((priority) =>
-			accessibleLabel.includes(priority.value),
-		)?.value ?? ""
-	);
-};
+			return {
+				id,
+				key: String(id),
+				name,
+				color: String(tag?.color ?? "").trim() || TAG_COLORS[index % TAG_COLORS.length],
+			};
+		})
+		.filter(Boolean)
+		.sort((a, b) => a.name.localeCompare(b.name));
 
 const ProjectBoardHeader = ({
 	projectName,
@@ -110,123 +84,45 @@ const ProjectBoardHeader = ({
 	disableEdit,
 	disableInfo,
 	showDelete = true,
+	projectTags = [],
+	tagsLoading = false,
+	filters = {},
+	onFiltersChange,
 }) => {
 	const title = [projectName, viewLabel].filter(Boolean).join(" / ");
 	const filterDisabled = normalizeText(viewLabel) === "todo list";
+	const availableTags = useMemo(
+		() => normalizeProjectTags(projectTags),
+		[projectTags],
+	);
+	const activeTagIds = useMemo(
+		() => normalizeIdArray(filters?.tagIds ?? filters?.tag_ids),
+		[filters],
+	);
+	const activePriorities = useMemo(
+		() => normalizePriorityArray(filters?.priorities ?? filters?.priority),
+		[filters],
+	);
+	const activeAssigneeIds = useMemo(
+		() => normalizeIdArray(filters?.assigneeIds ?? filters?.assignee_ids),
+		[filters],
+	);
+	const activeSearch = String(filters?.search ?? "").trim();
 	const [filterOpen, setFilterOpen] = useState(false);
-	const [availableTags, setAvailableTags] = useState([]);
-	const [draftTags, setDraftTags] = useState([]);
+	const [draftTagIds, setDraftTagIds] = useState([]);
 	const [draftPriorities, setDraftPriorities] = useState([]);
 	const [draftSearch, setDraftSearch] = useState("");
-	const [activeTags, setActiveTags] = useState([]);
-	const [activePriorities, setActivePriorities] = useState([]);
-	const [activeSearch, setActiveSearch] = useState("");
 
 	const hasActiveFilters = Boolean(
-		activeTags.length || activePriorities.length || activeSearch.trim(),
+		activeTagIds.length ||
+			activePriorities.length ||
+			activeAssigneeIds.length ||
+			activeSearch,
 	);
-
-	const scanBoardTags = useCallback(() => {
-		if (typeof document === "undefined") return;
-
-		const tagMap = new Map();
-		getTaskElements().forEach((taskElement) => {
-			getTaskTags(taskElement).forEach(({ name, color }) => {
-				const key = normalizeText(name);
-				if (!key) return;
-
-				const current = tagMap.get(key);
-				if (!current || (!current.color && color)) {
-					tagMap.set(key, { name, color });
-				}
-			});
-		});
-
-		const nextTags = Array.from(tagMap.entries())
-			.map(([key, tag], index) => ({
-				key,
-				name: tag.name,
-				color: tag.color || TAG_COLORS[index % TAG_COLORS.length],
-			}))
-			.sort((a, b) => a.name.localeCompare(b.name));
-
-		setAvailableTags((currentTags) => {
-			const currentKey = currentTags
-				.map((tag) => `${tag.key}:${tag.name}:${tag.color}`)
-				.join("|");
-			const nextKey = nextTags
-				.map((tag) => `${tag.key}:${tag.name}:${tag.color}`)
-				.join("|");
-			return currentKey === nextKey ? currentTags : nextTags;
-		});
-	}, []);
-
-	const applyFiltersToBoard = useCallback(() => {
-		if (typeof document === "undefined") return;
-
-		const normalizedSelectedTags = activeTags
-			.map(normalizeText)
-			.filter(Boolean);
-		const normalizedSelectedPriorities = activePriorities
-			.map(normalizeText)
-			.filter(Boolean);
-		const normalizedSearch = normalizeText(activeSearch);
-		const taskElements = getTaskElements();
-
-		taskElements.forEach((taskElement) => {
-			const taskTags = getTaskTagNames(taskElement).map(normalizeText);
-			const taskPriority = getTaskPriority(taskElement);
-			const matchesTags =
-				normalizedSelectedTags.length === 0 ||
-				normalizedSelectedTags.some((selectedTag) =>
-					taskTags.includes(selectedTag),
-				);
-			const matchesPriority =
-				normalizedSelectedPriorities.length === 0 ||
-				normalizedSelectedPriorities.includes(taskPriority);
-			const matchesSearch =
-				!normalizedSearch ||
-				getTaskSearchContent(taskElement).includes(normalizedSearch);
-			const isMatch = matchesTags && matchesPriority && matchesSearch;
-
-			taskElement.classList.toggle(
-				"task-filter-hidden",
-				hasActiveFilters && !isMatch,
-			);
-			taskElement.classList.remove("task-filter-dimmed");
-		});
-	}, [activePriorities, activeSearch, activeTags, hasActiveFilters]);
-
-	useEffect(() => {
-		if (typeof document === "undefined") return undefined;
-
-		const boardRoot = document.querySelector(".project-board-main__content");
-		scanBoardTags();
-		applyFiltersToBoard();
-
-		if (!boardRoot || typeof MutationObserver === "undefined") return undefined;
-
-		let animationFrame = null;
-		const observer = new MutationObserver(() => {
-			if (animationFrame) cancelAnimationFrame(animationFrame);
-			animationFrame = requestAnimationFrame(() => {
-				scanBoardTags();
-				applyFiltersToBoard();
-			});
-		});
-
-		observer.observe(boardRoot, { childList: true, subtree: true });
-
-		return () => {
-			observer.disconnect();
-			if (animationFrame) cancelAnimationFrame(animationFrame);
-		};
-	}, [applyFiltersToBoard, scanBoardTags]);
 
 	useEffect(() => {
 		if (!filterOpen || typeof document === "undefined") return undefined;
 
-		scanBoardTags();
 		const previousOverflow = document.body.style.overflow;
 		document.body.style.overflow = "hidden";
 
@@ -239,20 +135,7 @@ const ProjectBoardHeader = ({
 			document.body.style.overflow = previousOverflow;
 			document.removeEventListener("keydown", handleEscape);
 		};
-	}, [filterOpen, scanBoardTags]);
-
-	useEffect(
-		() => () => {
-			if (typeof document === "undefined") return;
-			getTaskElements().forEach((taskElement) => {
-				taskElement.classList.remove(
-					"task-filter-hidden",
-					"task-filter-dimmed",
-				);
-			});
-		},
-		[],
-	);
+	}, [filterOpen]);
 
 	useEffect(() => {
 		if (typeof window === "undefined" || typeof window.$ !== "function") return;
@@ -272,25 +155,21 @@ const ProjectBoardHeader = ({
 
 	const openFilterDrawer = () => {
 		if (filterDisabled) return;
-		setDraftTags(activeTags);
+		setDraftTagIds(activeTagIds);
 		setDraftPriorities(activePriorities);
 		setDraftSearch(activeSearch);
-		scanBoardTags();
 		setFilterOpen(true);
 	};
 
-	const toggleDraftTag = (tagName) => {
-		setDraftTags((current) => {
-			const exists = current.some(
-				(selectedTag) => normalizeText(selectedTag) === normalizeText(tagName),
-			);
-			return exists
-				? current.filter(
-						(selectedTag) =>
-							normalizeText(selectedTag) !== normalizeText(tagName),
-					)
-				: [...current, tagName];
-		});
+	const toggleDraftTag = (tagId) => {
+		const normalizedTagId = Number(tagId);
+		if (!Number.isInteger(normalizedTagId) || normalizedTagId <= 0) return;
+
+		setDraftTagIds((current) =>
+			current.includes(normalizedTagId)
+				? current.filter((value) => value !== normalizedTagId)
+				: [...current, normalizedTagId],
+		);
 	};
 
 	const toggleDraftPriority = (priorityValue) => {
@@ -302,19 +181,25 @@ const ProjectBoardHeader = ({
 	};
 
 	const handleApplyFilters = () => {
-		setActiveTags(draftTags);
-		setActivePriorities(draftPriorities);
-		setActiveSearch(draftSearch.trim());
+		onFiltersChange?.({
+			tagIds: draftTagIds,
+			priorities: draftPriorities,
+			assigneeIds: activeAssigneeIds,
+			search: draftSearch.trim(),
+		});
 		setFilterOpen(false);
 	};
 
 	const handleResetFilters = () => {
-		setDraftTags([]);
+		setDraftTagIds([]);
 		setDraftPriorities([]);
 		setDraftSearch("");
-		setActiveTags([]);
-		setActivePriorities([]);
-		setActiveSearch("");
+		onFiltersChange?.({
+			tagIds: [],
+			priorities: [],
+			assigneeIds: [],
+			search: "",
+		});
 	};
 
 	return (
@@ -490,23 +375,21 @@ const ProjectBoardHeader = ({
 							})}
 						</div>
 					</section>
-          
+
 					<section
 						className="project-task-filter-section"
 						aria-labelledby="project-tags-title"
 					>
 						<div className="project-task-filter-section__heading">
 							<h6 id="project-tags-title">Project Tags</h6>
-							{draftTags.length ? (
-								<span>{draftTags.length} selected</span>
+							{draftTagIds.length ? (
+								<span>{draftTagIds.length} selected</span>
 							) : null}
 						</div>
 
 						<div className="project-task-filter-tags">
 							{filteredTags.map((tag) => {
-								const selected = draftTags.some(
-									(selectedTag) => normalizeText(selectedTag) === tag.key,
-								);
+								const selected = draftTagIds.includes(tag.id);
 
 								return (
 									<button
@@ -514,7 +397,7 @@ const ProjectBoardHeader = ({
 										key={tag.key}
 										className={`project-task-filter-tag ${selected ? "is-selected" : ""}`}
 										style={{ "--tag-color": tag.color }}
-										onClick={() => toggleDraftTag(tag.name)}
+										onClick={() => toggleDraftTag(tag.id)}
 										aria-pressed={selected}
 									>
 										<i className="ph ph-tag" aria-hidden="true" />
@@ -530,9 +413,11 @@ const ProjectBoardHeader = ({
 							})}
 						</div>
 
-						{!availableTags.length ? (
+						{tagsLoading ? (
+							<p className="project-task-filter-empty">Loading tags...</p>
+						) : !availableTags.length ? (
 							<p className="project-task-filter-empty">
-								No task tags are available.
+								No project tags are available.
 							</p>
 						) : filteredTags.length === 0 ? (
 							<p className="project-task-filter-empty">

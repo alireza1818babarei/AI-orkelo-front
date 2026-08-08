@@ -4,6 +4,88 @@ import {getErrorMessage} from "../../utils/getError";
 
 export const PROJECT_COLUMN_TASK_PAGE_SIZE = 5;
 
+const TASK_PRIORITY_FILTER_VALUES = new Set(["low", "medium", "high", "urgent"]);
+
+const normalizeFilterIds = (value) => {
+  const source = Array.isArray(value) ? value : value == null ? [] : [value];
+  const seen = new Set();
+
+  return source
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0)
+    .filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+};
+
+const normalizePriorityFilters = (value) => {
+  const source = Array.isArray(value) ? value : value == null ? [] : [value];
+  const seen = new Set();
+
+  return source
+    .map((priority) =>
+      String(priority ?? "")
+        .trim()
+        .toLowerCase(),
+    )
+    .filter((priority) => TASK_PRIORITY_FILTER_VALUES.has(priority))
+    .filter((priority) => {
+      if (seen.has(priority)) return false;
+      seen.add(priority);
+      return true;
+    });
+};
+
+export const normalizeTaskFilters = (filters = {}) => ({
+  tagIds: normalizeFilterIds(filters?.tagIds ?? filters?.tag_ids ?? filters?.tagId ?? filters?.tag_id),
+  priorities: normalizePriorityFilters(filters?.priorities ?? filters?.priority),
+  assigneeIds: normalizeFilterIds(
+    filters?.assigneeIds ??
+      filters?.assignee_ids ??
+      filters?.assigneeId ??
+      filters?.assignee_id,
+  ),
+  search: String(filters?.search ?? "").trim(),
+});
+
+export const hasTaskFilters = (filters = {}) => {
+  const normalized = normalizeTaskFilters(filters);
+  return Boolean(
+    normalized.tagIds.length ||
+      normalized.priorities.length ||
+      normalized.assigneeIds.length ||
+      normalized.search,
+  );
+};
+
+export const serializeTaskFilters = (filters = {}) => {
+  const normalized = normalizeTaskFilters(filters);
+
+  return [
+    `tags:${normalized.tagIds.join(",")}`,
+    `priorities:${normalized.priorities.join(",")}`,
+    `assignees:${normalized.assigneeIds.join(",")}`,
+    `search:${normalized.search}`,
+  ].join("|");
+};
+
+const areTaskFiltersEqual = (left = {}, right = {}) =>
+  serializeTaskFilters(left) === serializeTaskFilters(right);
+
+const buildTaskFilterParams = (filters = {}) => {
+  const normalized = normalizeTaskFilters(filters);
+  const params = {};
+
+  if (normalized.tagIds.length) params.tag_ids = normalized.tagIds;
+  if (normalized.priorities.length) params.priorities = normalized.priorities;
+  if (normalized.assigneeIds.length) params.assignee_ids = normalized.assigneeIds;
+  if (normalized.search) params.search = normalized.search;
+
+  return params;
+};
+
 const normalizeOrderedIds = (orderedIds) =>
   (Array.isArray(orderedIds) ? orderedIds : [])
     .map((id) => Number(id))
@@ -71,6 +153,16 @@ const mergeUniqueTasks = (currentTasks, nextTasks) => {
 
   return merged;
 };
+
+const clearLoadedColumnTasks = (columns) =>
+  (Array.isArray(columns) ? columns : []).map((column) => ({
+    ...column,
+    tasks: undefined,
+    tasks_count: undefined,
+    tasksCount: undefined,
+    task_count: undefined,
+    taskCount: undefined,
+  }));
 
 const normalizeColumnIdValue = (columnId) => {
   const n = Number(columnId);
@@ -445,10 +537,15 @@ export const getColumnTasksThunk = createAsyncThunk(
       page = 1,
       perPage = PROJECT_COLUMN_TASK_PAGE_SIZE,
       append = false,
+      filters,
     },
-    {rejectWithValue},
+    {getState, rejectWithValue},
   ) => {
     try {
+      const state = getState();
+      const normalizedFilters = normalizeTaskFilters(
+        filters === undefined ? state?.projectColumns?.taskFilters : filters,
+      );
       const normalizedPage = normalizePositiveInt(page, 1);
       const normalizedPerPage = normalizePositiveInt(
         perPage,
@@ -460,6 +557,7 @@ export const getColumnTasksThunk = createAsyncThunk(
           params: {
             page: normalizedPage,
             per_page: normalizedPerPage,
+            ...buildTaskFilterParams(normalizedFilters),
           },
         },
       );
@@ -476,6 +574,7 @@ export const getColumnTasksThunk = createAsyncThunk(
         projectId,
         columnId,
         append,
+        filters: normalizedFilters,
         meta,
         tasks: Array.isArray(payload) ? payload : [],
       };
@@ -484,12 +583,17 @@ export const getColumnTasksThunk = createAsyncThunk(
     }
   },
   {
-    condition: ({projectId, columnId, force, page = 1}, {getState}) => {
+    condition: ({projectId, columnId, force, page = 1, filters}, {getState}) => {
       if (force) return true;
 
       const state = getState();
       const slice = state?.projectColumns ?? null;
       if (!slice) return true;
+
+      const requestedFilters = normalizeTaskFilters(
+        filters === undefined ? slice.taskFilters : filters,
+      );
+      if (!areTaskFiltersEqual(requestedFilters, slice.taskFilters)) return true;
 
       if (slice.projectId && String(slice.projectId) !== String(projectId)) {
         return true;
@@ -545,6 +649,7 @@ const initialState = {
   tasksErrorByColumnId: {},
   taskPaginationByColumnId: {},
   archivingCompletedByColumnId: {},
+  taskFilters: normalizeTaskFilters(),
 };
 
 const projectColumnsSlice = createSlice({
@@ -559,6 +664,16 @@ const projectColumnsSlice = createSlice({
       state.tasksErrorByColumnId = {};
       state.taskPaginationByColumnId = {};
       state.archivingCompletedByColumnId = {};
+    },
+    setTaskFilters: (state, action) => {
+      const nextFilters = normalizeTaskFilters(action.payload);
+      if (areTaskFiltersEqual(state.taskFilters, nextFilters)) return;
+
+      state.taskFilters = nextFilters;
+      state.items = clearLoadedColumnTasks(state.items);
+      state.tasksLoadingByColumnId = {};
+      state.tasksErrorByColumnId = {};
+      state.taskPaginationByColumnId = {};
     },
     reorderProjectColumnsLocal: (state, action) => {
       const {projectId, orderedIds} = action.payload || {};
@@ -732,6 +847,7 @@ const projectColumnsSlice = createSlice({
     builder.addCase(createProjectTaskThunk.fulfilled, (state, action) => {
       const {projectId, columnId, task} = action.payload || {};
       if (!task || !columnId) return;
+      if (hasTaskFilters(state.taskFilters)) return;
       const key = String(columnId);
       state.projectId = projectId ?? state.projectId;
       state.items = (state.items || []).map((c) => {
@@ -760,7 +876,16 @@ const projectColumnsSlice = createSlice({
     });
 
     builder.addCase(getColumnTasksThunk.pending, (state, action) => {
-      const {projectId, columnId} = action.meta?.arg ?? {};
+      const {projectId, columnId, filters} = action.meta?.arg ?? {};
+      const requestedFilters = normalizeTaskFilters(
+        filters === undefined ? state.taskFilters : filters,
+      );
+      if (!areTaskFiltersEqual(state.taskFilters, requestedFilters)) {
+        state.taskFilters = requestedFilters;
+        state.items = clearLoadedColumnTasks(state.items);
+        state.taskPaginationByColumnId = {};
+      }
+
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
@@ -768,7 +893,9 @@ const projectColumnsSlice = createSlice({
       delete state.tasksErrorByColumnId[key];
     });
     builder.addCase(getColumnTasksThunk.fulfilled, (state, action) => {
-      const {projectId, columnId, tasks, meta, append} = action.payload || {};
+      const {projectId, columnId, tasks, meta, append, filters} = action.payload || {};
+      if (!areTaskFiltersEqual(filters, state.taskFilters)) return;
+
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
@@ -791,7 +918,12 @@ const projectColumnsSlice = createSlice({
       });
     });
     builder.addCase(getColumnTasksThunk.rejected, (state, action) => {
-      const {projectId, columnId, page = 1} = action.meta?.arg ?? {};
+      const {projectId, columnId, page = 1, filters} = action.meta?.arg ?? {};
+      const requestedFilters = normalizeTaskFilters(
+        filters === undefined ? state.taskFilters : filters,
+      );
+      if (!areTaskFiltersEqual(requestedFilters, state.taskFilters)) return;
+
       state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
@@ -874,6 +1006,7 @@ const projectColumnsSlice = createSlice({
 export const {
   clearProjectColumns,
   setProjectColumns,
+  setTaskFilters,
   reorderProjectColumnsLocal,
   reorderProjectTasksLocal,
   updateTaskInColumn,
