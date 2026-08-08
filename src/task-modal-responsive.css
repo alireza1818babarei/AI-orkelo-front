@@ -19,7 +19,6 @@ body .task-detail-modal-dialog .dropdown,
 body .task-detail-modal-dialog .dropdown-menu {
   box-sizing: border-box;
   min-width: 0;
-  max-width: 100%;
 }
 
 body .task-detail-modal-dialog {
