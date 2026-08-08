@@ -91,8 +91,19 @@ export const isRecordedVoiceAttachment = (a) => {
   return name.startsWith("voice-recording-");
 };
 
+const hasExplicitVoiceFlag = (value) =>
+  value === true ||
+  value === 1 ||
+  String(value ?? "").trim().toLowerCase() === "true" ||
+  String(value ?? "").trim() === "1";
+
+export const isVoiceAttachment = (a) => {
+  if (hasExplicitVoiceFlag(a?.is_voice ?? a?.isVoice)) return true;
+  return isRecordedVoiceAttachment(a);
+};
+
 export const isAudioAttachment = (a) => {
-  const mime = String(a?.mime || "").toLowerCase();
+  const mime = String(a?.mime_type ?? a?.mimeType ?? a?.mime ?? "").toLowerCase();
   if (mime.startsWith("audio/")) return true;
 
   if (isRecordedVoiceAttachment(a)) return true;
@@ -163,7 +174,7 @@ const resolveVideoMimeType = (a) => {
 };
 
 const resolveAudioMimeType = (a) => {
-  const mime = String(a?.mime || "").toLowerCase();
+  const mime = String(a?.mime_type ?? a?.mimeType ?? a?.mime ?? "").toLowerCase();
   if (mime.startsWith("audio/")) return mime;
 
   const ext = getAttachmentExt(a);
@@ -429,7 +440,8 @@ const getVoiceAttachmentDurationSeconds = (attachment) => {
   const directSeconds = normalizeVoiceDurationSeconds(
     attachment?.voiceDurationSeconds ??
       attachment?.voice_duration_seconds ??
-      attachment?.duration_seconds,
+      attachment?.duration_seconds ??
+      attachment?.duration,
   );
   if (directSeconds) return directSeconds;
 
@@ -1128,11 +1140,11 @@ export default function TaskAttachments({
   const uploadAbortControllerRef = useRef(null);
   const uploadCancelReasonRef = useRef(null);
   const voiceAttachments = useMemo(
-    () => (attachments || []).filter(isRecordedVoiceAttachment),
+    () => (attachments || []).filter(isVoiceAttachment),
     [attachments],
   );
   const fileAttachments = useMemo(
-    () => (attachments || []).filter((attachment) => !isRecordedVoiceAttachment(attachment)),
+    () => (attachments || []).filter((attachment) => !isVoiceAttachment(attachment)),
     [attachments],
   );
 
