@@ -1,7 +1,17 @@
 import api from "../api/axios";
 
-export const createTelegramLinkClaim = async () => {
-  const response = await api.post("/telegram/link-claims");
+export const createTelegramLinkClaim = async ({ signal } = {}) => {
+  const response = signal
+    ? await api.post("/telegram/link-claims", undefined, { signal })
+    : await api.post("/telegram/link-claims");
+  return response.data;
+};
+
+export const getTelegramLinkClaimStatus = async (claimId, { signal } = {}) => {
+  const response = await api.get(
+    `/telegram/link-claims/${encodeURIComponent(String(claimId))}/status`,
+    { signal },
+  );
   return response.data;
 };
 

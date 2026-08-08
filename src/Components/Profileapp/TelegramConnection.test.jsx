@@ -1,27 +1,41 @@
 import React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TelegramConnection, {
   getTelegramErrorMessage,
 } from "./TelegramConnection";
-import { createTelegramLinkClaim } from "../../services/telegram";
-import { toastError, toastInfo } from "../../utils/sweetAlert";
+import {
+  createTelegramLinkClaim,
+  getTelegramLinkClaimStatus,
+} from "../../services/telegram";
+import { toastError, toastInfo, toastSuccess } from "../../utils/sweetAlert";
+
+const { dispatchMock } = vi.hoisted(() => ({
+  dispatchMock: vi.fn(),
+}));
+
+vi.mock("react-redux", () => ({
+  useDispatch: () => dispatchMock,
+}));
 
 vi.mock("../../services/telegram", () => ({
   createTelegramLinkClaim: vi.fn(),
+  getTelegramLinkClaimStatus: vi.fn(),
 }));
 
 vi.mock("../../utils/sweetAlert", () => ({
   toastError: vi.fn(),
   toastInfo: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 const claimResponse = {
   message: "Telegram connection link created.",
   code: "telegram_link_created",
   data: {
+    claimId: 42,
     url: "https://t.me/example_bot?start=test-token",
-    expires_at: "2026-08-06T12:10:00Z",
+    expires_at: "2099-08-06T12:10:00Z",
     expires_in_seconds: 600,
   },
 };
@@ -29,6 +43,11 @@ const claimResponse = {
 describe("TelegramConnection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getTelegramLinkClaimStatus.mockResolvedValue({
+      claimId: 42,
+      status: "pending",
+      connected: false,
+    });
     vi.spyOn(window, "open").mockReturnValue({});
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -38,6 +57,10 @@ describe("TelegramConnection", () => {
       configurable: true,
       value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders the Telegram status and connect button", () => {
@@ -70,7 +93,7 @@ describe("TelegramConnection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
 
-    const loadingButton = screen.getByRole("button", { name: "Connecting..." });
+    const loadingButton = screen.getByRole("button", { name: "Creating link..." });
     expect(loadingButton).toBeDisabled();
     expect(loadingButton).toHaveAttribute("aria-busy", "true");
 
@@ -159,6 +182,182 @@ describe("TelegramConnection", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Telegram is already connected to your account.",
     );
+  });
+
+  it("polls until Telegram reports a completed connection", async () => {
+    vi.useFakeTimers();
+    createTelegramLinkClaim.mockResolvedValue(claimResponse);
+    getTelegramLinkClaimStatus.mockResolvedValue({
+      claimId: 42,
+      status: "completed",
+      connected: true,
+      telegramUsername: "username",
+    });
+    render(<TelegramConnection />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
+      await Promise.resolve();
+    });
+    expect(
+      screen.getByRole("button", { name: "Waiting for Telegram..." }),
+    ).toBeDisabled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(getTelegramLinkClaimStatus).toHaveBeenCalledWith(42, {
+      signal: expect.any(AbortSignal),
+    });
+    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Your Telegram account has been connected.",
+    );
+    expect(toastSuccess).toHaveBeenCalledWith("Telegram account connected");
+    expect(dispatchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops and reports when a completed claim is disconnected", async () => {
+    vi.useFakeTimers();
+    createTelegramLinkClaim.mockResolvedValue(claimResponse);
+    getTelegramLinkClaimStatus.mockResolvedValue({
+      claimId: 42,
+      status: "completed",
+      connected: false,
+    });
+    render(<TelegramConnection />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(screen.getByText("Not connected")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The Telegram account was disconnected",
+    );
+    expect(getTelegramLinkClaimStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops polling and allows a new claim when the claim expires", async () => {
+    vi.useFakeTimers();
+    createTelegramLinkClaim.mockResolvedValue(claimResponse);
+    getTelegramLinkClaimStatus.mockResolvedValue({
+      claimId: 42,
+      status: "expired",
+      connected: false,
+    });
+    render(<TelegramConnection />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The Telegram linking request expired.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Connect Telegram" }),
+    ).toBeEnabled();
+    expect(getTelegramLinkClaimStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a network error on the next interval while still pending", async () => {
+    vi.useFakeTimers();
+    createTelegramLinkClaim.mockResolvedValue(claimResponse);
+    getTelegramLinkClaimStatus
+      .mockRejectedValueOnce({ status: 0, message: "Network Error" })
+      .mockResolvedValueOnce({
+        claimId: 42,
+        status: "completed",
+        connected: true,
+      });
+    render(<TelegramConnection />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(getTelegramLinkClaimStatus).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(getTelegramLinkClaimStatus).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Connected")).toBeInTheDocument();
+  });
+
+  it("stops polling and shows an error when the claim is not found", async () => {
+    vi.useFakeTimers();
+    createTelegramLinkClaim.mockResolvedValue(claimResponse);
+    getTelegramLinkClaimStatus.mockRejectedValue({
+      status: 404,
+      message: "Not Found",
+    });
+    render(<TelegramConnection />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The Telegram linking request could not be found.",
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(getTelegramLinkClaimStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops polling when the user closes the pending message", async () => {
+    vi.useFakeTimers();
+    createTelegramLinkClaim.mockResolvedValue(claimResponse);
+    render(<TelegramConnection />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
+      await Promise.resolve();
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Stop waiting for Telegram" }),
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(getTelegramLinkClaimStatus).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Connect Telegram" }),
+    ).toBeEnabled();
+  });
+
+  it("aborts an in-flight status request when unmounted", async () => {
+    vi.useFakeTimers();
+    let requestSignal;
+    createTelegramLinkClaim.mockResolvedValue(claimResponse);
+    getTelegramLinkClaimStatus.mockImplementation((_claimId, { signal }) => {
+      requestSignal = signal;
+      return new Promise(() => {});
+    });
+    const { unmount } = render(<TelegramConnection />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Connect Telegram" }));
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(requestSignal?.aborted).toBe(false);
+
+    unmount();
+    expect(requestSignal?.aborted).toBe(true);
   });
 });
 

@@ -27,7 +27,7 @@ import {
   getAttachmentUrl,
   isAudioAttachment,
   isImageAttachment,
-  isRecordedVoiceAttachment,
+  isVoiceAttachment,
   isVideoAttachment,
   parseFilenameFromContentDisposition,
   resolveAttachmentHref,
@@ -151,11 +151,11 @@ export default function ChecklistItemAttachments({
   const isDisabled =
     isUploadUnavailable || isUploading;
   const voiceAttachments = useMemo(
-    () => (attachments || []).filter(isRecordedVoiceAttachment),
+    () => (attachments || []).filter(isVoiceAttachment),
     [attachments],
   );
   const fileAttachments = useMemo(
-    () => (attachments || []).filter((attachment) => !isRecordedVoiceAttachment(attachment)),
+    () => (attachments || []).filter((attachment) => !isVoiceAttachment(attachment)),
     [attachments],
   );
 
