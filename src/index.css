@@ -283,3 +283,211 @@ body .home-list__meta {
     overflow-wrap: anywhere;
   }
 }
+
+/* Requests mobile responsive overrides */
+@media (max-width: 767.98px) {
+  body .requests-page,
+  body .requests-page__shell,
+  body .requests-page__shell > .card-body,
+  body .requests-page__panel,
+  body .requests-page__panel > .card-body,
+  body .requests-page .row,
+  body .requests-page [class*='col-'] {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  body .requests-page__tabs {
+    border-bottom: 0;
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: 1fr;
+    overflow: visible;
+    width: 100%;
+  }
+
+  body .requests-page__tabs li {
+    min-width: 0;
+    width: 100%;
+  }
+
+  body .requests-page__tabs button {
+    border: 1px solid var(--requests-border);
+    border-radius: 6px;
+    min-height: 40px;
+    padding: 0.65rem 0.75rem;
+    text-align: left;
+    white-space: normal;
+    width: 100%;
+  }
+
+  body .requests-page__tabs button.is-active {
+    background: var(--requests-primary-soft);
+    border-color: rgba(var(--primary), 0.35);
+  }
+
+  body .requests-page__tabs button.is-active::after {
+    display: none;
+  }
+
+  body .requests-page .table-responsive {
+    max-width: 100%;
+    overflow-x: visible;
+    width: 100%;
+  }
+
+  body .requests-page__table {
+    border-collapse: separate;
+    display: block;
+    margin-bottom: 0;
+    min-width: 0;
+    width: 100%;
+  }
+
+  body .requests-page__table thead {
+    display: none;
+  }
+
+  body .requests-page__table tbody {
+    display: grid;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  body .requests-page__table tbody tr {
+    background: var(--requests-control);
+    border: 1px solid var(--requests-border);
+    border-radius: 8px;
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  body .requests-page__table > tbody > tr > td {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--requests-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    padding: 0.75rem !important;
+    white-space: normal;
+    width: 100%;
+  }
+
+  body .requests-page__table > tbody > tr > td:last-child {
+    border-bottom: 0;
+  }
+
+  body .requests-page__table > tbody > tr > td::before {
+    color: var(--requests-muted);
+    content: '';
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  body .requests-page__table tbody tr:not(:has(.requests-page__employee)) td:nth-child(1)::before {
+    content: 'Type';
+  }
+
+  body .requests-page__table tbody tr:not(:has(.requests-page__employee)) td:nth-child(2)::before {
+    content: 'Start';
+  }
+
+  body .requests-page__table tbody tr:not(:has(.requests-page__employee)) td:nth-child(3)::before {
+    content: 'End';
+  }
+
+  body .requests-page__table tbody tr:not(:has(.requests-page__employee)) td:nth-child(4)::before {
+    content: 'Duration';
+  }
+
+  body .requests-page__table tbody tr:not(:has(.requests-page__employee)) td:nth-child(5)::before {
+    content: 'Reason';
+  }
+
+  body .requests-page__table tbody tr:not(:has(.requests-page__employee)) td:nth-child(6)::before {
+    content: 'Status';
+  }
+
+  body .requests-page__table tbody tr:not(:has(.requests-page__employee)) td:nth-child(7)::before {
+    content: 'Actions';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(1)::before {
+    content: 'Employee';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(2)::before {
+    content: 'Type';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(3)::before {
+    content: 'Start';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(4)::before {
+    content: 'End';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(5)::before {
+    content: 'Duration';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(6)::before {
+    content: 'Reason';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(7)::before {
+    content: 'Status';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__employee) td:nth-child(8)::before {
+    content: 'Actions';
+  }
+
+  body .requests-page__table tbody tr:has(.requests-page__empty) {
+    background: transparent;
+    border: 0;
+  }
+
+  body .requests-page__table .requests-page__empty {
+    border-bottom: 0;
+    display: block;
+    width: 100%;
+  }
+
+  body .requests-page__table .requests-page__empty::before {
+    display: none;
+  }
+
+  body .requests-page__employee {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  body .requests-page__employee > span:last-child {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  body .requests-page__employee small,
+  body .requests-page__employee strong {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  body .requests-page__row-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}
