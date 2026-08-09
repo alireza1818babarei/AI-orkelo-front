@@ -294,7 +294,6 @@ body .home-list__meta {
   body .requests-page .row,
   body .requests-page [class*='col-'] {
     box-sizing: border-box;
-    max-width: 100%;
     min-width: 0;
   }
 
