@@ -25,10 +25,7 @@ import {
 	toastError,
 	toastSuccess,
 } from "../../utils/sweetAlert.js";
-import {
-	resolveUserAvatarUrl,
-	resolveUserAvatarWithFallback,
-} from "../../utils/mediaUrl.js";
+import { resolveUserAvatarWithFallback } from "../../utils/mediaUrl.js";
 import { formatCommentTimestamp } from "../../services/dateTime.js";
 import {
 	fetchNotificationsThunk,
@@ -36,6 +33,11 @@ import {
 	markNotificationAsReadThunk,
 } from "../../store/notifications/notificationsSlice.js";
 import { resolveNotificationTarget } from "../../utils/notificationNavigation.js";
+import {
+	isSystemNotification,
+	resolveNotificationAvatarUrl,
+	resolveNotificationSenderName,
+} from "../../utils/notificationPresentation.js";
 import TelegramHeaderButton from "./TelegramHeaderButton.jsx";
 
 const resolveNotificationTableName = (notification) => {
@@ -463,13 +465,12 @@ const HeaderMenu = () => {
 										const notificationId = String(notification?.id ?? "");
 										const isRead = Boolean(notification?.is_read);
 										const target = resolveNotificationTarget(notification);
+										const systemNotification =
+											isSystemNotification(notification);
 										const actorName =
-											notification?.actor?.name ??
-											notification?.title ??
-											"Notification";
-										const actorAvatar = resolveUserAvatarUrl(
-											notification?.actor?.avatar ?? "",
-										);
+											resolveNotificationSenderName(notification);
+										const actorAvatar =
+											resolveNotificationAvatarUrl(notification);
 										const tableName =
 											resolveNotificationTableName(notification);
 
@@ -503,10 +504,14 @@ const HeaderMenu = () => {
 												<div className="message-images">
 													<span
 														className={`header-notification__avatar h-35 w-35 d-flex-center position-relative ${
-															actorAvatar
-																? "header-notification__avatar--image bg-secondary"
-																: "header-notification__avatar--fallback"
-														}`}
+																	actorAvatar
+																		? "header-notification__avatar--image bg-secondary"
+																		: "header-notification__avatar--fallback"
+																} ${
+																	systemNotification
+																		? "header-notification__avatar--system"
+																		: ""
+																}`}
 													>
 														{actorAvatar ? (
 															<img

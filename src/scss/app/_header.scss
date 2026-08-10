@@ -493,6 +493,17 @@ header {
               background: rgba(var(--secondary), 1);
             }
 
+            .header-notification__avatar--system {
+              background: #fff;
+              border: 1px solid rgba(var(--secondary), 0.24);
+
+              .header-notification__avatar-img {
+                object-fit: contain;
+                padding: 3px;
+                background: #fff;
+              }
+            }
+
             .header-notification__avatar--fallback {
               background: #fff;
               border: 1px solid rgba(var(--secondary), 0.24);
