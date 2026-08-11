@@ -19,6 +19,7 @@ import {
   reorderProjectTasksLocal,
   reorderProjectTaskThunk,
   removeTaskFromColumn,
+  clearProjectColumns,
   setTaskFilters,
   updateProjectColumnThunk,
   archiveCompletedColumnTasksThunk,
@@ -34,6 +35,7 @@ import {
   deleteTodoListColumnThunk,
   getTodoListColumnTasksThunk,
   getTodoListColumnsThunk,
+  clearTodoList,
   patchTodoTask,
   removeTodoTask,
   reorderTodoListColumnsThunk,
@@ -183,6 +185,7 @@ const ProjectBoard = () => {
   } = useSelector((s) => s.projectColumns);
   const {
     items: todoColumns,
+    projectId: todoColumnsProjectId,
     status: todoColumnsStatus,
     tasksLoadingByColumnId: todoTasksLoadingByColumnId,
     completingByTaskId: todoCompletingByTaskId,
@@ -348,7 +351,13 @@ const ProjectBoard = () => {
   const isRouteTodoTask = routeTaskBoardType === TODO_BOARD_TYPE;
   const isTodoListView =
     requestedProjectView === TODO_LIST_VIEW_QUERY || isRouteTodoTask;
-  const activeViewColumns = isTodoListView ? todoColumns : columns;
+  const activeTodoColumns =
+    todoColumnsProjectId != null &&
+    id != null &&
+    String(todoColumnsProjectId) === String(id)
+      ? todoColumns
+      : [];
+  const activeViewColumns = isTodoListView ? activeTodoColumns : columns;
 
   useEffect(() => {
     if (!id || !taskId || !isRouteTodoTask) return;
@@ -371,7 +380,11 @@ const ProjectBoard = () => {
   useEffect(() => {
     if (!id) return;
     tasksForcedProjectRef.current = null;
-    dispatch(setTaskFilters({}));
+    todoTasksForcedProjectRef.current = null;
+    // Remove the previous board immediately so no effect can pair its columns
+    // with the newly selected project id while fresh data is loading.
+    dispatch(clearProjectColumns());
+    dispatch(clearTodoList());
     dispatch(getProjectDetailsThunk(id));
     dispatch(getProjectColumnsThunk(id));
     dispatch(getProjectMembersThunk(id));
@@ -490,13 +503,19 @@ const ProjectBoard = () => {
 
   const todoColumnIdsKey = useMemo(() => {
     if (!id || !isTodoListView) return "";
-    return (todoColumns || [])
+    if (
+      todoColumnsProjectId == null ||
+      String(todoColumnsProjectId) !== String(id)
+    ) {
+      return "";
+    }
+    return (activeTodoColumns || [])
       .map((column) => column?.id)
       .filter((value) => value != null)
       .map(String)
       .sort()
       .join("|");
-  }, [id, isTodoListView, todoColumns]);
+  }, [activeTodoColumns, id, isTodoListView, todoColumnsProjectId]);
 
   useEffect(() => {
     if (!id || !isTodoListView || !todoColumnIdsKey) return;
@@ -1219,6 +1238,15 @@ const ProjectBoard = () => {
     }
   };
 
+  const showMembersPanelForTour = useCallback(() => {
+    if (membersMobileViewport) {
+      setMobileMembersPanelOpen(true);
+      return;
+    }
+
+    setDesktopMembersPanelCollapsed(false);
+  }, [membersMobileViewport]);
+
   const busy =
     !project &&
     !pageError &&
@@ -1253,15 +1281,6 @@ const ProjectBoard = () => {
 
     setDesktopMembersPanelCollapsed((prev) => !prev);
   };
-
-  const showMembersPanelForTour = useCallback(() => {
-    if (membersMobileViewport) {
-      setMobileMembersPanelOpen(true);
-      return;
-    }
-
-    setDesktopMembersPanelCollapsed(false);
-  }, [membersMobileViewport]);
 
   return (
     <section

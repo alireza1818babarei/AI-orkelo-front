@@ -169,6 +169,24 @@ const normalizeColumnIdValue = (columnId) => {
   return Number.isInteger(n) && n > 0 ? n : columnId;
 };
 
+const isSameProject = (leftProjectId, rightProjectId) =>
+  leftProjectId != null &&
+  rightProjectId != null &&
+  String(leftProjectId) === String(rightProjectId);
+
+const getColumnProjectId = (column) =>
+  column?.project_id ?? column?.projectId ?? null;
+
+const columnBelongsToProject = (column, projectId) =>
+  isSameProject(getColumnProjectId(column), projectId);
+
+const findProjectColumn = (items, columnId, projectId) =>
+  (Array.isArray(items) ? items : []).find(
+    (column) =>
+      String(column?.id ?? "") === String(columnId ?? "") &&
+      columnBelongsToProject(column, projectId),
+  );
+
 const buildTaskByIdMap = (columns) => {
   const map = new Map();
   (Array.isArray(columns) ? columns : []).forEach((column) => {
@@ -313,27 +331,19 @@ const applyColumnOrder = (columns, orderedIds) => {
 
 export const getProjectColumnsThunk = createAsyncThunk(
   "projectColumns/getByProject",
-  async (projectId, {getState, rejectWithValue}) => {
+  async (projectId, {rejectWithValue}) => {
     try {
-      const state = getState();
-      const list = state?.projects?.items || [];
-      const fromList = list.find((p) => String(p.id) === String(projectId));
-      if (fromList && Array.isArray(fromList.columns)) {
-        return {projectId, columns: sortColumnsByPosition(fromList.columns)};
-      }
+      // Always load the selected project's columns from their scoped endpoint.
+      // Cached project-list data may still belong to the previously opened board.
+      const res = await api.get(`/projects/${projectId}/columns`);
+      const payload = res.data?.data ?? res.data ?? [];
+      const columns = (Array.isArray(payload) ? payload : []).filter((column) =>
+        columnBelongsToProject(column, projectId),
+      );
 
-      const res = await api.get(`/projects/${projectId}`);
-      const root = res.data?.data ?? res.data ?? null;
-      const d = root?.data ?? root ?? null;
-      const columns =
-        d?.columns ??
-        d?.project?.columns ??
-        root?.columns ??
-        root?.project?.columns ??
-        [];
       return {
         projectId,
-        columns: sortColumnsByPosition(Array.isArray(columns) ? columns : []),
+        columns: sortColumnsByPosition(columns),
       };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -584,33 +594,29 @@ export const getColumnTasksThunk = createAsyncThunk(
   },
   {
     condition: ({projectId, columnId, force, page = 1, filters}, {getState}) => {
-      if (force) return true;
-
       const state = getState();
       const slice = state?.projectColumns ?? null;
-      if (!slice) return true;
+      if (!slice || !isSameProject(slice.projectId, projectId)) return false;
+
+      const column = findProjectColumn(slice.items, columnId, projectId);
+      if (!column) return false;
+
+      if (force) return true;
 
       const requestedFilters = normalizeTaskFilters(
         filters === undefined ? slice.taskFilters : filters,
       );
       if (!areTaskFiltersEqual(requestedFilters, slice.taskFilters)) return true;
 
-      if (slice.projectId && String(slice.projectId) !== String(projectId)) {
-        return true;
-      }
-
       const key = String(columnId ?? "");
       if (slice.tasksLoadingByColumnId?.[key]) return false;
-
-      const col = (slice.items || []).find((c) => String(c?.id) === key);
-      if (!col) return true;
 
       const normalizedPage = normalizePositiveInt(page, 1);
       if (normalizedPage > 1) {
         return slice.taskPaginationByColumnId?.[key]?.hasMore !== false;
       }
 
-      if (Array.isArray(col.tasks)) return false;
+      if (Array.isArray(column.tasks)) return false;
 
       return true;
     },
@@ -765,16 +771,24 @@ const projectColumnsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(getProjectColumnsThunk.pending, (state) => {
+    builder.addCase(getProjectColumnsThunk.pending, (state, action) => {
+      const projectId = action.meta?.arg ?? null;
+      const isProjectSwitch = !isSameProject(state.projectId, projectId);
+
       state.status = "loading";
       state.error = null;
+      state.projectId = projectId;
+      if (isProjectSwitch) state.items = [];
       state.tasksLoadingByColumnId = {};
       state.tasksErrorByColumnId = {};
       state.taskPaginationByColumnId = {};
+      state.archivingCompletedByColumnId = {};
     });
     builder.addCase(getProjectColumnsThunk.fulfilled, (state, action) => {
-      state.status = "succeeded";
       const projectId = action.payload?.projectId ?? null;
+      if (!isSameProject(state.projectId, projectId)) return;
+
+      state.status = "succeeded";
       const nextColumns = action.payload?.columns || [];
 
       const prevTasksByColumnId = new Map(
@@ -796,6 +810,9 @@ const projectColumnsSlice = createSlice({
       );
     });
     builder.addCase(getProjectColumnsThunk.rejected, (state, action) => {
+      const projectId = action.meta?.arg ?? null;
+      if (!isSameProject(state.projectId, projectId)) return;
+
       state.status = "failed";
       state.error = action.payload || {message: "Somthing went wrong"};
       state.items = [];
@@ -877,6 +894,13 @@ const projectColumnsSlice = createSlice({
 
     builder.addCase(getColumnTasksThunk.pending, (state, action) => {
       const {projectId, columnId, filters} = action.meta?.arg ?? {};
+      if (
+        !isSameProject(state.projectId, projectId) ||
+        !findProjectColumn(state.items, columnId, projectId)
+      ) {
+        return;
+      }
+
       const requestedFilters = normalizeTaskFilters(
         filters === undefined ? state.taskFilters : filters,
       );
@@ -885,8 +909,6 @@ const projectColumnsSlice = createSlice({
         state.items = clearLoadedColumnTasks(state.items);
         state.taskPaginationByColumnId = {};
       }
-
-      state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
       state.tasksLoadingByColumnId[key] = true;
@@ -894,9 +916,14 @@ const projectColumnsSlice = createSlice({
     });
     builder.addCase(getColumnTasksThunk.fulfilled, (state, action) => {
       const {projectId, columnId, tasks, meta, append, filters} = action.payload || {};
+      if (
+        !isSameProject(state.projectId, projectId) ||
+        !findProjectColumn(state.items, columnId, projectId)
+      ) {
+        return;
+      }
       if (!areTaskFiltersEqual(filters, state.taskFilters)) return;
 
-      state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
       delete state.tasksLoadingByColumnId[key];
@@ -919,12 +946,16 @@ const projectColumnsSlice = createSlice({
     });
     builder.addCase(getColumnTasksThunk.rejected, (state, action) => {
       const {projectId, columnId, page = 1, filters} = action.meta?.arg ?? {};
+      if (
+        !isSameProject(state.projectId, projectId) ||
+        !findProjectColumn(state.items, columnId, projectId)
+      ) {
+        return;
+      }
       const requestedFilters = normalizeTaskFilters(
         filters === undefined ? state.taskFilters : filters,
       );
       if (!areTaskFiltersEqual(requestedFilters, state.taskFilters)) return;
-
-      state.projectId = projectId ?? state.projectId;
       if (columnId == null) return;
       const key = String(columnId);
       delete state.tasksLoadingByColumnId[key];

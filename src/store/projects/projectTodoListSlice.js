@@ -47,6 +47,24 @@ const normalizeColumns = (columns) =>
       : column?.tasks,
   }));
 
+const isSameProject = (leftProjectId, rightProjectId) =>
+  leftProjectId != null &&
+  rightProjectId != null &&
+  String(leftProjectId) === String(rightProjectId);
+
+const getColumnProjectId = (column) =>
+  column?.project_id ?? column?.projectId ?? null;
+
+const columnBelongsToProject = (column, projectId) =>
+  isSameProject(getColumnProjectId(column), projectId);
+
+const findProjectColumn = (items, columnId, projectId) =>
+  (Array.isArray(items) ? items : []).find(
+    (column) =>
+      String(column?.id ?? "") === String(columnId ?? "") &&
+      columnBelongsToProject(column, projectId),
+  );
+
 export const getTodoListColumnsThunk = createAsyncThunk(
   "projectTodoList/getColumns",
   async ({ projectId, force = false }, { rejectWithValue }) => {
@@ -58,7 +76,11 @@ export const getTodoListColumnsThunk = createAsyncThunk(
       return {
         projectId,
         force,
-        columns: normalizeColumns(Array.isArray(payload) ? payload : []),
+        columns: normalizeColumns(
+          (Array.isArray(payload) ? payload : []).filter((column) =>
+            columnBelongsToProject(column, projectId),
+          ),
+        ),
       };
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -146,6 +168,20 @@ export const getTodoListColumnTasksThunk = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
+  },
+  {
+    condition: ({ projectId, columnId, force }, { getState }) => {
+      const slice = getState()?.projectTodoList ?? null;
+      if (!slice || !isSameProject(slice.projectId, projectId)) return false;
+
+      const column = findProjectColumn(slice.items, columnId, projectId);
+      if (!column) return false;
+      if (force) return true;
+
+      const key = String(columnId ?? "");
+      if (slice.tasksLoadingByColumnId?.[key]) return false;
+      return !Array.isArray(column.tasks);
+    },
   },
 );
 
@@ -316,15 +352,22 @@ const projectTodoListSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(getTodoListColumnsThunk.pending, (state, action) => {
+      const projectId = action.meta?.arg?.projectId ?? null;
+      const isProjectSwitch = !isSameProject(state.projectId, projectId);
+
       state.status = "loading";
       state.error = null;
-      state.projectId = action.meta?.arg?.projectId ?? state.projectId;
+      state.projectId = projectId;
+      if (isProjectSwitch) state.items = [];
       state.tasksLoadingByColumnId = {};
       state.tasksErrorByColumnId = {};
+      state.completingByTaskId = {};
     });
     builder.addCase(getTodoListColumnsThunk.fulfilled, (state, action) => {
+      const projectId = action.payload?.projectId ?? null;
+      if (!isSameProject(state.projectId, projectId)) return;
+
       state.status = "succeeded";
-      state.projectId = action.payload?.projectId ?? null;
 
       const previousTasks = new Map(
         (state.items || []).map((column) => [String(column?.id), column?.tasks]),
@@ -341,6 +384,9 @@ const projectTodoListSlice = createSlice({
       );
     });
     builder.addCase(getTodoListColumnsThunk.rejected, (state, action) => {
+      const projectId = action.meta?.arg?.projectId ?? null;
+      if (!isSameProject(state.projectId, projectId)) return;
+
       state.status = "failed";
       state.error = action.payload || { message: "Something went wrong" };
       state.items = [];
@@ -390,20 +436,36 @@ const projectTodoListSlice = createSlice({
 
     builder.addCase(getTodoListColumnTasksThunk.pending, (state, action) => {
       const { projectId, columnId } = action.meta?.arg ?? {};
-      state.projectId = projectId ?? state.projectId;
+      if (
+        !isSameProject(state.projectId, projectId) ||
+        !findProjectColumn(state.items, columnId, projectId)
+      ) {
+        return;
+      }
       if (columnId == null) return;
       state.tasksLoadingByColumnId[String(columnId)] = true;
       delete state.tasksErrorByColumnId[String(columnId)];
     });
     builder.addCase(getTodoListColumnTasksThunk.fulfilled, (state, action) => {
       const { projectId, columnId, tasks } = action.payload || {};
-      state.projectId = projectId ?? state.projectId;
+      if (
+        !isSameProject(state.projectId, projectId) ||
+        !findProjectColumn(state.items, columnId, projectId)
+      ) {
+        return;
+      }
       if (columnId == null) return;
       delete state.tasksLoadingByColumnId[String(columnId)];
       state.items = updateColumnTasks(state.items, columnId, () => tasks || []);
     });
     builder.addCase(getTodoListColumnTasksThunk.rejected, (state, action) => {
-      const { columnId } = action.meta?.arg ?? {};
+      const { projectId, columnId } = action.meta?.arg ?? {};
+      if (
+        !isSameProject(state.projectId, projectId) ||
+        !findProjectColumn(state.items, columnId, projectId)
+      ) {
+        return;
+      }
       if (columnId == null) return;
       delete state.tasksLoadingByColumnId[String(columnId)];
       state.tasksErrorByColumnId[String(columnId)] =
