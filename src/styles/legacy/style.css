@@ -192,7 +192,7 @@ Author URI: https://themeforest.net/user/la-themes
 
 @font-face {
   font-family: 'Shabnam';
-  src: url('../../../public/assets/fonts/Shabnam-Medium.ttf');
+  src: url('../../assets/legacy/fonts/Shabnam-Medium.ttf');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -44264,7 +44264,7 @@ body[class="ltr dark"] .team-chat-container {
 }
 
 .ticket-details-profile {
-  background-image: url("/public/assets/images/dashboard/project/chat-bg.jpg");
+  background-image: url("../../assets/legacy/images/dashboard/project/chat-bg.jpg");
   background-repeat: no-repeat;
   background-size: cover;
   background-position: top;

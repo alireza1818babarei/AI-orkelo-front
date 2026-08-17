@@ -200,32 +200,8 @@ const ChecklistTree = ({
 
         {depth === 0 ? (
           <div className="mt-2 ps-3 checklist-item-followup">
-            <div className="checklist-item-actions">
-              <button
-                type="button"
-                className="btn px-0 small f-s-12 checklist-item-action-link"
-                onClick={() =>
-                  setSubInputById((prev) => ({
-                    ...prev,
-                    [item.id]: prev[item.id] ?? "",
-                  }))
-                }
-              >
-                Add sub item
-              </button>
-              <ChecklistItemAttachments
-                projectId={projectId}
-                taskId={taskId}
-                checklistItem={item}
-                inputId={attachmentInputId}
-                className="checklist-item-attachments--action"
-                disabled={isItemBusy}
-                onChanged={onChecklistAttachmentChanged}
-                formatDateTime={formatDateTime}
-              />
-            </div>
             {subInputById[item.id] !== undefined ? (
-              <div className="mt-1">
+              <div className="mb-1">
                 <textarea
                   className="form-control autogrow-textarea"
                   rows="1"
@@ -291,6 +267,30 @@ const ChecklistTree = ({
                 />
               </div>
             ) : null}
+            <div className="checklist-item-actions">
+              <button
+                type="button"
+                className="btn px-0 small f-s-12 checklist-item-action-link"
+                onClick={() =>
+                  setSubInputById((prev) => ({
+                    ...prev,
+                    [item.id]: prev[item.id] ?? "",
+                  }))
+                }
+              >
+                Add sub item
+              </button>
+              <ChecklistItemAttachments
+                projectId={projectId}
+                taskId={taskId}
+                checklistItem={item}
+                inputId={attachmentInputId}
+                className="checklist-item-attachments--action"
+                disabled={isItemBusy}
+                onChanged={onChecklistAttachmentChanged}
+                formatDateTime={formatDateTime}
+              />
+            </div>
           </div>
         ) : null}
       </div>

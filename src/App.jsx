@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import "simplebar-react/dist/simplebar.min.css";
-import "../public/assets/css/style.css";
+import "./styles/legacy/style.css";
 import "./scss/style.scss";
 import "./scss/responsive.scss";
 import Loader from "./Components/Loader";
