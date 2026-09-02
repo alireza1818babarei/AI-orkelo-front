@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { Spinner } from "reactstrap";
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownToggle,
+  Spinner,
+} from "reactstrap";
 import { alertTextConfirm, toastError, toastSuccess } from "../../../utils/sweetAlert";
 import { reviewSuperTaskEntity } from "../../../api/superTask";
 import { getReviewMeta, REVIEW_STATUS } from "./superTask.utils";
@@ -13,8 +19,10 @@ export default function SuperTaskReviewControls({
   onChanged,
   compact = false,
   showStatus = true,
+  secondaryActionsInMenu = false,
 }) {
   const [busyAction, setBusyAction] = useState("");
+  const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
   const capabilities = entity?.capabilities ?? {};
   const status = String(entity?.review_status || REVIEW_STATUS.IN_PROGRESS);
   const meta = getReviewMeta(status);
@@ -116,7 +124,7 @@ export default function SuperTaskReviewControls({
           )
         : null}
 
-      {capabilities.can_restore
+      {capabilities.can_restore && !secondaryActionsInMenu
         ? actionButton(
             "restore",
             "Restore",
@@ -124,6 +132,38 @@ export default function SuperTaskReviewControls({
             "btn-outline-primary",
           )
         : null}
+
+      {capabilities.can_restore && secondaryActionsInMenu ? (
+        <Dropdown
+          isOpen={secondaryMenuOpen}
+          toggle={() => setSecondaryMenuOpen((current) => !current)}
+          className="super-task-review-controls__secondary"
+        >
+          <DropdownToggle
+            tag="button"
+            type="button"
+            className={`btn btn-light ${compact ? "btn-sm" : ""} super-task-review-controls__menu-toggle`}
+            disabled={Boolean(busyAction)}
+            aria-label="More review actions"
+            title="More review actions"
+          >
+            <i className="ti ti-dots-vertical" aria-hidden="true" />
+          </DropdownToggle>
+          <DropdownMenu end>
+            <DropdownItem
+              onClick={() => runAction("restore")}
+              disabled={Boolean(busyAction)}
+            >
+              {busyAction === "restore" ? (
+                <Spinner size="sm" className="me-2" />
+              ) : (
+                <i className="ti ti-rotate-clockwise me-2" aria-hidden="true" />
+              )}
+              Restore
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
+      ) : null}
     </div>
   );
 }

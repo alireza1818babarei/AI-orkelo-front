@@ -4,17 +4,26 @@ import { getContrastText, getReviewMeta } from "./superTask.utils";
 
 const MAX_VISIBLE_TAGS = 3;
 
-const formatTrackedTime = (value) => {
-  const parsed = Number(value);
-  const totalSeconds = Number.isFinite(parsed)
-    ? Math.max(0, Math.floor(parsed))
-    : 0;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (part) => String(part).padStart(2, "0");
+const getDueDateMeta = (value) => {
+  if (!value) return null;
 
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return {
+    compact: new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+    }).format(date),
+    full: new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date),
+    isOverdue: date.getTime() < Date.now(),
+  };
 };
 
 function WorkItemTag({ tag }) {
@@ -48,9 +57,9 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
   const tags = Array.isArray(item?.tags) ? item.tags : [];
   const visibleTags = tags.slice(0, MAX_VISIBLE_TAGS);
   const remainingTagCount = Math.max(0, tags.length - visibleTags.length);
-  const trackedSeconds = Number(item?.time_tracking?.total_time);
-  const hasTrackedTime = Number.isFinite(trackedSeconds) && trackedSeconds > 0;
-  const hasActiveTracker = Boolean(item?.time_tracking?.active_tracker);
+  const dueDate = getDueDateMeta(item?.due_at);
+  const attachmentCount = Math.max(0, Number(item?.attachments_count) || 0);
+  const voiceCount = Math.max(0, Number(item?.voice_count) || 0);
   const isActionable = typeof onOpen === "function";
   const CardElement = isActionable ? "button" : "article";
   const avatarUser = assignee || { name: "Unassigned" };
@@ -73,21 +82,11 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
         user={avatarUser}
         size={40}
         title={avatarTitle}
-        useGeneratedFallback={false}
       />
 
       <span className="super-task-work-item-card__content">
         <span className="super-task-work-item-card__head">
-          <span className="super-task-work-item-card__copy">
-            <strong title={title} dir="auto">{title}</strong>
-            <span
-              className="super-task-work-item-card__description"
-              title={description}
-              dir="auto"
-            >
-              {description}
-            </span>
-          </span>
+          <strong title={title} dir="auto">{title}</strong>
 
           <span className={`super-task-status is-${status.tone}`}>
             {status.label}
@@ -102,7 +101,15 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
           </span>
         </span>
 
-        {(workRoleName || tags.length || hasTrackedTime || hasActiveTracker) ? (
+        <span
+          className="super-task-work-item-card__description"
+          title={description}
+          dir="auto"
+        >
+          {description}
+        </span>
+
+        {(workRoleName || tags.length || dueDate || attachmentCount || voiceCount) ? (
           <span className="super-task-work-item-card__meta">
             <span className="super-task-work-item-card__meta-left">
               {workRoleName ? (
@@ -132,15 +139,39 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
               ) : null}
             </span>
 
-            {(hasTrackedTime || hasActiveTracker) ? (
-              <span
-                className={`super-task-work-item-card__tracking ${hasActiveTracker ? "is-active" : ""}`}
-                title={hasActiveTracker ? "Tracking is active" : "Total tracked time"}
-              >
-                <i className="ti ti-clock" aria-hidden="true" />
-                {hasTrackedTime ? formatTrackedTime(trackedSeconds) : "Tracking"}
-              </span>
-            ) : null}
+            <span className="super-task-work-item-card__meta-right">
+              {dueDate ? (
+                <span
+                  className={`super-task-work-item-card__due ${dueDate.isOverdue ? "is-overdue" : ""}`}
+                  title={`Due ${dueDate.full}`}
+                >
+                  <i className="ti ti-calendar" aria-hidden="true" />
+                  {dueDate.compact}
+                </span>
+              ) : null}
+
+              {attachmentCount ? (
+                <span
+                  className="super-task-work-item-card__media-count"
+                  title={`${attachmentCount} file attachment${attachmentCount === 1 ? "" : "s"}`}
+                  aria-label={`${attachmentCount} file attachment${attachmentCount === 1 ? "" : "s"}`}
+                >
+                  <i className="ti ti-paperclip" aria-hidden="true" />
+                  {attachmentCount}
+                </span>
+              ) : null}
+
+              {voiceCount ? (
+                <span
+                  className="super-task-work-item-card__media-count"
+                  title={`${voiceCount} voice attachment${voiceCount === 1 ? "" : "s"}`}
+                  aria-label={`${voiceCount} voice attachment${voiceCount === 1 ? "" : "s"}`}
+                >
+                  <i className="ti ti-microphone" aria-hidden="true" />
+                  {voiceCount}
+                </span>
+              ) : null}
+            </span>
           </span>
         ) : null}
       </span>

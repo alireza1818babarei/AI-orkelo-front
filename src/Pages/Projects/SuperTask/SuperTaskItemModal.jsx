@@ -293,11 +293,8 @@ export default function SuperTaskItemModal({
   }, [loadSubTaskTimeline, onChanged]);
 
   const handleWorkItemContentChanged = useCallback(async () => {
-    await Promise.all([
-      loadWorkItemTimeline(),
-      Promise.resolve(onChanged?.()),
-    ]);
-  }, [loadWorkItemTimeline, onChanged]);
+    await refreshWorkItemAndAncestors();
+  }, [refreshWorkItemAndAncestors]);
 
   const openWorkItem = (item) => {
     if (item?.id == null) return;
@@ -348,11 +345,25 @@ export default function SuperTaskItemModal({
             type="button"
             className="btn btn-sm btn-light super-task-item-modal__back"
             onClick={backToSubTask}
+            aria-label="Back to Sub-task"
+            title="Back to Sub-task"
           >
             <i className="ti ti-arrow-left" aria-hidden="true" />
             <span>Back</span>
           </button>
         ) : null}
+
+        <div className="super-task-item-modal__identity">
+          <span className="super-task-item-modal__eyebrow">
+            {isWorkItemView ? "Work Item" : "Sub-task"}
+          </span>
+          {visibleEntity ? (
+            <span className={`super-task-status is-${status.tone}`}>
+              <i className={status.icon} aria-hidden="true" />
+              {status.label}
+            </span>
+          ) : null}
+        </div>
 
         <div className="super-task-item-modal__header-actions">
           {visibleEntity && hasReviewActions ? (
@@ -369,19 +380,8 @@ export default function SuperTaskItemModal({
               }
               compact
               showStatus={false}
+              secondaryActionsInMenu={isWorkItemView}
             />
-          ) : null}
-        </div>
-
-        <div className="super-task-item-modal__identity">
-          <span className="super-task-item-modal__eyebrow">
-            {isWorkItemView ? "Work Item" : "Sub-task"}
-          </span>
-          {visibleEntity ? (
-            <span className={`super-task-status is-${status.tone}`}>
-              <i className={status.icon} aria-hidden="true" />
-              {status.label}
-            </span>
           ) : null}
         </div>
 
@@ -534,7 +534,7 @@ export default function SuperTaskItemModal({
               <SuperTaskWorkItemList items={workItems} onOpen={openWorkItem} />
             </section>
 
-            <section className="super-task-item-modal__section super-task-detail-assets task-detail-modal-dialog">
+            <section className="super-task-item-modal__section super-task-detail-assets">
               <div className="super-task-section-heading">
                 <div>
                   <span className="super-task-section-heading__eyebrow">Files & voice</span>

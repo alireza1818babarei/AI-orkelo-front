@@ -83,6 +83,47 @@ body .task-detail-modal-dialog .dropdown-menu {
   max-width: min(360px, calc(100vw - 1.5rem)) !important;
 }
 
+/* Shared Task/Super Task media actions respond to their actual content width. */
+body .task-detail-modal-dialog .task-attachment-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+  align-items: start;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+body .task-detail-modal-dialog .task-attachment-actions .task-attachment-dropzone,
+body .task-detail-modal-dialog .task-voice-add-button,
+body .task-detail-modal-dialog .task-voice-box,
+body .task-detail-modal-dialog .task-voice-list,
+body .task-detail-modal-dialog .task-voice-card,
+body .task-detail-modal-dialog .task-voice-player {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .task-detail-modal-dialog .task-voice-panel--task {
+  display: contents;
+}
+
+body .task-detail-modal-dialog .task-voice-panel--task .task-voice-box {
+  grid-column: 1 / -1;
+}
+
+body .task-detail-modal-dialog .task-attachment-actions + .mt-2,
+body .task-detail-modal-dialog .task-attachment-actions + .mt-2 > .row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .task-detail-modal-dialog img,
+body .task-detail-modal-dialog video,
+body .task-detail-modal-dialog audio {
+  max-width: 100%;
+}
+
 @media (max-width: 991.98px) {
   body .task-detail-modal-dialog {
     width: calc(100vw - 1rem);
@@ -367,32 +408,5 @@ body .task-detail-modal-dialog .dropdown-menu {
   body .task-detail-modal-dialog .checklist-textarea ~ .icon-btn,
   body .task-detail-modal-dialog .checklist-textarea + .icon-btn {
     opacity: 1 !important;
-  }
-}
-
-@media (min-width: 768px) {
-  body .task-detail-modal-dialog .task-attachment-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: 0.75rem;
-  }
-
-  body .task-detail-modal-dialog .task-attachment-actions .task-attachment-dropzone {
-    width: 100%;
-  }
-
-  body .task-detail-modal-dialog .task-voice-panel--task {
-    display: contents;
-  }
-
-  body .task-detail-modal-dialog .task-voice-panel--task .task-voice-add-button {
-    grid-column: 2;
-    width: 100%;
-  }
-
-  body .task-detail-modal-dialog .task-voice-panel--task .task-voice-box {
-    grid-column: 1 / -1;
-    width: 100%;
   }
 }

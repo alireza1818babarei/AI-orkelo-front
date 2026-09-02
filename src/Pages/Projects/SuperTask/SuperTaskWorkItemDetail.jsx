@@ -60,7 +60,7 @@ export default function SuperTaskWorkItemDetail({
           ) : null}
         </section>
 
-        <section className="super-task-item-modal__section super-task-detail-assets task-detail-modal-dialog">
+        <section className="super-task-item-modal__section super-task-detail-assets">
           <div className="super-task-section-heading">
             <div>
               <span className="super-task-section-heading__eyebrow">Files & voice</span>
