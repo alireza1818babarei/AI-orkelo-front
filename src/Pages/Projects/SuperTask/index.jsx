@@ -398,6 +398,7 @@ export default function SuperTaskPage() {
         taskId={taskId}
         subTaskId={selectedSubTaskId}
         projectMembers={members}
+        projectTags={tags}
         onChanged={refreshTask}
       />
     </div>

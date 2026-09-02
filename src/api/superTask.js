@@ -123,6 +123,81 @@ export const createWorkItem = async (
   return unwrapData(response, null);
 };
 
+const workItemPath = (projectId, taskId, subTaskId, workItemId) =>
+  `/projects/${projectId}/tasks/${taskId}/sub-tasks/${subTaskId}/work-items/${workItemId}`;
+
+export const getWorkItem = async (
+  projectId,
+  taskId,
+  subTaskId,
+  workItemId,
+) => {
+  const response = await api.get(
+    workItemPath(projectId, taskId, subTaskId, workItemId),
+  );
+  return unwrapData(response, null);
+};
+
+export const updateWorkItem = async (
+  projectId,
+  taskId,
+  subTaskId,
+  workItemId,
+  payload,
+) => {
+  const response = await api.patch(
+    workItemPath(projectId, taskId, subTaskId, workItemId),
+    payload,
+  );
+  return unwrapData(response, null);
+};
+
+export const getWorkItemTrackers = async (
+  projectId,
+  taskId,
+  subTaskId,
+  workItemId,
+) => {
+  const response = await api.get(
+    `${workItemPath(projectId, taskId, subTaskId, workItemId)}/time-trackers`,
+  );
+  return unwrapData(response, {
+    trackers: [],
+    work_item_total_time: 0,
+    active_tracker: null,
+  });
+};
+
+const mutateWorkItemTracker = async ({
+  projectId,
+  taskId,
+  subTaskId,
+  workItemId,
+  action,
+  payload,
+}) => {
+  const path = `${workItemPath(
+    projectId,
+    taskId,
+    subTaskId,
+    workItemId,
+  )}/time-trackers/${action}`;
+  const response =
+    action === "start"
+      ? await api.post(path, payload)
+      : await api.patch(path, payload);
+  return unwrapData(response, null);
+};
+
+export const startWorkItemTracker = (params) =>
+  mutateWorkItemTracker({ ...params, action: "start" });
+
+export const resumeWorkItemTracker = (params) =>
+  mutateWorkItemTracker({ ...params, action: "resume" });
+
+export const stopWorkItemTracker = (params) =>
+  mutateWorkItemTracker({ ...params, action: "stop" });
+
 export const deleteSubTask = async (projectId, taskId, subTaskId) =>
   api.delete(
     `/projects/${projectId}/tasks/${taskId}/sub-tasks/${subTaskId}`,

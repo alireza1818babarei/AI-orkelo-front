@@ -20,6 +20,8 @@ export default function SuperTaskUserDropdown({
   saving = false,
   allowUnassigned = true,
   emptyLabel = "Assign to",
+  selectedLabel = null,
+  secondaryText = "",
   className = "",
 }) {
   const [open, setOpen] = useState(false);
@@ -71,7 +73,14 @@ export default function SuperTaskUserDropdown({
           </span>
         )}
         <span className="super-task-user-dropdown__label">
-          {activeUser ? `Assigned to ${activeUser.name}` : emptyLabel}
+          <span>
+            {activeUser
+              ? selectedLabel || `Assigned to ${activeUser.name}`
+              : emptyLabel}
+          </span>
+          {activeUser && secondaryText ? (
+            <small>{secondaryText}</small>
+          ) : null}
         </span>
         {saving ? (
           <Spinner size="sm" color="primary" />

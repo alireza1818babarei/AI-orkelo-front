@@ -1,31 +1,8 @@
 import React from "react";
 import SuperTaskUserAvatar from "./SuperTaskUserAvatar";
-import { getReviewMeta } from "./superTask.utils";
+import { getContrastText, getReviewMeta } from "./superTask.utils";
 
 const MAX_VISIBLE_TAGS = 3;
-
-const getContrastText = (hex) => {
-  const raw = String(hex || "").trim();
-  if (!raw) return "rgba(var(--primary), 1)";
-
-  const normalized = raw.startsWith("#") ? raw.slice(1) : raw;
-  const fullHex =
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((character) => character + character)
-          .join("")
-      : normalized;
-
-  if (!/^[0-9a-fA-F]{6}$/.test(fullHex)) return "#fff";
-
-  const red = parseInt(fullHex.slice(0, 2), 16);
-  const green = parseInt(fullHex.slice(2, 4), 16);
-  const blue = parseInt(fullHex.slice(4, 6), 16);
-  const luminance = (red * 299 + green * 587 + blue * 114) / 1000;
-
-  return luminance >= 170 ? "#111" : "#fff";
-};
 
 const formatTrackedTime = (value) => {
   const parsed = Number(value);
@@ -118,7 +95,7 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
 
           <span
             className="super-task-work-item-card__chevron"
-            title="Work Item details continue in Phase 5"
+            title="Open Work Item"
             aria-hidden="true"
           >
             <i className="ti ti-chevron-right" />

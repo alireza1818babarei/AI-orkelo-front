@@ -46,6 +46,29 @@ export const formatDateTime = (value, includeTime = true) => {
   }).format(date);
 };
 
+export const getContrastText = (hex) => {
+  const raw = String(hex || "").trim();
+  if (!raw) return "rgba(var(--primary), 1)";
+
+  const normalized = raw.startsWith("#") ? raw.slice(1) : raw;
+  const fullHex =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((character) => character + character)
+          .join("")
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(fullHex)) return "#fff";
+
+  const red = parseInt(fullHex.slice(0, 2), 16);
+  const green = parseInt(fullHex.slice(2, 4), 16);
+  const blue = parseInt(fullHex.slice(4, 6), 16);
+  const luminance = (red * 299 + green * 587 + blue * 114) / 1000;
+
+  return luminance >= 170 ? "#111" : "#fff";
+};
+
 export const getMemberId = (member) =>
   member?.id ?? member?.user_id ?? member?.user?.id ?? null;
 
