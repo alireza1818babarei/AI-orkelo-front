@@ -1123,6 +1123,10 @@ export default function TaskAttachments({
   initialAttachments,
   prefetched = false,
   extraAttachmentCount = 0,
+  resourceBasePath = "",
+  inputId = "task-attachment-file",
+  syncBoardCounts = true,
+  isActive = true,
 }) {
   const dispatch = useDispatch();
   const [attachments, setAttachments] = useState([]);
@@ -1139,6 +1143,16 @@ export default function TaskAttachments({
   const attachmentDragDepthRef = useRef(0);
   const uploadAbortControllerRef = useRef(null);
   const uploadCancelReasonRef = useRef(null);
+  const attachmentBasePath = useMemo(
+    () =>
+      String(
+        resourceBasePath ||
+          (projectId && taskId
+            ? `/projects/${projectId}/tasks/${taskId}`
+            : ""),
+      ).replace(/\/+$/, ""),
+    [projectId, resourceBasePath, taskId],
+  );
   const voiceAttachments = useMemo(
     () => (attachments || []).filter(isVoiceAttachment),
     [attachments],
@@ -1213,7 +1227,7 @@ export default function TaskAttachments({
   };
 
   const setBoardCounts = useCallback((items) => {
-    if (!taskId) return;
+    if (!syncBoardCounts || !taskId) return;
     const taskAttachmentCount = Array.isArray(items) ? items.length : 0;
     const checklistAttachmentCount = Number(extraAttachmentCount);
     const count =
@@ -1233,15 +1247,13 @@ export default function TaskAttachments({
         },
       }),
     );
-  }, [columnId, dispatch, extraAttachmentCount, taskId]);
+  }, [columnId, dispatch, extraAttachmentCount, syncBoardCounts, taskId]);
 
   const fetchAttachments = useCallback(async () => {
-    if (!projectId || !taskId) return;
+    if (!attachmentBasePath) return;
     try {
       setAttachmentsLoading(true);
-      const res = await api.get(
-        `/projects/${projectId}/tasks/${taskId}/attachments`,
-      );
+      const res = await api.get(`${attachmentBasePath}/attachments`);
       const items = res?.data?.data ?? res?.data ?? [];
       const list = Array.isArray(items) ? items : [];
       setAttachments(list);
@@ -1253,7 +1265,7 @@ export default function TaskAttachments({
     } finally {
       setAttachmentsLoading(false);
     }
-  }, [projectId, setBoardCounts, taskId]);
+  }, [attachmentBasePath, setBoardCounts]);
 
   useEffect(() => {
     if (!prefetched) return;
@@ -1310,10 +1322,10 @@ export default function TaskAttachments({
       setPreviewDownloading(true);
 
       // Prefer same-origin API endpoint to avoid CORS issues with /storage/ downloads.
-      if (projectId && taskId && attachmentId != null) {
+      if (attachmentBasePath && attachmentId != null) {
         try {
           const res = await api.get(
-            `/projects/${projectId}/tasks/${taskId}/attachments/${attachmentId}/download`,
+            `${attachmentBasePath}/attachments/${attachmentId}/download`,
             { responseType: "blob" },
           );
           const blob = res?.data instanceof Blob ? res.data : new Blob([res?.data]);
@@ -1349,14 +1361,14 @@ export default function TaskAttachments({
 
   const uploadAttachments = useCallback(async (files, options = {}) => {
     const selectedFiles = Array.from(files || []).filter(Boolean);
-    if (!projectId || !taskId || !selectedFiles.length || attachmentUploading) {
+    if (!attachmentBasePath || !selectedFiles.length || attachmentUploading) {
       return 0;
     }
     let controller = null;
     try {
       setAttachmentUploading(true);
       setAttachmentUploadingCount(selectedFiles.length);
-      const url = `/projects/${projectId}/tasks/${taskId}/attachments`;
+      const url = `${attachmentBasePath}/attachments`;
       controller = new AbortController();
       uploadAbortControllerRef.current = controller;
       uploadCancelReasonRef.current = null;
@@ -1376,7 +1388,7 @@ export default function TaskAttachments({
           : options.successMessage || "File attached",
       );
       await fetchAttachments();
-      onChanged?.();
+      await onChanged?.();
       return uploadedCount;
     } catch (err) {
       if (
@@ -1405,7 +1417,7 @@ export default function TaskAttachments({
       setAttachmentUploading(false);
       setAttachmentUploadingCount(0);
     }
-  }, [attachmentUploading, fetchAttachments, onChanged, projectId, taskId]);
+  }, [attachmentBasePath, attachmentUploading, fetchAttachments, onChanged]);
 
   const uploadVoiceAttachment = useCallback(
     (file) =>
@@ -1475,7 +1487,7 @@ export default function TaskAttachments({
   }, [attachmentUploading, uploadAttachments]);
 
   useEffect(() => {
-    if (!projectId || !taskId) return undefined;
+    if (!isActive || !attachmentBasePath) return undefined;
 
     const onPaste = (e) => {
       const items = e?.clipboardData?.items;
@@ -1500,11 +1512,11 @@ export default function TaskAttachments({
 
     document.addEventListener("paste", onPaste, true);
     return () => document.removeEventListener("paste", onPaste, true);
-  }, [projectId, taskId, uploadAttachments]);
+  }, [attachmentBasePath, isActive, uploadAttachments]);
 
   const deleteAttachment = async (attachment) => {
     const attachmentId = getAttachmentId(attachment);
-    if (!projectId || !taskId || !attachmentId) return;
+    if (!attachmentBasePath || !attachmentId) return;
     const isVoice = isAudioAttachment(attachment);
     try {
       const { isConfirmed } = await alertConfirm({
@@ -1518,13 +1530,11 @@ export default function TaskAttachments({
       if (!isConfirmed) return;
 
       setDeletingId(String(attachmentId));
-      await api.delete(
-        `/projects/${projectId}/tasks/${taskId}/attachments/${attachmentId}`,
-      );
+      await api.delete(`${attachmentBasePath}/attachments/${attachmentId}`);
       toastSuccess(isVoice ? "Voice deleted" : "File deleted");
       setMenuOpenId(null);
       await fetchAttachments();
-      onChanged?.();
+      await onChanged?.();
     } catch (err) {
       const msg =
         err?.message ||
@@ -1541,7 +1551,7 @@ export default function TaskAttachments({
     <div className="mb-3">
       <div className="task-attachment-actions">
         <label
-          htmlFor="task-attachment-file"
+          htmlFor={inputId}
           className={`task-attachment-dropzone ${
             attachmentDragActive ? "is-drag-over" : ""
           } ${
@@ -1586,7 +1596,7 @@ export default function TaskAttachments({
           <input
             type="file"
             name="files[]"
-            id="task-attachment-file"
+            id={inputId}
             className="d-none"
             multiple
             onChange={async (e) => {
@@ -1605,7 +1615,7 @@ export default function TaskAttachments({
         <VoiceAttachmentsPanel
           className="task-voice-panel--task"
           attachments={voiceAttachments}
-          disabled={!projectId || !taskId}
+          disabled={!attachmentBasePath}
           uploading={attachmentUploading}
           onUpload={uploadVoiceAttachment}
           onDelete={deleteAttachment}

@@ -20,6 +20,7 @@ import ActionDropdown from "../../Components/ActionDropdown/index.jsx";
 import CompanyMembersModal from "./CompanyMembersModal.jsx";
 import AddCompanyMemberModal from "./AddCompanyMemberModal.jsx";
 import EditCompanyModal from "./EditCompanyModal.jsx";
+import CompanyWorkRolesModal from "./CompanyWorkRolesModal.jsx";
 import {
 	alertConfirm,
 	toastError,
@@ -96,6 +97,8 @@ const HeaderMenu = () => {
 	const [companyAddMemberModalOpen, setCompanyAddMemberModalOpen] =
 		useState(false);
 	const [companyEditModalOpen, setCompanyEditModalOpen] = useState(false);
+	const [companyWorkRolesModalOpen, setCompanyWorkRolesModalOpen] =
+		useState(false);
 
 	const activeCompanyId =
 		activeCompanyIdFromContext ?? user?.active_company_id ?? null;
@@ -133,12 +136,14 @@ const HeaderMenu = () => {
 			setCompanyMembersModalOpen(false);
 			setCompanyAddMemberModalOpen(false);
 			setCompanyEditModalOpen(false);
+			setCompanyWorkRolesModalOpen(false);
 			return;
 		}
 
 		if (!canManageCompanyMembers) {
 			setCompanyMembersModalOpen(false);
 			setCompanyAddMemberModalOpen(false);
+			setCompanyWorkRolesModalOpen(false);
 		}
 
 		if (!canEditCompany) {
@@ -197,6 +202,11 @@ const HeaderMenu = () => {
 	const openCompanyEditModal = () => {
 		if (!canEditCompany) return;
 		setCompanyEditModalOpen(true);
+	};
+
+	const openCompanyWorkRolesModal = () => {
+		if (!canManageCompanyMembers) return;
+		setCompanyWorkRolesModalOpen(true);
 	};
 
 	const handleSubmitCompanyEdit = async ({ name, image }) => {
@@ -370,6 +380,12 @@ const HeaderMenu = () => {
 						label: "Company Members",
 						icon: "ti-users",
 						onClick: openCompanyMembersModal,
+					},
+					{
+						key: "company-work-roles",
+						label: "Work Roles",
+						icon: "ti-hierarchy-2",
+						onClick: openCompanyWorkRolesModal,
 					},
 					{
 						key: "add-member",
@@ -783,6 +799,14 @@ const HeaderMenu = () => {
 					onClose={() => setCompanyAddMemberModalOpen(false)}
 					onSubmit={handleSubmitAddCompanyMember}
 					isSubmitting={companyMemberAddLoading}
+				/>
+			) : null}
+
+			{canManageCompanyMembers ? (
+				<CompanyWorkRolesModal
+					isOpen={companyWorkRolesModalOpen}
+					onClose={() => setCompanyWorkRolesModalOpen(false)}
+					companyId={activeCompanyId}
 				/>
 			) : null}
 		</>

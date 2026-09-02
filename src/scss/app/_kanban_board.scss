@@ -400,6 +400,84 @@ nav.dark-sidebar ~ .app-content .board-column-load-more__button:focus-visible:no
   padding-top: 15px;
 }
 
+.board-item-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.3rem;
+  color: rgba(var(--primary), 1);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.board-item-participants {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding-left: 0.5rem;
+}
+
+.board-item-participant {
+  width: 30px;
+  height: 30px;
+  margin-left: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid var(--white);
+  border-radius: 50%;
+  background: rgba(var(--primary), 0.12);
+  color: rgba(var(--primary), 1);
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(var(--dark), 0.12);
+
+  &:first-child {
+    margin-left: 0;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.board-item-participant--overflow {
+  background: rgba(var(--secondary), 0.14);
+  color: rgba(var(--secondary), 0.9);
+}
+
+.board-quick-create__types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  margin-bottom: 0.45rem;
+  padding: 0.2rem;
+  border-radius: 8px;
+  background: rgba(var(--secondary), 0.08);
+}
+
+.board-quick-create__type {
+  padding: 0.35rem 0.4rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(var(--secondary), 0.86);
+  font-size: 0.75rem;
+  font-weight: 600;
+
+  &.is-active {
+    background: var(--white);
+    color: rgba(var(--primary), 1);
+    box-shadow: 0 1px 4px rgba(var(--dark), 0.12);
+  }
+}
+
 // Fix: if any ancestor creates a "fixed-position containing block" (transform/filter/etc),
 // dragging can be offset from the cursor. We portal dragged items to <body> and boost z-index.
 .board-drag-portal {

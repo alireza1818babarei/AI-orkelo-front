@@ -43,9 +43,11 @@ const BoardItem = ({
                      taskChecklistCompletedCount,
                      taskChecklistTotalCount,
                       taskTags,
-                     taskPriority,
+                      taskPriority,
                      taskRating,
                       taskUserImg,
+                     taskUsers = [],
+                     taskKindLabel = '',
                      taskReviewStatus = 'active',
                      isCompleted = false,
                      innerRef,
@@ -62,10 +64,27 @@ const BoardItem = ({
   const [showTaskUserImg, setShowTaskUserImg] = useState(
     Boolean(normalizedTaskUserImg)
   );
+  const [failedTaskUserImages, setFailedTaskUserImages] = useState(() => new Set());
 
   useEffect(() => {
     setShowTaskUserImg(Boolean(normalizedTaskUserImg));
   }, [normalizedTaskUserImg]);
+
+  const normalizedTaskUsers = (Array.isArray(taskUsers) ? taskUsers : [])
+    .filter((user) => user && typeof user === 'object')
+    .map((user, index) => ({
+      ...user,
+      key: String(user.id ?? user.email ?? user.name ?? index),
+      avatar: String(user.avatar || '').trim(),
+    }));
+  const visibleTaskUsers = normalizedTaskUsers.slice(0, 3);
+  const hiddenTaskUserCount = Math.max(normalizedTaskUsers.length - visibleTaskUsers.length, 0);
+  const hasTaskUsers = visibleTaskUsers.length > 0;
+  const hasAnyTaskUser = hasTaskUsers || showTaskUserImg;
+
+  useEffect(() => {
+    setFailedTaskUserImages(new Set());
+  }, [normalizedTaskUsers.map((user) => `${user.key}:${user.avatar}`).join('|')]);
 
   const normalizeTags = (value) => {
     const v = value?.data ?? value ?? [];
@@ -159,7 +178,7 @@ const BoardItem = ({
         className={`board-item-content position-relative ${
           isCompleted ? 'board-item-content--completed' : ''
         } ${
-          showTaskUserImg ? 'board-item-content--has-assignee-img' : ''
+          hasAnyTaskUser ? 'board-item-content--has-assignee-img' : ''
         } ${
           !showPriorityCue ? 'board-item-content--without-priority' : ''
         }`}
@@ -220,6 +239,12 @@ const BoardItem = ({
         <div className="gap-1 d-flex flex-column">
           <div className="d-flex justify-content-between align-items-center gap-2">
             <div>
+              {taskKindLabel ? (
+                <span className="board-item-kind-badge">
+                  <i className="ti ti-hierarchy-3" aria-hidden="true"></i>
+                  {taskKindLabel}
+                </span>
+              ) : null}
               {taskId ? (
                 <div
                   className="board-item-id position-absolute bottom-0 f-s-11"
@@ -236,7 +261,48 @@ const BoardItem = ({
               </div>
             </div>
 
-            {showTaskUserImg ? (
+            {hasTaskUsers ? (
+              <div className="board-item-participants" aria-label="Super Task participants">
+                {visibleTaskUsers.map((user) => {
+                  const showAvatar = user.avatar && !failedTaskUserImages.has(user.key);
+                  const initial = String(user.name || user.email || '?').trim().charAt(0).toUpperCase();
+
+                  return (
+                    <div
+                      key={user.key}
+                      className="board-item-participant"
+                      title={user.name || user.email || 'Participant'}
+                    >
+                      {showAvatar ? (
+                        <img
+                          src={user.avatar}
+                          alt=""
+                          className="img-fluid"
+                          onError={() => {
+                            setFailedTaskUserImages((current) => {
+                              const next = new Set(current);
+                              next.add(user.key);
+                              return next;
+                            });
+                          }}
+                        />
+                      ) : (
+                        <span aria-hidden="true">{initial}</span>
+                      )}
+                    </div>
+                  );
+                })}
+                {hiddenTaskUserCount > 0 ? (
+                  <div
+                    className="board-item-participant board-item-participant--overflow"
+                    title={`${hiddenTaskUserCount} more participant${hiddenTaskUserCount === 1 ? '' : 's'}`}
+                    aria-label={`${hiddenTaskUserCount} more participants`}
+                  >
+                    +{hiddenTaskUserCount}
+                  </div>
+                ) : null}
+              </div>
+            ) : showTaskUserImg ? (
               <div className="d-flex align-items-center gap-1">
                 <div className="h-40 w-40 d-flex-center b-r-50 overflow-hidden text-bg-primary">
                   <img

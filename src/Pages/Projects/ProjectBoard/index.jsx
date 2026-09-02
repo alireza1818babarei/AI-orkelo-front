@@ -882,17 +882,25 @@ const ProjectBoard = () => {
 
 
 
-  const handleAddTask = async (column, text) => {
+  const handleAddTask = async (column, text, taskType = "task") => {
     if (!project?.id || !column?.id || !text?.trim()) return;
+    const normalizedTaskType = taskType === "super_task" ? "super_task" : "task";
     try {
+      const payload = {
+        text: text.trim(),
+        column_id: column.id,
+      };
+
+      // Preserve the existing normal Task payload exactly; type is only sent for Super Tasks.
+      if (normalizedTaskType === "super_task") {
+        payload.type = "super_task";
+      }
+
       await dispatch(
         createProjectTaskThunk({
           projectId: project.id,
           columnId: column.id,
-          payload: {
-            text: text.trim(),
-            column_id: column.id,
-          },
+          payload,
         }),
       ).unwrap();
 
@@ -1011,6 +1019,12 @@ const ProjectBoard = () => {
   const handleTaskClick = (task) => {
     const nextTaskId = task?.id;
     if (!id || nextTaskId == null) return;
+
+    if (String(task?.task_type || "").toLowerCase() === "super_task") {
+      navigat(`/projects/${id}/tasks/${nextTaskId}${location.search || ""}`);
+      return;
+    }
+
     setActiveTask(task);
     navigat(`/projects/${id}/task/${nextTaskId}${location.search || ""}`);
   };

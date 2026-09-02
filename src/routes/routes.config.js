@@ -10,6 +10,7 @@ import ProjectManager from '../Pages/ManageProjects/Project';
 import Profile from '../Pages/Profile';
 import MyProjects from '../Pages/Profile/MyProjects';
 import ProjectBoard from '../Pages/Projects/ProjectBoard';
+import SuperTaskPage from '../Pages/Projects/SuperTask';
 import ManageFinance from '../Pages/ManageFinance';
 import Requests from '../Pages/Requests';
 import RequireAuth from './auth/RequireAuth';
@@ -47,6 +48,7 @@ export const routesConfig = [
           { path: '/manage-projecets/:projectId/user/:userId', element: <UserReports/>},
           { path: '/projects/:id', element: <ProjectBoard /> },
           { path: '/projects/:id/task/:taskId', element: <ProjectBoard /> },
+          { path: '/projects/:projectId/tasks/:taskId', element: <SuperTaskPage /> },
           { path: '/profile', element: <Profile /> },
           { path: '/profile/projects', element: <Profile /> },
           { path: '/profile/integrations', element: <Profile /> },

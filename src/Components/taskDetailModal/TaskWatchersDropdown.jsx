@@ -69,6 +69,7 @@ export default function TaskWatchersDropdown({
   columnId = null,
   taskId,
   disabled = false,
+  onChanged,
 }) {
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
@@ -141,6 +142,7 @@ export default function TaskWatchersDropdown({
           addTaskWatcherThunk({ projectId, taskId, columnId, userId }),
         ).unwrap();
       }
+      await onChanged?.({ user, watching: !isWatcher });
     } catch (err) {
       const msg = err?.message || err?.data?.message || "Update watchers failed";
       toastError(msg);

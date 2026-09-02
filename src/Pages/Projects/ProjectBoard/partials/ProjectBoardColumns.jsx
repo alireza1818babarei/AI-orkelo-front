@@ -246,6 +246,35 @@ const resolveTaskAssigneeAvatar = (task) => {
   );
 };
 
+const isSuperTask = (task) =>
+  String(task?.task_type ?? "")
+    .trim()
+    .toLowerCase() === "super_task";
+
+const resolveSuperTaskParticipants = (task) => {
+  const participants = Array.isArray(task?.participants) ? task.participants : [];
+  const seen = new Set();
+
+  return participants.reduce((result, participant) => {
+    if (!participant || typeof participant !== "object") return result;
+
+    const key = String(
+      participant.id ?? participant.email ?? participant.name ?? "",
+    ).trim();
+    if (!key || seen.has(key)) return result;
+
+    seen.add(key);
+    result.push({
+      ...participant,
+      avatar: resolveUserAvatarWithFallback(
+        participant.avatar,
+        participant.id ?? participant.email ?? participant.name ?? task?.id ?? "",
+      ),
+    });
+    return result;
+  }, []);
+};
+
 const TaskCard = memo(function TaskCard({
   task,
   columnId,
@@ -259,6 +288,10 @@ const TaskCard = memo(function TaskCard({
   if (!task) return null;
   const reviewStatus = getTaskReviewStatus(task);
   const completed = isTaskCompleted(task);
+  const superTask = isSuperTask(task);
+  const superTaskParticipants = superTask
+    ? resolveSuperTaskParticipants(task)
+    : [];
   const checklistProgress = getTaskChecklistProgress(task);
   const hasDueTime = Boolean(getTaskDueValue(task));
   const overdue = !completed && isTaskOverdue(task);
@@ -361,7 +394,9 @@ const TaskCard = memo(function TaskCard({
         taskTags={task.tags ?? []}
         taskPriority={task.priority}
         taskRating={task.rating}
-        taskUserImg={resolveTaskAssigneeAvatar(task)}
+        taskUserImg={superTask ? "" : resolveTaskAssigneeAvatar(task)}
+        taskUsers={superTaskParticipants}
+        taskKindLabel={superTask ? "Super Task" : ""}
         taskReviewStatus={reviewStatus}
         isCompleted={completed}
       />
@@ -421,7 +456,9 @@ const Column = memo(function Column({
 
   addTaskColumnId,
   addTaskText,
+  addTaskType,
   setAddTaskText,
+  setAddTaskType,
   onStartAddTask,
   onCancelAddTask,
   onSubmitAddTask,
@@ -538,11 +575,29 @@ const Column = memo(function Column({
   const footer = useMemo(() => {
     if (addTaskColumnId === String(column.id)) {
       return (
-        <div className="py-3 px-2">
+        <div className="board-quick-create py-3 px-2">
+          <div className="board-quick-create__types" role="group" aria-label="Create type">
+            {[
+              { value: "task", label: "Task" },
+              { value: "super_task", label: "Super Task" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`board-quick-create__type ${addTaskType === option.value ? "is-active" : ""}`}
+                aria-pressed={addTaskType === option.value}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setAddTaskType(option.value)}
+                disabled={tasksLoading || status === "loading"}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <input
             type="text"
             className="form-control"
-            placeholder="Task title"
+            placeholder={addTaskType === "super_task" ? "Super Task title" : "Task title"}
             value={addTaskText}
             onChange={(e) => setAddTaskText(e.target.value)}
             onBlur={() => onSubmitAddTask?.(column)}
@@ -577,11 +632,13 @@ const Column = memo(function Column({
   }, [
     addTaskColumnId,
     addTaskText,
+    addTaskType,
     column,
     onCancelAddTask,
     onStartAddTask,
     onSubmitAddTask,
     setAddTaskText,
+    setAddTaskType,
     status,
     tasksLoading,
   ]);
@@ -719,6 +776,7 @@ const ProjectBoardColumns = ({
 
   const [addTaskColumnId, setAddTaskColumnId] = useState(null);
   const [addTaskText, setAddTaskText] = useState("");
+  const [addTaskType, setAddTaskType] = useState("task");
 
   const completedByIdRef = useRef({});
   const completeFlashTimeoutsRef = useRef({});
@@ -920,11 +978,13 @@ const ProjectBoardColumns = ({
     if (!column?.id) return;
     setAddTaskColumnId(String(column.id));
     setAddTaskText("");
+    setAddTaskType("task");
   };
 
   const cancelAddTask = () => {
     setAddTaskColumnId(null);
     setAddTaskText("");
+    setAddTaskType("task");
   };
 
   const submitAddTask = (column) => {
@@ -933,7 +993,7 @@ const ProjectBoardColumns = ({
       cancelAddTask();
       return;
     }
-    onAddTask?.(column, text);
+    onAddTask?.(column, text, addTaskType);
     cancelAddTask();
   };
 
@@ -1228,7 +1288,9 @@ const ProjectBoardColumns = ({
                       isDragging={colDragSnapshot.isDragging}
                       addTaskColumnId={addTaskColumnId}
                       addTaskText={addTaskText}
+                      addTaskType={addTaskType}
                       setAddTaskText={setAddTaskText}
+                      setAddTaskType={setAddTaskType}
                       onStartAddTask={startAddTask}
                       onCancelAddTask={cancelAddTask}
                       onSubmitAddTask={submitAddTask}

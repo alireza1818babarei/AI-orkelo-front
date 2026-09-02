@@ -371,6 +371,7 @@ const truncateText = (value, max = 50) => {
 export default function TaskActivityConversation({
   projectId,
   taskId,
+  resourceBasePath = '',
   activities = [],
   comments = [],
   checklistItems = [],
@@ -395,6 +396,16 @@ export default function TaskActivityConversation({
     end: -1,
     activeIndex: 0,
   });
+  const commentBasePath = useMemo(
+    () =>
+      String(
+        resourceBasePath ||
+          (projectId && taskId
+            ? `/projects/${projectId}/tasks/${taskId}`
+            : ''),
+      ).replace(/\/+$/, ''),
+    [projectId, resourceBasePath, taskId],
+  );
   const composerRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -645,7 +656,7 @@ export default function TaskActivityConversation({
   }, [showComments]);
 
   const submitComment = async () => {
-    if (!projectId || !taskId) return;
+    if (!commentBasePath) return;
     const text = commentText.trim();
     if (!text) return;
 
@@ -661,14 +672,11 @@ export default function TaskActivityConversation({
         );
       }
 
-      await api.post(
-        `/projects/${projectId}/tasks/${taskId}/comments`,
-        payload,
-      );
+      await api.post(`${commentBasePath}/comments`, payload);
       setCommentText('');
       setSelectedMentionMembers([]);
       closeMentionMenu();
-      onRefresh?.();
+      await onRefresh?.();
     } catch (err) {
       const msg = err?.message || err?.data?.message || 'Create comment failed';
       toastError(msg);
@@ -679,7 +687,7 @@ export default function TaskActivityConversation({
 
   const deleteComment = async (comment) => {
     const commentId = comment?.id ?? comment?.comment_id ?? null;
-    if (!projectId || !taskId || !commentId) return;
+    if (!commentBasePath || !commentId) return;
 
     try {
       const { isConfirmed } = await alertConfirm({
@@ -693,11 +701,9 @@ export default function TaskActivityConversation({
       const key = String(commentId);
       setCommentDeletingIds((prev) => ({ ...(prev || {}), [key]: true }));
 
-      await api.delete(
-        `/projects/${projectId}/tasks/${taskId}/comments/${commentId}`,
-      );
+      await api.delete(`${commentBasePath}/comments/${commentId}`);
       toastSuccess('Comment Deleted');
-      onRefresh?.();
+      await onRefresh?.();
     } catch (err) {
       const msg =
         err?.message ||
