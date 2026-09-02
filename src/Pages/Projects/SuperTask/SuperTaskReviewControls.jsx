@@ -12,6 +12,7 @@ export default function SuperTaskReviewControls({
   workItemId = null,
   onChanged,
   compact = false,
+  showStatus = true,
 }) {
   const [busyAction, setBusyAction] = useState("");
   const capabilities = entity?.capabilities ?? {};
@@ -81,10 +82,12 @@ export default function SuperTaskReviewControls({
 
   return (
     <div className="super-task-review-controls">
-      <span className={`super-task-status is-${meta.tone}`}>
-        <i className={meta.icon} aria-hidden="true" />
-        {meta.label}
-      </span>
+      {showStatus ? (
+        <span className={`super-task-status is-${meta.tone}`}>
+          <i className={meta.icon} aria-hidden="true" />
+          {meta.label}
+        </span>
+      ) : null}
 
       {capabilities.can_submit
         ? actionButton(

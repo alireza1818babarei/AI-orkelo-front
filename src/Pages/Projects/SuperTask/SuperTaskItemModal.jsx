@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, ModalBody, Spinner } from "reactstrap";
 import {
+  createWorkItem,
   getEntityTimeline,
   getSubTask,
   updateSubTask,
@@ -8,6 +9,8 @@ import {
 import TaskActivityConversation from "../../../Components/taskDetailModal/TaskActivityConversation";
 import TaskAttachments from "../../../Components/taskDetailModal/TaskAttachments";
 import { toastError, toastSuccess } from "../../../utils/sweetAlert";
+import SuperTaskCreateWorkItemForm from "./SuperTaskCreateWorkItemForm";
+import SuperTaskInlineTextField from "./SuperTaskInlineTextField";
 import SuperTaskReviewControls from "./SuperTaskReviewControls";
 import SuperTaskWorkItemList from "./SuperTaskWorkItemList";
 import {
@@ -29,11 +32,12 @@ export default function SuperTaskItemModal({
 }) {
   const requestRef = useRef(0);
   const [subTask, setSubTask] = useState(null);
-  const [draft, setDraft] = useState({ title: "", description: "" });
   const [timeline, setTimeline] = useState(EMPTY_TIMELINE);
   const [loading, setLoading] = useState(false);
   const [timelineLoading, setTimelineLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingField, setSavingField] = useState("");
+  const [showCreateWorkItem, setShowCreateWorkItem] = useState(false);
+  const [creatingWorkItem, setCreatingWorkItem] = useState(false);
   const [modalError, setModalError] = useState("");
 
   const resourceBasePath = useMemo(
@@ -48,10 +52,6 @@ export default function SuperTaskItemModal({
 
   const syncSubTask = useCallback((item) => {
     setSubTask(item);
-    setDraft({
-      title: item?.title ?? "",
-      description: item?.description ?? "",
-    });
   }, []);
 
   const loadTimeline = useCallback(async () => {
@@ -100,12 +100,15 @@ export default function SuperTaskItemModal({
   useEffect(() => {
     if (!isOpen) {
       requestRef.current += 1;
+      setShowCreateWorkItem(false);
       return;
     }
 
     setSubTask(null);
     setTimeline(EMPTY_TIMELINE);
     setModalError("");
+    setShowCreateWorkItem(false);
+    setSavingField("");
     refreshDetails({ showLoading: true });
   }, [isOpen, refreshDetails, subTaskId]);
 
@@ -116,27 +119,40 @@ export default function SuperTaskItemModal({
     ]);
   }, [onChanged, refreshDetails]);
 
-  const saveSubTask = async () => {
-    if (!subTask?.id || saving || !subTask?.capabilities?.can_edit) return;
+  const handleUpdateField = async (field, value) => {
+    if (!subTask?.id || savingField || !subTask?.capabilities?.can_edit) {
+      return false;
+    }
+    try {
+      setSavingField(field);
+      await updateSubTask(projectId, taskId, subTaskId, { [field]: value });
+      await refreshModalAndRoot();
+      return true;
+    } catch (error) {
+      toastError(error?.message || "Update Sub-task failed");
+      return false;
+    } finally {
+      setSavingField("");
+    }
+  };
 
-    const title = String(draft.title || "").trim();
-    if (!title) {
-      toastError("Title is required");
-      return;
+  const handleCreateWorkItem = async (payload) => {
+    if (!subTask?.id || creatingWorkItem || !subTask?.capabilities?.can_edit) {
+      return false;
     }
 
     try {
-      setSaving(true);
-      await updateSubTask(projectId, taskId, subTaskId, {
-        title,
-        description: String(draft.description || "").trim() || null,
-      });
+      setCreatingWorkItem(true);
+      await createWorkItem(projectId, taskId, subTaskId, payload);
+      setShowCreateWorkItem(false);
       await refreshModalAndRoot();
-      toastSuccess("Sub-task updated");
+      toastSuccess("Work Item created");
+      return true;
     } catch (error) {
-      toastError(error?.message || "Update Sub-task failed");
+      toastError(error?.message || "Create Work Item failed");
+      return false;
     } finally {
-      setSaving(false);
+      setCreatingWorkItem(false);
     }
   };
 
@@ -151,6 +167,13 @@ export default function SuperTaskItemModal({
   const workItems = Array.isArray(subTask?.work_items)
     ? subTask.work_items
     : [];
+  const capabilities = subTask?.capabilities ?? {};
+  const hasReviewActions = Boolean(
+    capabilities.can_submit ||
+      capabilities.can_approve ||
+      capabilities.can_reject ||
+      capabilities.can_restore,
+  );
 
   return (
     <Modal
@@ -163,7 +186,20 @@ export default function SuperTaskItemModal({
       contentClassName="super-task-item-modal__content"
     >
       <div className="super-task-item-modal__header">
-        <div className="d-flex align-items-center gap-2 min-w-0">
+        <div className="super-task-item-modal__header-actions">
+          {subTask && hasReviewActions ? (
+            <SuperTaskReviewControls
+              entity={subTask}
+              projectId={projectId}
+              taskId={taskId}
+              subTaskId={subTaskId}
+              onChanged={refreshModalAndRoot}
+              compact
+              showStatus={false}
+            />
+          ) : null}
+        </div>
+        <div className="super-task-item-modal__identity">
           <span className="super-task-item-modal__eyebrow">Sub-task</span>
           {subTask ? (
             <span className={`super-task-status is-${status.tone}`}>
@@ -204,38 +240,28 @@ export default function SuperTaskItemModal({
         ) : (
           <>
             <section className="super-task-item-modal__editor">
-              <label className="form-label" htmlFor={`sub-task-title-${subTask.id}`}>
-                Title
-              </label>
-              <input
-                id={`sub-task-title-${subTask.id}`}
-                className="form-control form-control-lg"
-                value={draft.title}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, title: event.target.value }))
-                }
-                disabled={!subTask.capabilities?.can_edit || saving}
+              <SuperTaskInlineTextField
+                kind="title"
+                value={subTask.title}
+                placeholder="Sub-task title"
+                canEdit={Boolean(subTask.capabilities?.can_edit)}
+                saving={Boolean(savingField)}
+                onCommit={(value) => handleUpdateField("title", value)}
+                className="super-task-inline-editor--modal-title"
               />
-
-              <label
-                className="form-label mt-3"
-                htmlFor={`sub-task-description-${subTask.id}`}
-              >
-                Description
-              </label>
-              <textarea
-                id={`sub-task-description-${subTask.id}`}
-                className="form-control"
-                rows="4"
-                value={draft.description}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
+              <SuperTaskInlineTextField
+                value={subTask.description || ""}
+                placeholder={
+                  subTask.capabilities?.can_edit
+                    ? "Click to add a description"
+                    : "No description has been added yet."
                 }
-                disabled={!subTask.capabilities?.can_edit || saving}
-                placeholder="Add a clear description..."
+                canEdit={Boolean(subTask.capabilities?.can_edit)}
+                saving={Boolean(savingField)}
+                onCommit={(value) =>
+                  handleUpdateField("description", value.trim() || null)
+                }
+                className="super-task-inline-editor--modal-description"
               />
 
               {subTask.rejection_note ? (
@@ -245,38 +271,29 @@ export default function SuperTaskItemModal({
                 </div>
               ) : null}
 
-              <div className="super-task-item-modal__actions">
-                <SuperTaskReviewControls
-                  entity={subTask}
-                  projectId={projectId}
-                  taskId={taskId}
-                  subTaskId={subTaskId}
-                  onChanged={refreshModalAndRoot}
-                  compact
-                />
-                {subTask.capabilities?.can_edit ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm text-white"
-                    onClick={saveSubTask}
-                    disabled={saving || !String(draft.title || "").trim()}
-                  >
-                    {saving ? <Spinner size="sm" className="me-2" /> : null}
-                    Save changes
-                  </button>
-                ) : null}
-              </div>
             </section>
 
             <section className="super-task-item-modal__section">
               <div className="super-task-section-heading">
-                <div>
-                  <span className="super-task-section-heading__eyebrow">
-                    Assigned delivery
-                  </span>
-                  <h5>Work Items ({workItems.length})</h5>
-                </div>
+                <h5>Work Items ({workItems.length})</h5>
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={() => setShowCreateWorkItem((current) => !current)}
+                  disabled={!subTask.capabilities?.can_edit || creatingWorkItem}
+                >
+                  <i className="ti ti-plus me-1" aria-hidden="true" />
+                  Add Work Item
+                </button>
               </div>
+              {showCreateWorkItem ? (
+                <SuperTaskCreateWorkItemForm
+                  projectMembers={projectMembers}
+                  creating={creatingWorkItem}
+                  onCreate={handleCreateWorkItem}
+                  onCancel={() => setShowCreateWorkItem(false)}
+                />
+              ) : null}
               <SuperTaskWorkItemList items={workItems} />
             </section>
 

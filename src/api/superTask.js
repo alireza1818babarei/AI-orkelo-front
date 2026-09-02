@@ -110,6 +110,19 @@ export const updateSubTask = async (
   return unwrapData(response, null);
 };
 
+export const createWorkItem = async (
+  projectId,
+  taskId,
+  subTaskId,
+  payload,
+) => {
+  const response = await api.post(
+    `/projects/${projectId}/tasks/${taskId}/sub-tasks/${subTaskId}/work-items`,
+    payload,
+  );
+  return unwrapData(response, null);
+};
+
 export const deleteSubTask = async (projectId, taskId, subTaskId) =>
   api.delete(
     `/projects/${projectId}/tasks/${taskId}/sub-tasks/${subTaskId}`,

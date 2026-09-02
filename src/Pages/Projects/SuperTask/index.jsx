@@ -14,16 +14,17 @@ import {
 import TaskActivityConversation from "../../../Components/taskDetailModal/TaskActivityConversation";
 import TaskAttachments from "../../../Components/taskDetailModal/TaskAttachments";
 import { toastError, toastSuccess } from "../../../utils/sweetAlert";
+import SuperTaskInlineTextField from "./SuperTaskInlineTextField";
 import SuperTaskItemModal from "./SuperTaskItemModal";
 import SuperTaskReviewControls from "./SuperTaskReviewControls";
 import SuperTaskSidebar from "./SuperTaskSidebar";
 import SuperTaskSubTaskRow from "./SuperTaskSubTaskRow";
 import SuperTaskSummaryGrid from "./SuperTaskSummaryGrid";
-import SuperTaskUserAvatar from "./SuperTaskUserAvatar";
+import SuperTaskUserDropdown from "./SuperTaskUserDropdown";
 import {
   formatDateTime,
   getMemberId,
-  getReviewMeta,
+  normalizeProjectMember,
   REVIEW_STATUS,
 } from "./superTask.utils";
 import "./superTask.css";
@@ -58,8 +59,6 @@ export default function SuperTaskPage() {
   const [showNewSubTask, setShowNewSubTask] = useState(false);
   const [newSubTask, setNewSubTask] = useState({ title: "", description: "" });
   const [creatingSubTask, setCreatingSubTask] = useState(false);
-  const [editingDetails, setEditingDetails] = useState(false);
-  const [detailsDraft, setDetailsDraft] = useState({ text: "", description: "" });
   const [savingField, setSavingField] = useState("");
   const [selectedSubTaskId, setSelectedSubTaskId] = useState(null);
 
@@ -118,7 +117,6 @@ export default function SuperTaskPage() {
       setMembers(memberData);
       setTags(tagData);
       setTimeline(timelineData);
-      setDetailsDraft({ text: taskData?.text || "", description: taskData?.description || "" });
     } catch (error) {
       setPageError(error?.message || "Super Task could not be loaded.");
     } finally {
@@ -134,7 +132,6 @@ export default function SuperTaskPage() {
       ]);
       setTask(taskData);
       setSummary(summaryData || EMPTY_SUMMARY);
-      setDetailsDraft({ text: taskData?.text || "", description: taskData?.description || "" });
       await Promise.all([loadChildren(), loadTimeline()]);
     } catch (error) {
       toastError(error?.message || "Refresh Super Task failed");
@@ -176,47 +173,39 @@ export default function SuperTaskPage() {
     }
   };
 
-  const handleUpdateField = async (field, value) => {
-    if (!task?.column?.id || savingField) return;
+  const handleUpdateField = async (
+    field,
+    value,
+    { showSuccess = true } = {},
+  ) => {
+    if (!task?.column?.id || savingField) return false;
     try {
       setSavingField(field);
-      await updateSuperTask(projectId, task.column.id, taskId, { [field]: value });
+      const updatedTask = await updateSuperTask(
+        projectId,
+        task.column.id,
+        taskId,
+        { [field]: value },
+      );
       setTask((current) => ({
         ...current,
-        [field]: value,
+        ...(updatedTask && typeof updatedTask === "object" ? updatedTask : {}),
+        [field]: updatedTask?.[field] ?? value,
         ...(field === "responsible_user_id"
           ? {
               responsible_user:
-                members.find((member) => String(getMemberId(member)) === String(value)) || null,
+                members
+                  .map(normalizeProjectMember)
+                  .find((member) => String(member.id) === String(value)) || null,
             }
           : {}),
       }));
-      toastSuccess("Super Task updated");
+      if (showSuccess) toastSuccess("Super Task updated");
       await loadTimeline();
+      return true;
     } catch (error) {
       toastError(error?.message || "Update failed");
-    } finally {
-      setSavingField("");
-    }
-  };
-
-  const saveDetails = async () => {
-    const text = detailsDraft.text.trim();
-    if (!text) {
-      toastError("Title is required");
-      return;
-    }
-    try {
-      setSavingField("details");
-      await updateSuperTask(projectId, task.column.id, taskId, {
-        text,
-        description: detailsDraft.description.trim() || null,
-      });
-      setEditingDetails(false);
-      await refreshTask();
-      toastSuccess("Super Task details updated");
-    } catch (error) {
-      toastError(error?.message || "Update details failed");
+      return false;
     } finally {
       setSavingField("");
     }
@@ -264,8 +253,6 @@ export default function SuperTaskPage() {
     );
   }
 
-  const statusMeta = getReviewMeta(task.review_status);
-
   return (
     <div className="super-task-page">
       <header className="super-task-page__toolbar">
@@ -276,56 +263,53 @@ export default function SuperTaskPage() {
           </button>
           <SuperTaskReviewControls entity={task} projectId={projectId} taskId={taskId} onChanged={refreshTask} />
         </div>
-        <label className="super-task-owner-control">
-          <span>Super Task owner</span>
-          <div>
-            <SuperTaskUserAvatar user={task.responsible_user} size={34} />
-            <select
-              value={task.responsible_user?.id || ""}
-              onChange={(event) => handleUpdateField("responsible_user_id", event.target.value ? Number(event.target.value) : null)}
-              disabled={savingField === "responsible_user_id" || !task.capabilities?.can_edit}
-            >
-              <option value="">Unassigned</option>
-              {members.map((member) => <option key={getMemberId(member)} value={getMemberId(member)}>{member.name}</option>)}
-            </select>
-          </div>
-        </label>
-        <div className="super-task-page__toolbar-actions">
-          {task.capabilities?.can_edit ? (
-            <button type="button" className="super-task-icon-button" onClick={() => setEditingDetails((v) => !v)} title="Edit details">
-              <i className="ti ti-edit" aria-hidden="true" />
-            </button>
-          ) : null}
-          <button type="button" className="super-task-icon-button" onClick={() => navigate(`/projects/${projectId}${location.search || ""}`)} aria-label="Close">
-            <i className="ti ti-x" aria-hidden="true" />
-          </button>
-        </div>
+        <SuperTaskUserDropdown
+          users={members}
+          selectedUser={task.responsible_user}
+          selectedUserId={task.responsible_user?.id}
+          onChange={(userId) =>
+            handleUpdateField("responsible_user_id", userId, {
+              showSuccess: false,
+            })
+          }
+          disabled={!task.capabilities?.can_edit || Boolean(savingField)}
+          saving={savingField === "responsible_user_id"}
+          emptyLabel="Assign responsible"
+          className="super-task-owner-dropdown"
+        />
       </header>
 
       <div className="super-task-page__layout">
         <main className="super-task-page__main">
           <section className="super-task-hero">
-            {editingDetails ? (
-              <div className="super-task-details-editor">
-                <input value={detailsDraft.text} onChange={(event) => setDetailsDraft((current) => ({ ...current, text: event.target.value }))} className="form-control form-control-lg" />
-                <textarea value={detailsDraft.description} onChange={(event) => setDetailsDraft((current) => ({ ...current, description: event.target.value }))} rows="3" className="form-control" placeholder="Description" />
-                <div className="d-flex gap-2 justify-content-end">
-                  <button type="button" className="btn btn-light" onClick={() => setEditingDetails(false)}>Cancel</button>
-                  <button type="button" className="btn btn-primary text-white" onClick={saveDetails} disabled={savingField === "details"}>
-                    {savingField === "details" ? <Spinner size="sm" className="me-2" /> : null}Save
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="super-task-hero__title-row">
-                  <h1>{task.text}</h1>
-                  <span className={`super-task-status is-${statusMeta.tone}`}><i className={statusMeta.icon} aria-hidden="true" />{statusMeta.label}</span>
-                </div>
-                <p>{task.description || "No description has been added yet."}</p>
-                {task.rejection_note ? <div className="super-task-rejection-note"><i className="ti ti-message-exclamation" />{task.rejection_note}</div> : null}
-              </>
-            )}
+            <SuperTaskInlineTextField
+              kind="title"
+              value={task.text}
+              placeholder="Super Task title"
+              canEdit={Boolean(task.capabilities?.can_edit)}
+              saving={Boolean(savingField)}
+              onCommit={(value) =>
+                handleUpdateField("text", value, { showSuccess: false })
+              }
+              className="super-task-inline-editor--root-title"
+            />
+            <SuperTaskInlineTextField
+              value={task.description || ""}
+              placeholder={
+                task.capabilities?.can_edit
+                  ? "Click to add a description"
+                  : "No description has been added yet."
+              }
+              canEdit={Boolean(task.capabilities?.can_edit)}
+              saving={Boolean(savingField)}
+              onCommit={(value) =>
+                handleUpdateField("description", value.trim() || null, {
+                  showSuccess: false,
+                })
+              }
+              className="super-task-inline-editor--root-description"
+            />
+            {task.rejection_note ? <div className="super-task-rejection-note"><i className="ti ti-message-exclamation" />{task.rejection_note}</div> : null}
           </section>
 
           <SuperTaskSummaryGrid summary={summary} />
