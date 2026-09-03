@@ -351,9 +351,13 @@ export default function SuperTaskPage() {
     <div className="super-task-page">
       <header className="super-task-page__toolbar">
         <div className="super-task-page__toolbar-left">
-          <button type="button" className="super-task-back-button" onClick={() => navigate(`/projects/${projectId}`)}>
+          <button
+            type="button"
+            className="btn btn-primary text-white d-inline-flex align-items-center gap-2 fw-semibold"
+            onClick={() => navigate(`/projects/${projectId}`)}
+          >
             <i className="ti ti-arrow-left" aria-hidden="true" />
-            <span>Back to board</span>
+            <span className="d-none d-sm-inline">Back to board</span>
           </button>
           <SuperTaskReviewControls entity={task} projectId={projectId} taskId={taskId} onChanged={refreshTask} />
         </div>
