@@ -60,24 +60,26 @@ export default function SuperTaskWorkItemDetail({
           ) : null}
         </section>
 
-        <section className="super-task-item-modal__section super-task-detail-assets">
-          <div className="super-task-section-heading">
-            <div>
-              <span className="super-task-section-heading__eyebrow">Files & voice</span>
-              <h5>Attachments</h5>
+        {isActive ? (
+          <section className="super-task-item-modal__section super-task-detail-assets">
+            <div className="super-task-section-heading">
+              <div>
+                <span className="super-task-section-heading__eyebrow">Files & voice</span>
+                <h5>Attachments</h5>
+              </div>
             </div>
-          </div>
-          <TaskAttachments
-            projectId={projectId}
-            taskId={taskId}
-            resourceBasePath={resourceBasePath}
-            inputId={`work-item-attachment-file-${workItem.id}`}
-            syncBoardCounts={false}
-            isActive={isActive}
-            formatDateTime={formatDateTime}
-            onChanged={onContentChanged}
-          />
-        </section>
+            <TaskAttachments
+              projectId={projectId}
+              taskId={taskId}
+              resourceBasePath={resourceBasePath}
+              inputId={`work-item-attachment-file-${workItem.id}`}
+              syncBoardCounts={false}
+              isActive={isActive}
+              formatDateTime={formatDateTime}
+              onChanged={onContentChanged}
+            />
+          </section>
+        ) : null}
 
         <section className="super-task-item-modal__section">
           {timelineLoading ? (
