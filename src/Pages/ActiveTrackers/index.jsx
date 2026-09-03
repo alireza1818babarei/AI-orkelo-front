@@ -4,7 +4,10 @@ import { Link } from 'react-router-dom';
 import AppPagination from '../../Components/Common/AppPagination';
 import api from '../../api/axios';
 import { formatMonthDayTime } from '../../utils/date';
-import { TODO_BOARD_TYPE } from '../../store/projects/projectTodoListSlice';
+import {
+  buildWorkEntityPath,
+  getWorkEntityPresentation,
+} from '../../utils/workEntity';
 
 const TRACKERS_PER_PAGE = 10;
 const SEARCH_DEBOUNCE_MS = 800;
@@ -45,14 +48,12 @@ const formatRunningDuration = (seconds) => {
 };
 
 const normalizeTracker = (tracker) => ({
+  ...tracker,
   id: tracker?.id,
   userId: tracker?.user_id,
   taskId: tracker?.task_id,
-  taskBoardType: String(tracker?.task_board_type ?? '').trim().toLowerCase(),
   projectId: tracker?.project_id,
   projectName: String(tracker?.project_name ?? '').trim() || 'Project',
-  userName: String(tracker?.user_name ?? '').trim() || 'Unknown user',
-  taskName: String(tracker?.task_name ?? '').trim() || 'Untitled task',
   startedAt: tracker?.start_track ?? null,
   totalTime: Number(tracker?.total_time ?? 0) || 0,
   type: String(tracker?.type ?? '').trim(),
@@ -79,13 +80,6 @@ const normalizeTrackersResponse = (payload) => {
     trackers: data.map(normalizeTracker),
     meta: normalizeMeta(root?.meta, data.length),
   };
-};
-
-const buildTaskPath = (tracker) => {
-  const basePath = `/projects/${tracker.projectId}/task/${tracker.taskId}`;
-  return tracker.taskBoardType === TODO_BOARD_TYPE
-    ? `${basePath}?view=todo-list`
-    : basePath;
 };
 
 export default function ActiveTrackers({ scope = 'company' }) {
@@ -242,48 +236,74 @@ export default function ActiveTrackers({ scope = 'company' }) {
                     </td>
                   </tr>
                 ) : trackers.length > 0 ? (
-                  trackers.map((tracker) => (
-                    <tr key={tracker.id}>
-                      <td data-label='Project'>
-                        <span className='active-trackers-page__strong-cell'>
-                          {tracker.projectName}
-                        </span>
-                      </td>
-                      <td data-label='Task'>
-                        <span className='active-trackers-page__truncate'>
-                          {tracker.taskName}
-                        </span>
-                      </td>
-                      <td data-label='User'>{tracker.userName}</td>
-                      <td data-label='Started at'>
-                        {formatMonthDayTime(tracker.startedAt)}
-                      </td>
-                      <td data-label='Running time'>
-                        {formatRunningDuration(
-                          getRunningDurationSeconds(tracker.startedAt, nowMs)
-                        )}
-                      </td>
-                      <td
-                        className='active-trackers-page__action-cell'
-                        data-label='Action'
-                      >
-                        {tracker.projectId && tracker.taskId ? (
-                          <Button
-                            as={Link}
-                            to={buildTaskPath(tracker)}
-                            variant='outline-primary'
-                            size='sm'
-                          >
-                            Open task
-                          </Button>
-                        ) : (
-                          <Badge bg='light' text='dark'>
-                            Unavailable
-                          </Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  trackers.map((tracker) => {
+                    const presentation = getWorkEntityPresentation(tracker);
+                    const target = buildWorkEntityPath(tracker);
+                    const assignedUser = presentation.assignedUser;
+                    const userName =
+                      assignedUser?.name || tracker.user_name || 'Unknown user';
+                    const workRoleName = presentation.workRole?.name;
+
+                    return (
+                      <tr key={tracker.id}>
+                        <td data-label='Project'>
+                          <span className='active-trackers-page__strong-cell'>
+                            {tracker.projectName}
+                          </span>
+                        </td>
+                        <td data-label='Task'>
+                          <span className='active-trackers-page__truncate'>
+                            {presentation.title}
+                          </span>
+                          {presentation.isWorkItem ? (
+                            <small className='active-trackers-page__entity-context'>
+                              Work Item
+                              {presentation.context
+                                ? ` · ${presentation.context}`
+                                : ''}
+                            </small>
+                          ) : null}
+                        </td>
+                        <td data-label='User'>
+                          <span>{userName}</span>
+                          {workRoleName ? (
+                            <small className='active-trackers-page__work-role'>
+                              {workRoleName}
+                            </small>
+                          ) : null}
+                        </td>
+                        <td data-label='Started at'>
+                          {formatMonthDayTime(tracker.startedAt)}
+                        </td>
+                        <td data-label='Running time'>
+                          {formatRunningDuration(
+                            getRunningDurationSeconds(tracker.startedAt, nowMs)
+                          )}
+                        </td>
+                        <td
+                          className='active-trackers-page__action-cell'
+                          data-label='Action'
+                        >
+                          {target ? (
+                            <Button
+                              as={Link}
+                              to={target}
+                              variant='outline-primary'
+                              size='sm'
+                            >
+                              {presentation.isWorkItem
+                                ? 'Open Work Item'
+                                : 'Open task'}
+                            </Button>
+                          ) : (
+                            <Badge bg='light' text='dark'>
+                              Unavailable
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={6} className='text-center text-secondary py-4'>

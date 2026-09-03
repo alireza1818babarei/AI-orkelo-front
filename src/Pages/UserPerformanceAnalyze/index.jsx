@@ -2,8 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Col, Form, Modal, ProgressBar, Row, Table } from 'react-bootstrap';
 import Flatpickr from 'react-flatpickr';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { resolvePublicMediaUrl } from '../../utils/mediaUrl';
+import {
+  buildWorkEntityPath,
+  getWorkEntityKey,
+  getWorkEntityPresentation,
+} from '../../utils/workEntity';
 
 const COMPANY_MANAGEMENT_ROLES = new Set(['company_owner', 'company_supervisor']);
 const WORK_DAY_MINUTES = 480;
@@ -259,6 +265,10 @@ function UserAvatar({ user }) {
 }
 
 function StarRating({ value }) {
+  if (value === null || value === undefined) {
+    return <span className='user-performance-analyze__unrated'>Not rated</span>;
+  }
+
   const rating = normalizeRating(value);
   const label = `${formatRating(rating)}/5`;
 
@@ -291,7 +301,7 @@ function MetricCard({ metric, summary }) {
   );
 }
 
-function TopTimeTasks({ tasks }) {
+function TopTimeTasks({ tasks, onOpen }) {
   const maxSeconds = Math.max(
     1,
     ...tasks.map((task) => Number(task.total_seconds ?? 0) || 0),
@@ -301,24 +311,36 @@ function TopTimeTasks({ tasks }) {
     <Card className='user-performance-analyze__panel border-0 shadow-sm h-100'>
       <Card.Body>
         <div className='user-performance-analyze__panel-header'>
-          <h5>Tasks With The Highest Time Spent</h5>
+          <h5>Work With The Highest Time Spent</h5>
         </div>
 
         <div className='user-performance-analyze__time-list'>
           {tasks.length > 0 ? (
             tasks.map((task, index) => {
               const percent = Math.max(5, Math.round(((Number(task.total_seconds) || 0) / maxSeconds) * 100));
+              const presentation = getWorkEntityPresentation(task);
+              const target = buildWorkEntityPath(task);
 
               return (
-                <div className='user-performance-analyze__time-item' key={task.task_id}>
+                <button
+                  type='button'
+                  className='user-performance-analyze__time-item'
+                  key={getWorkEntityKey(task)}
+                  onClick={() => onOpen(task)}
+                  disabled={!target}
+                >
                   <span>{index + 1}</span>
                   <div>
-                    <strong>{task.task_name || 'Untitled task'}</strong>
-                    <small>{task.project_name || 'Project'}</small>
-                    <ProgressBar now={percent} aria-label={`${task.task_name} tracked time`} />
+                    <strong>{presentation.title}</strong>
+                    <small>
+                      {presentation.isWorkItem ? 'Work Item · ' : ''}
+                      {task.project_name || 'Project'}
+                      {presentation.context ? ` · ${presentation.context}` : ''}
+                    </small>
+                    <ProgressBar now={percent} aria-label={`${presentation.title} tracked time`} />
                   </div>
                   <em>{task.total_time_label || '0m'}</em>
-                </div>
+                </button>
               );
             })
           ) : (
@@ -330,19 +352,19 @@ function TopTimeTasks({ tasks }) {
   );
 }
 
-function OverdueTasks({ tasks }) {
+function OverdueTasks({ tasks, onOpen }) {
   return (
     <Card className='user-performance-analyze__panel border-0 shadow-sm h-100'>
       <Card.Body>
         <div className='user-performance-analyze__panel-header'>
-          <h5>Most Overdue Tasks</h5>
+          <h5>Most Overdue Work</h5>
         </div>
 
         <div className='user-performance-analyze__table-wrap'>
           <Table responsive className='align-middle mb-0'>
             <thead>
               <tr>
-                <th>Task</th>
+                <th>Work</th>
                 <th>Project</th>
                 <th>Assignee</th>
                 <th>Due Date</th>
@@ -351,32 +373,54 @@ function OverdueTasks({ tasks }) {
             </thead>
             <tbody>
               {tasks.length > 0 ? (
-                tasks.map((task) => (
-                  <tr key={task.task_id}>
-                    <td>{task.task_name || 'Untitled task'}</td>
-                    <td>{task.project_name || 'Project'}</td>
-                    <td>
-                      {task.assignee ? (
-                        <span className='user-performance-analyze__assignee'>
-                          <UserAvatar user={task.assignee} />
-                          {task.assignee.name}
+                tasks.map((task) => {
+                  const presentation = getWorkEntityPresentation(task);
+                  const target = buildWorkEntityPath(task);
+
+                  return (
+                    <tr key={getWorkEntityKey(task)}>
+                      <td>
+                        <button
+                          type='button'
+                          className='user-performance-analyze__work-link'
+                          onClick={() => onOpen(task)}
+                          disabled={!target}
+                        >
+                          <strong>{presentation.title}</strong>
+                          {presentation.isWorkItem && presentation.context ? (
+                            <small>Work Item · {presentation.context}</small>
+                          ) : null}
+                        </button>
+                      </td>
+                      <td>{task.project_name || 'Project'}</td>
+                      <td>
+                        {task.assignee ? (
+                          <span className='user-performance-analyze__assignee'>
+                            <UserAvatar user={task.assignee} />
+                            <span>
+                              <strong>{task.assignee.name}</strong>
+                              {task.assignee.work_role?.name ? (
+                                <small>{task.assignee.work_role.name}</small>
+                              ) : null}
+                            </span>
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td>{formatDate(task.due_at)}</td>
+                      <td>
+                        <span className='user-performance-analyze__danger-text'>
+                          {formatDayValue(task.overdue_days)}
                         </span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td>{formatDate(task.due_at)}</td>
-                    <td>
-                      <span className='user-performance-analyze__danger-text'>
-                        {formatDayValue(task.overdue_days)}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={5} className='user-performance-analyze__empty'>
-                    No overdue tasks found.
+                    No overdue work found.
                   </td>
                 </tr>
               )}
@@ -419,7 +463,9 @@ function UserPerformanceTable({ rows }) {
                         <UserAvatar user={row.user} />
                         <span>
                           <strong>{row.user?.name || 'User'}</strong>
-                          <small>{row.user?.email || '-'}</small>
+                          <small>
+                            {row.user?.work_role?.name || row.user?.email || '-'}
+                          </small>
                         </span>
                       </span>
                     </td>
@@ -598,6 +644,7 @@ function WarningDetailsModal({ warning, onHide }) {
 }
 
 export default function UserPerformanceAnalyze() {
+  const navigate = useNavigate();
   const user = useSelector((state) => state.auth?.user ?? null);
   const activeCompanyRole = useSelector(
     (state) => state.companyContext?.activeCompany?.membership?.role ?? null,
@@ -661,6 +708,11 @@ export default function UserPerformanceAnalyze() {
       [key]: value,
     }));
   };
+
+  const handleOpenWork = useCallback((item) => {
+    const path = buildWorkEntityPath(item);
+    if (path) navigate(path);
+  }, [navigate]);
 
   return (
     <section className='user-performance-analyze'>
@@ -750,10 +802,10 @@ export default function UserPerformanceAnalyze() {
 
       <Row className='g-4'>
         <Col xs={12} xl={4}>
-          <TopTimeTasks tasks={analysis.top_time_tasks} />
+          <TopTimeTasks tasks={analysis.top_time_tasks} onOpen={handleOpenWork} />
         </Col>
         <Col xs={12} xl={8}>
-          <OverdueTasks tasks={analysis.overdue_tasks} />
+          <OverdueTasks tasks={analysis.overdue_tasks} onOpen={handleOpenWork} />
         </Col>
         <Col xs={12}>
           <UserPerformanceTable rows={analysis.user_performance} />

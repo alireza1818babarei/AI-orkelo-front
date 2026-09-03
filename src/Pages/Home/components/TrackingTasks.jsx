@@ -5,8 +5,11 @@ import {
   clearInitialState,
   getTrackingTasks,
 } from "../../../store/tasks/trackingTasksSlice";
-import { TODO_BOARD_TYPE } from "../../../store/projects/projectTodoListSlice";
 import { formatMonthDayTime } from "../../../utils/date";
+import {
+  buildWorkEntityPath,
+  getWorkEntityPresentation,
+} from "../../../utils/workEntity";
 
 const DEFAULT_TRACKER_COLUMNS = 4;
 const RUNNING_TIME_REFRESH_MS = 30000;
@@ -44,23 +47,6 @@ const getFallbackColumnsPerRow = () => {
   if (window.innerWidth <= 1400) return 3;
 
   return DEFAULT_TRACKER_COLUMNS;
-};
-
-const normalizeBoardType = (value) =>
-  String(value ?? "")
-    .trim()
-    .toLowerCase();
-
-const buildTrackingTaskUrl = (baseUrl, task) => {
-  const normalizedBase = String(baseUrl || "/");
-  const safeBase = normalizedBase.endsWith("/")
-    ? normalizedBase
-    : `${normalizedBase}/`;
-  const path = `projects/${encodeURIComponent(task.project_id)}/task/${encodeURIComponent(task.task_id)}`;
-
-  return normalizeBoardType(task?.task_board_type) === TODO_BOARD_TYPE
-    ? `${safeBase}${path}?view=todo-list`
-    : `${safeBase}${path}`;
 };
 
 const TrackingTasks = () => {
@@ -184,30 +170,54 @@ const TrackingTasks = () => {
             ref={trackerGridRef}
             className="tracker__homePage b-r-5"
           >
-            {visibleTasks.map((task) => (
-              <Link
-                to={buildTrackingTaskUrl(taskModalUrl, task)}
-                key={task.id}
-                className="tracker__homeLink"
-              >
+            {visibleTasks.map((task) => {
+              const presentation = getWorkEntityPresentation(task);
+              const target = buildWorkEntityPath(task, {
+                baseUrl: taskModalUrl,
+              });
+              const assignedUser = presentation.assignedUser;
+              const assignedUserName =
+                assignedUser?.name || task.user_name || "Unknown user";
+              const workRoleName = presentation.workRole?.name;
+
+              const card = (
                 <div className="tracker__homeCard d-flex flex-column px-4 py-3">
-                  <p className="trackerBadge__homePage fw-bold align-self-start px-2 py-1 b-r-10">
-                    {task.project_name}
-                  </p>
+                  <div className="trackerBadges__homePage">
+                    <p className="trackerBadge__homePage fw-bold px-2 py-1 b-r-10">
+                      {task.project_name}
+                    </p>
+                    {presentation.isWorkItem ? (
+                      <span className="trackerEntityBadge__homePage">
+                        Work Item
+                      </span>
+                    ) : null}
+                  </div>
 
                   <p className="trackerDetail__homePage">
                     <span className="trackerLabel__homePage">User name:</span>
                     <span className="trackerValue__homePage text-capitalize">
-                      {task.user_name}
+                      {assignedUserName}
+                      {workRoleName ? ` · ${workRoleName}` : ""}
                     </span>
                   </p>
 
                   <p className="trackerDetail__homePage">
-                    <span className="trackerLabel__homePage">Task name:</span>
+                    <span className="trackerLabel__homePage">
+                      {presentation.isWorkItem ? "Work Item:" : "Task name:"}
+                    </span>
                     <span className="trackerValue__homePage text-capitalize">
-                      {task.task_name}
+                      {presentation.title}
                     </span>
                   </p>
+
+                  {presentation.context ? (
+                    <p className="trackerDetail__homePage">
+                      <span className="trackerLabel__homePage">Context:</span>
+                      <span className="trackerValue__homePage">
+                        {presentation.context}
+                      </span>
+                    </p>
+                  ) : null}
 
                   <p className="trackerDetail__homePage">
                     <span className="trackerLabel__homePage">Started at:</span>
@@ -227,8 +237,18 @@ const TrackingTasks = () => {
                     </span>
                   </p>
                 </div>
-              </Link>
-            ))}
+              );
+
+              return target ? (
+                <Link to={target} key={task.id} className="tracker__homeLink">
+                  {card}
+                </Link>
+              ) : (
+                <div key={task.id} className="tracker__homeLink">
+                  {card}
+                </div>
+              );
+            })}
           </div>
 
           {hasHiddenRows && (

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "reactstrap";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
@@ -42,6 +42,8 @@ export default function SuperTaskPage() {
   const location = useLocation();
   const attachmentSectionRef = useRef(null);
   const childRequestRef = useRef(0);
+  const routeSearchRef = useRef(location.search);
+  const invalidChildIntentRef = useRef("");
   const [task, setTask] = useState(null);
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [subTasks, setSubTasks] = useState([]);
@@ -64,6 +66,48 @@ export default function SuperTaskPage() {
 
   const rootPath = `/projects/${projectId}/tasks/${taskId}`;
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const childIntent = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const subTaskId = String(params.get("subTask") ?? "").trim();
+    const workItemId = String(params.get("workItem") ?? "").trim();
+
+    return {
+      subTaskId: subTaskId || null,
+      workItemId: workItemId || null,
+    };
+  }, [location.search]);
+
+  useEffect(() => {
+    routeSearchRef.current = location.search;
+  }, [location.search]);
+
+  const updateChildIntent = useCallback(
+    ({ subTaskId: nextSubTaskId, workItemId: nextWorkItemId }) => {
+      const params = new URLSearchParams(location.search);
+
+      if (nextSubTaskId == null || String(nextSubTaskId).trim() === "") {
+        params.delete("subTask");
+      } else {
+        params.set("subTask", String(nextSubTaskId));
+      }
+
+      if (nextWorkItemId == null || String(nextWorkItemId).trim() === "") {
+        params.delete("workItem");
+      } else {
+        params.set("workItem", String(nextWorkItemId));
+      }
+
+      const search = params.toString();
+      navigate(
+        {
+          pathname: location.pathname,
+          search: search ? `?${search}` : "",
+        },
+        { replace: true },
+      );
+    },
+    [location.pathname, location.search, navigate],
+  );
 
   const loadTimeline = useCallback(async () => {
     try {
@@ -108,7 +152,7 @@ export default function SuperTaskPage() {
         getEntityTimeline(rootPath),
       ]);
       if (String(taskData?.task_type || "").toLowerCase() !== "super_task") {
-        navigate(`/projects/${projectId}/task/${taskId}${location.search || ""}`, { replace: true });
+        navigate(`/projects/${projectId}/task/${taskId}${routeSearchRef.current || ""}`, { replace: true });
         return;
       }
       setTask(taskData);
@@ -122,7 +166,7 @@ export default function SuperTaskPage() {
     } finally {
       setLoading(false);
     }
-  }, [location.search, navigate, projectId, rootPath, taskId]);
+  }, [navigate, projectId, rootPath, taskId]);
 
   const refreshTask = useCallback(async () => {
     try {
@@ -151,6 +195,56 @@ export default function SuperTaskPage() {
     if (!task) return;
     loadChildren();
   }, [debouncedSearch, filters, loadChildren, task?.id]);
+
+  useEffect(() => {
+    if (!task) return;
+
+    const intentKey = `${childIntent.subTaskId || ""}:${childIntent.workItemId || ""}`;
+
+    if (!childIntent.subTaskId) {
+      if (childIntent.workItemId && invalidChildIntentRef.current !== intentKey) {
+        invalidChildIntentRef.current = intentKey;
+        toastError("A Sub-task ID is required to open this Work Item.");
+        updateChildIntent({ subTaskId: null, workItemId: null });
+      }
+      return;
+    }
+
+    const rootSubTasks = Array.isArray(task?.sub_tasks) ? task.sub_tasks : [];
+    const subTaskExists = rootSubTasks.some(
+      (item) => String(item?.id) === String(childIntent.subTaskId),
+    );
+
+    if (!subTaskExists) {
+      if (invalidChildIntentRef.current !== intentKey) {
+        invalidChildIntentRef.current = intentKey;
+        toastError("The requested Sub-task could not be found.");
+      }
+      setSelectedSubTaskId(null);
+      updateChildIntent({ subTaskId: null, workItemId: null });
+      return;
+    }
+
+    invalidChildIntentRef.current = "";
+    setSelectedSubTaskId(childIntent.subTaskId);
+  }, [childIntent, task, updateChildIntent]);
+
+  const handleOpenSubTask = useCallback((subTaskId) => {
+    setSelectedSubTaskId(subTaskId);
+    updateChildIntent({ subTaskId, workItemId: null });
+  }, [updateChildIntent]);
+
+  const handleCloseChild = useCallback(() => {
+    setSelectedSubTaskId(null);
+    updateChildIntent({ subTaskId: null, workItemId: null });
+  }, [updateChildIntent]);
+
+  const handleWorkItemIntent = useCallback((workItemId) => {
+    updateChildIntent({
+      subTaskId: selectedSubTaskId,
+      workItemId,
+    });
+  }, [selectedSubTaskId, updateChildIntent]);
 
   const handleCreateSubTask = async (event) => {
     event.preventDefault();
@@ -257,7 +351,7 @@ export default function SuperTaskPage() {
     <div className="super-task-page">
       <header className="super-task-page__toolbar">
         <div className="super-task-page__toolbar-left">
-          <button type="button" className="super-task-back-button" onClick={() => navigate(`/projects/${projectId}${location.search || ""}`)}>
+          <button type="button" className="super-task-back-button" onClick={() => navigate(`/projects/${projectId}`)}>
             <i className="ti ti-arrow-left" aria-hidden="true" />
             <span>Back to board</span>
           </button>
@@ -372,7 +466,7 @@ export default function SuperTaskPage() {
                 <SuperTaskSubTaskRow
                   key={item.id}
                   item={item}
-                  onOpen={setSelectedSubTaskId}
+                  onOpen={handleOpenSubTask}
                 />
               ))}
             </div>
@@ -393,13 +487,15 @@ export default function SuperTaskPage() {
 
       <SuperTaskItemModal
         isOpen={selectedSubTaskId != null}
-        onClose={() => setSelectedSubTaskId(null)}
+        onClose={handleCloseChild}
         projectId={projectId}
         taskId={taskId}
         subTaskId={selectedSubTaskId}
+        initialWorkItemId={childIntent.workItemId}
         projectMembers={members}
         projectTags={tags}
         onChanged={refreshTask}
+        onWorkItemChange={handleWorkItemIntent}
       />
     </div>
   );

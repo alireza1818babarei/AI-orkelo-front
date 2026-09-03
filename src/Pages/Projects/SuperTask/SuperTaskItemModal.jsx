@@ -32,9 +32,11 @@ export default function SuperTaskItemModal({
   projectId,
   taskId,
   subTaskId,
+  initialWorkItemId = null,
   projectMembers = [],
   projectTags = [],
   onChanged,
+  onWorkItemChange,
 }) {
   const subTaskRequestRef = useRef(0);
   const workItemRequestRef = useRef(0);
@@ -202,6 +204,42 @@ export default function SuperTaskItemModal({
     loadWorkItem({ showLoading: true });
   }, [isOpen, loadWorkItem, selectedWorkItemId, view]);
 
+  useEffect(() => {
+    if (!isOpen || !subTask || initialWorkItemId == null) return;
+
+    if (
+      view === VIEW.WORK_ITEM &&
+      String(selectedWorkItemId) === String(initialWorkItemId)
+    ) {
+      return;
+    }
+
+    const requestedWorkItem = (subTask.work_items || []).find(
+      (item) => String(item?.id) === String(initialWorkItemId),
+    );
+
+    if (!requestedWorkItem) {
+      toastError("The requested Work Item could not be found in this Sub-task.");
+      onWorkItemChange?.(null);
+      return;
+    }
+
+    setWorkItem(null);
+    setWorkItemTimeline(EMPTY_TIMELINE);
+    setWorkItemError("");
+    setWorkItemSavingField("");
+    setWorkItemLoading(true);
+    setSelectedWorkItemId(requestedWorkItem.id);
+    setView(VIEW.WORK_ITEM);
+  }, [
+    initialWorkItemId,
+    isOpen,
+    onWorkItemChange,
+    selectedWorkItemId,
+    subTask,
+    view,
+  ]);
+
   const refreshModalAndRoot = useCallback(async () => {
     await Promise.all([refreshDetails(), Promise.resolve(onChanged?.())]);
   }, [onChanged, refreshDetails]);
@@ -305,6 +343,7 @@ export default function SuperTaskItemModal({
     setWorkItemLoading(true);
     setSelectedWorkItemId(item.id);
     setView(VIEW.WORK_ITEM);
+    onWorkItemChange?.(item.id);
   };
 
   const backToSubTask = () => {
@@ -314,6 +353,7 @@ export default function SuperTaskItemModal({
     setWorkItem(null);
     setWorkItemError("");
     setWorkItemSavingField("");
+    onWorkItemChange?.(null);
     refreshDetails({ showLoading: true });
   };
 

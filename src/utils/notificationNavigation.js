@@ -1,3 +1,5 @@
+import { buildWorkEntityPath, isWorkItemEntity } from "./workEntity";
+
 const pickId = (...values) => {
   for (const value of values) {
     if (value === null || value === undefined) continue;
@@ -61,6 +63,56 @@ export const resolveNotificationTarget = (notification) => {
     activityProperties?.board_type,
     activityProperties?.column_board_type,
   );
+
+  const notificationEntity = {
+    entity_type:
+      notification?.entity_type ??
+      properties?.entity_type ??
+      activityProperties?.entity_type,
+    project_id: pickId(
+      notification?.project?.id,
+      notification?.project_id,
+      properties?.project_id,
+      activityProperties?.project_id,
+    ),
+    task_id: pickId(
+      notification?.task?.id,
+      notification?.task_id,
+      properties?.task_id,
+      activityProperties?.task_id,
+    ),
+    work_item_id: pickId(
+      notification?.work_item_id,
+      properties?.work_item_id,
+      activityProperties?.work_item_id,
+      properties?.super_task_item_id,
+      activityProperties?.super_task_item_id,
+    ),
+    super_task_id: pickId(
+      notification?.super_task_id,
+      properties?.super_task_id,
+      activityProperties?.super_task_id,
+    ),
+    sub_task_id: pickId(
+      notification?.sub_task_id,
+      properties?.sub_task_id,
+      activityProperties?.sub_task_id,
+    ),
+    task_board_type: boardType,
+  };
+
+  // Work Item notifications may expose the root Super Task as `task`; always
+  // prefer their explicit hierarchy so they never open the normal Task modal.
+  if (isWorkItemEntity(notificationEntity)) {
+    const workItemPath = buildWorkEntityPath(notificationEntity);
+
+    if (workItemPath) {
+      return {
+        path: workItemPath,
+        label: "Open Work Item",
+      };
+    }
+  }
 
   if (typeof properties?.path === "string" && properties.path.trim()) {
     return {

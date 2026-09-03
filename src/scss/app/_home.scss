@@ -320,6 +320,25 @@ nav.dark-sidebar ~ .app-content .leave-summary__next strong {
     white-space: nowrap;
 }
 
+.trackerBadges__homePage{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.trackerEntityBadge__homePage{
+    flex: 0 0 auto;
+    margin-bottom: 0.7rem;
+    border-radius: 999px;
+    padding: 0.22rem 0.5rem;
+    background: rgba(var(--info), 0.12);
+    color: rgba(var(--info), 1);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
 .trackerDetail__homePage{
     display: grid;
     grid-template-columns: 1fr;
