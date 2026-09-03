@@ -153,7 +153,9 @@ const ActionDropdown = ({
   const dropdown = open ? (
     <div
       ref={menuRef}
-      className="dropdown-menu position-absolute show p-1"
+      className={`dropdown-menu show p-1 ${
+        shouldUsePortal ? "" : "position-absolute"
+      }`}
       style={
         shouldUsePortal
           ? portalStyle || { visibility: "hidden" }
