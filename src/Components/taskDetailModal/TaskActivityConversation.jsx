@@ -21,6 +21,8 @@ const normalizeActionLabel = (action) => {
   if (a === 'checklist_item.deleted') return 'Checklist item deleted';
   if (a === 'tracker_expired') return 'Timer expired';
   if (a === 'task.created') return 'Task created';
+  if (a === 'sub_task.created') return 'Sub-task created';
+  if (a === 'work_item.created') return 'Work Item created';
   if (a === 'task.completed') return 'Task completed';
   if (a === 'task.assignee.assigned') return 'Assignee assigned';
   if (a === 'task.assignee.changed') return 'Assignee changed';
@@ -94,7 +96,11 @@ const resolveActivityUi = (action) => {
       contentClass: 'bg-light-primary b-1-primary',
     };
   }
-  if (a === 'task.created') {
+  if (
+    a === 'task.created' ||
+    a === 'sub_task.created' ||
+    a === 'work_item.created'
+  ) {
     return {
       iconClass: 'ti ti-plus',
       titleClass: 'text-primary',
@@ -172,6 +178,12 @@ const buildActivityMessage = (item, checklistItemTextById) => {
   const checklistLabel = quoteText(checklistText);
   const attachmentName = quoteText(properties?.original_name);
   const taskTitle = quoteText(properties?.task_text);
+  const subTaskTitle = quoteText(
+    properties?.sub_task_title ?? properties?.title,
+  );
+  const workItemTitle = quoteText(
+    properties?.work_item_title ?? properties?.title,
+  );
   const previousAssigneeName = pickString(
     properties?.previous_assignee_name,
     properties?.previous_assignee?.name,
@@ -236,6 +248,16 @@ const buildActivityMessage = (item, checklistItemTextById) => {
   }
   if (action === 'task.created') {
     return taskTitle ? `created the task ${taskTitle}` : 'created the task';
+  }
+  if (action === 'sub_task.created') {
+    return subTaskTitle
+      ? `created Sub-task ${subTaskTitle}`
+      : 'created a Sub-task';
+  }
+  if (action === 'work_item.created') {
+    return workItemTitle
+      ? `created Work Item ${workItemTitle}`
+      : 'created a Work Item';
   }
   if (action === 'task.completed') return 'completed the task';
   if (action === 'task.moved') return 'moved the task';
