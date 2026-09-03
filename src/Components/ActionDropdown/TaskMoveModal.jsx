@@ -59,7 +59,13 @@ const resolveTaskColumn = (task, projectColumns, taskId) => {
   return { id: null, boardType: TASK_MANAGER_BOARD };
 };
 
-const TaskMoveModal = ({ isOpen, onClose }) => {
+const TaskMoveModal = ({
+  isOpen,
+  onClose,
+  task: providedTask = null,
+  projectId: providedProjectId = null,
+  onMoved = null,
+}) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const taskDetail = useSelector((state) => state.taskDetail ?? {});
@@ -71,9 +77,10 @@ const TaskMoveModal = ({ isOpen, onClose }) => {
   const projectItems = Array.isArray(projectsState?.items)
     ? projectsState.items
     : [];
-  const task = taskDetail?.task ?? null;
+  const task = providedTask ?? taskDetail?.task ?? null;
   const taskId = task?.id ?? taskDetail?.taskId ?? null;
   const sourceProjectId =
+    providedProjectId ??
     task?.project?.id ?? task?.project_id ?? taskDetail?.projectId ?? null;
   const sourceProjectName =
     task?.project?.name ??
@@ -177,6 +184,8 @@ const TaskMoveModal = ({ isOpen, onClose }) => {
   }, [destinationProjectId, isOpen, sourceColumn.boardType]);
 
   const handleMove = async () => {
+    if (submitting) return;
+
     if (!sourceProjectId || !sourceColumn.id || !taskId) {
       setInlineError(
         "Task location is unavailable. Refresh the board and try again.",
@@ -193,7 +202,7 @@ const TaskMoveModal = ({ isOpen, onClose }) => {
     setInlineError("");
 
     try {
-      await api.patch(
+      const response = await api.patch(
         `/projects/${sourceProjectId}/columns/${sourceColumn.id}/tasks/${taskId}/move`,
         {
           destination_project_id: Number(destinationProjectId),
@@ -214,7 +223,16 @@ const TaskMoveModal = ({ isOpen, onClose }) => {
 
       toastSuccess("Task moved to the destination project.");
       onClose();
-      navigate(`/projects/${sourceProjectId}`, { replace: true });
+      if (typeof onMoved === "function") {
+        onMoved({
+          destinationProjectId,
+          destinationColumnId,
+          taskId,
+          response: response?.data?.data ?? response?.data ?? null,
+        });
+      } else {
+        navigate(`/projects/${sourceProjectId}`, { replace: true });
+      }
     } catch (error) {
       const normalizedError = getErrorMessage(error);
       const message = normalizedError?.message || "Task could not be moved.";

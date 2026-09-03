@@ -1,12 +1,22 @@
 import React from "react";
 import { getReviewMeta } from "./superTask.utils";
+import SuperTaskDeleteMenu from "./SuperTaskDeleteMenu";
 import SuperTaskRoleStages from "./SuperTaskRoleStages";
 
-export default function SuperTaskSubTaskRow({ item, onOpen }) {
+export default function SuperTaskSubTaskRow({
+  item,
+  onOpen,
+  onDelete,
+  deleting = false,
+}) {
   const status = getReviewMeta(item?.review_status);
 
   return (
-    <article className="super-task-subtask-row">
+    <article
+      className={`super-task-subtask-row ${
+        item?.capabilities?.can_delete === true ? "has-actions" : ""
+      }`}
+    >
       <span className={`super-task-subtask-row__state is-${status.tone}`}>
         <i className={status.icon} aria-hidden="true" />
       </span>
@@ -18,10 +28,20 @@ export default function SuperTaskSubTaskRow({ item, onOpen }) {
         <SuperTaskRoleStages stages={item?.work_role_stages} />
       </div>
       <span className={`super-task-status is-${status.tone}`}>{status.label}</span>
+      {item?.capabilities?.can_delete === true ? (
+        <SuperTaskDeleteMenu
+          itemLabel={item?.title || "Sub-task"}
+          onDelete={() => onDelete?.(item)}
+          disabled={deleting}
+        />
+      ) : null}
       <button
         type="button"
-        className="super-task-icon-button"
-        onClick={() => onOpen?.(item.id)}
+        className="super-task-icon-button super-task-subtask-row__open"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen?.(item.id);
+        }}
         title="Open Sub-task"
         aria-label={`Open ${item?.title || "Sub-task"}`}
       >

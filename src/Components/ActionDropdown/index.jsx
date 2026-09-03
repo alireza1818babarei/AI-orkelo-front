@@ -12,6 +12,8 @@ const ActionDropdown = ({
   actions = [],
   rootRef,
   align = "end",
+  portal = false,
+  width = DROPDOWN_WIDTH,
   children,
 }) => {
   const menuRef = React.useRef(null);
@@ -25,7 +27,7 @@ const ActionDropdown = ({
   const isCompanyHeaderDropdown = Boolean(
     rootRef?.current?.closest?.(".header-company"),
   );
-  const shouldUsePortal = isMobileHeader && isCompanyHeaderDropdown;
+  const shouldUsePortal = portal || (isMobileHeader && isCompanyHeaderDropdown);
 
   const isTaskDetailActionMenu = React.useMemo(() => {
     const actionKeys = new Set(
@@ -86,15 +88,15 @@ const ActionDropdown = ({
       if (!root) return;
 
       const rect = root.getBoundingClientRect();
-      const width = Math.min(
-        DROPDOWN_WIDTH,
+      const menuWidth = Math.min(
+        width,
         Math.max(0, window.innerWidth - VIEWPORT_GAP * 2),
       );
       const preferredLeft =
-        align === "start" ? rect.left : rect.right - width;
+        align === "start" ? rect.left : rect.right - menuWidth;
       const left = Math.min(
         Math.max(VIEWPORT_GAP, preferredLeft),
-        Math.max(VIEWPORT_GAP, window.innerWidth - width - VIEWPORT_GAP),
+        Math.max(VIEWPORT_GAP, window.innerWidth - menuWidth - VIEWPORT_GAP),
       );
       const top = rect.bottom + 2;
 
@@ -105,9 +107,9 @@ const ActionDropdown = ({
         right: "auto",
         margin: 0,
         zIndex: 1100,
-        width,
-        minWidth: width,
-        maxWidth: width,
+        width: menuWidth,
+        minWidth: menuWidth,
+        maxWidth: menuWidth,
         maxHeight: `calc(100vh - ${top + VIEWPORT_GAP}px)`,
         overflowY: "auto",
       });
@@ -121,7 +123,7 @@ const ActionDropdown = ({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [align, open, rootRef, shouldUsePortal]);
+  }, [align, open, rootRef, shouldUsePortal, width]);
 
   React.useEffect(() => {
     if (!open) return undefined;
@@ -160,7 +162,7 @@ const ActionDropdown = ({
               ...placementStyle,
               margin: 0,
               zIndex: 1060,
-              minWidth: DROPDOWN_WIDTH,
+              minWidth: width,
             }
       }
     >
@@ -189,8 +191,8 @@ const ActionDropdown = ({
                   event.stopPropagation();
                   if (action.disabled) return;
 
-                  action.onClick?.(event);
                   onToggle(false);
+                  action.onClick?.(event);
                 }}
               >
                 <span className="text-truncate flex-grow-1 pe-2">

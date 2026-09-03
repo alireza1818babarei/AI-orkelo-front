@@ -3,17 +3,26 @@ import { Spinner } from "reactstrap";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createSubTask,
+  deleteSubTask,
+  deleteSuperTask,
   getEntityTimeline,
   getProjectMembers,
   getProjectTags,
   getSuperTask,
   getSuperTaskSubTasks,
   getSuperTaskSummary,
+  toggleSuperTaskArchive,
   updateSuperTask,
 } from "../../../api/superTask";
+import ActionDropdown from "../../../Components/ActionDropdown";
+import TaskMoveModal from "../../../Components/ActionDropdown/TaskMoveModal";
 import TaskActivityConversation from "../../../Components/taskDetailModal/TaskActivityConversation";
 import TaskAttachments from "../../../Components/taskDetailModal/TaskAttachments";
-import { toastError, toastSuccess } from "../../../utils/sweetAlert";
+import {
+  alertConfirm,
+  toastError,
+  toastSuccess,
+} from "../../../utils/sweetAlert";
 import SuperTaskInlineTextField from "./SuperTaskInlineTextField";
 import SuperTaskItemModal from "./SuperTaskItemModal";
 import SuperTaskReviewControls from "./SuperTaskReviewControls";
@@ -41,6 +50,7 @@ export default function SuperTaskPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const attachmentSectionRef = useRef(null);
+  const actionMenuRef = useRef(null);
   const childRequestRef = useRef(0);
   const routeSearchRef = useRef(location.search);
   const invalidChildIntentRef = useRef("");
@@ -63,6 +73,10 @@ export default function SuperTaskPage() {
   const [creatingSubTask, setCreatingSubTask] = useState(false);
   const [savingField, setSavingField] = useState("");
   const [selectedSubTaskId, setSelectedSubTaskId] = useState(null);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [lifecycleAction, setLifecycleAction] = useState("");
+  const [deletingSubTaskId, setDeletingSubTaskId] = useState(null);
 
   const rootPath = `/projects/${projectId}/tasks/${taskId}`;
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
@@ -246,6 +260,124 @@ export default function SuperTaskPage() {
     });
   }, [selectedSubTaskId, updateChildIntent]);
 
+  const handleCopyLink = useCallback(async () => {
+    try {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.clipboard?.writeText
+      ) {
+        throw new Error("Clipboard access is unavailable.");
+      }
+      await navigator.clipboard.writeText(`${window.location.origin}${rootPath}`);
+      toastSuccess("Link Copied");
+    } catch (error) {
+      toastError(error?.message || "Copy link failed");
+    }
+  }, [rootPath]);
+
+  const handleArchive = useCallback(async () => {
+    const columnId = task?.column?.id ?? task?.column_id ?? null;
+    if (!columnId || lifecycleAction) return;
+
+    try {
+      setLifecycleAction("archive");
+      await toggleSuperTaskArchive(projectId, columnId, taskId);
+      setSelectedSubTaskId(null);
+      toastSuccess("Task archived");
+      navigate(`/projects/${projectId}`, { replace: true });
+    } catch (error) {
+      toastError(error?.message || "Archive task failed");
+    } finally {
+      setLifecycleAction("");
+    }
+  }, [lifecycleAction, navigate, projectId, task, taskId]);
+
+  const handleDeleteRoot = useCallback(async () => {
+    const columnId = task?.column?.id ?? task?.column_id ?? null;
+    if (
+      !columnId ||
+      lifecycleAction ||
+      task?.capabilities?.can_delete !== true
+    ) {
+      return;
+    }
+
+    const { isConfirmed } = await alertConfirm({
+      title: "Delete this Super Task?",
+      text: "Its Sub-tasks and Work Items will also be removed from active views.",
+      confirmText: "Delete",
+      cancelText: "No",
+    });
+    if (!isConfirmed) return;
+
+    try {
+      setLifecycleAction("delete");
+      await deleteSuperTask(projectId, columnId, taskId);
+      setSelectedSubTaskId(null);
+      toastSuccess("Super Task deleted");
+      navigate(`/projects/${projectId}`, { replace: true });
+    } catch (error) {
+      toastError(error?.message || "Delete Super Task failed");
+    } finally {
+      setLifecycleAction("");
+    }
+  }, [lifecycleAction, navigate, projectId, task, taskId]);
+
+  const handleDeleteSubTask = useCallback(async (item) => {
+    const subTaskId = item?.id ?? null;
+    if (
+      subTaskId == null ||
+      deletingSubTaskId != null ||
+      item?.capabilities?.can_delete !== true
+    ) {
+      return;
+    }
+
+    const { isConfirmed } = await alertConfirm({
+      title: "Delete this Sub-task?",
+      text: "Its Work Items will also be removed from active views.",
+      confirmText: "Delete",
+      cancelText: "No",
+    });
+    if (!isConfirmed) return;
+
+    const isOpen = String(selectedSubTaskId ?? "") === String(subTaskId);
+
+    try {
+      // Closing the modal during the request invalidates child detail requests.
+      setDeletingSubTaskId(subTaskId);
+      await deleteSubTask(projectId, taskId, subTaskId);
+      setSubTasks((current) =>
+        current.filter((subTask) => String(subTask?.id) !== String(subTaskId)),
+      );
+      setTask((current) => ({
+        ...current,
+        sub_tasks: (current?.sub_tasks || []).filter(
+          (subTask) => String(subTask?.id) !== String(subTaskId),
+        ),
+      }));
+
+      if (isOpen) {
+        setSelectedSubTaskId(null);
+        updateChildIntent({ subTaskId: null, workItemId: null });
+      }
+
+      toastSuccess("Sub-task deleted");
+      await refreshTask();
+    } catch (error) {
+      toastError(error?.message || "Delete Sub-task failed");
+    } finally {
+      setDeletingSubTaskId(null);
+    }
+  }, [
+    deletingSubTaskId,
+    projectId,
+    refreshTask,
+    selectedSubTaskId,
+    taskId,
+    updateChildIntent,
+  ]);
+
   const handleCreateSubTask = async (event) => {
     event.preventDefault();
     const title = newSubTask.title.trim();
@@ -361,20 +493,86 @@ export default function SuperTaskPage() {
           </button>
           <SuperTaskReviewControls entity={task} projectId={projectId} taskId={taskId} onChanged={refreshTask} />
         </div>
-        <SuperTaskUserDropdown
-          users={members}
-          selectedUser={task.responsible_user}
-          selectedUserId={task.responsible_user?.id}
-          onChange={(userId) =>
-            handleUpdateField("responsible_user_id", userId, {
-              showSuccess: false,
-            })
-          }
-          disabled={!task.capabilities?.can_edit || Boolean(savingField)}
-          saving={savingField === "responsible_user_id"}
-          emptyLabel="Assign responsible"
-          className="super-task-owner-dropdown"
-        />
+        <div className="super-task-page__toolbar-responsible">
+          <SuperTaskUserDropdown
+            users={members}
+            selectedUser={task.responsible_user}
+            selectedUserId={task.responsible_user?.id}
+            onChange={(userId) =>
+              handleUpdateField("responsible_user_id", userId, {
+                showSuccess: false,
+              })
+            }
+            disabled={!task.capabilities?.can_edit || Boolean(savingField)}
+            saving={savingField === "responsible_user_id"}
+            emptyLabel="Assign responsible"
+            className="super-task-owner-dropdown"
+          />
+        </div>
+        <div
+          ref={actionMenuRef}
+          className="position-relative super-task-page__action-menu"
+        >
+          <button
+            type="button"
+            className="super-task-icon-button"
+            aria-label="More Super Task actions"
+            title="More actions"
+            aria-haspopup="menu"
+            aria-expanded={actionMenuOpen}
+            disabled={Boolean(lifecycleAction)}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setActionMenuOpen((current) => !current);
+            }}
+          >
+            {lifecycleAction ? (
+              <Spinner size="sm" />
+            ) : (
+              <i className="ti ti-dots" aria-hidden="true" />
+            )}
+          </button>
+          <ActionDropdown
+            open={actionMenuOpen}
+            onToggle={setActionMenuOpen}
+            rootRef={actionMenuRef}
+            actions={[
+              {
+                key: "superTaskCopyLink",
+                label: "Copy link",
+                icon: "ti-link",
+                onClick: handleCopyLink,
+              },
+              {
+                key: "superTaskMove",
+                label: "Move to another project",
+                icon: "ti-arrow-right",
+                onClick: () => setMoveModalOpen(true),
+              },
+              {
+                key: "superTaskArchive",
+                label: "Archive",
+                icon: "ti-archive",
+                disabled: lifecycleAction === "archive",
+                onClick: handleArchive,
+              },
+              ...(task.capabilities?.can_delete === true
+                ? [
+                    { type: "divider" },
+                    {
+                      key: "superTaskDelete",
+                      label: "Delete",
+                      icon: "ti-trash",
+                      destructive: true,
+                      disabled: lifecycleAction === "delete",
+                      onClick: handleDeleteRoot,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </div>
       </header>
 
       <div className="super-task-page__layout">
@@ -471,6 +669,8 @@ export default function SuperTaskPage() {
                   key={item.id}
                   item={item}
                   onOpen={handleOpenSubTask}
+                  onDelete={handleDeleteSubTask}
+                  deleting={deletingSubTaskId != null}
                 />
               ))}
             </div>
@@ -490,7 +690,10 @@ export default function SuperTaskPage() {
       </div>
 
       <SuperTaskItemModal
-        isOpen={selectedSubTaskId != null}
+        isOpen={
+          selectedSubTaskId != null &&
+          String(deletingSubTaskId ?? "") !== String(selectedSubTaskId)
+        }
         onClose={handleCloseChild}
         projectId={projectId}
         taskId={taskId}
@@ -500,6 +703,19 @@ export default function SuperTaskPage() {
         projectTags={tags}
         onChanged={refreshTask}
         onWorkItemChange={handleWorkItemIntent}
+      />
+
+      <TaskMoveModal
+        isOpen={moveModalOpen}
+        onClose={() => setMoveModalOpen(false)}
+        task={task}
+        projectId={projectId}
+        onMoved={({ destinationProjectId }) => {
+          setSelectedSubTaskId(null);
+          navigate(`/projects/${destinationProjectId}/tasks/${taskId}`, {
+            replace: true,
+          });
+        }}
       />
     </div>
   );

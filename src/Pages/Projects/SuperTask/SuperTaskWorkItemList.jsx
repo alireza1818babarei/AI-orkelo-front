@@ -1,7 +1,12 @@
 import React from "react";
 import SuperTaskWorkItemCard from "./SuperTaskWorkItemCard";
 
-export default function SuperTaskWorkItemList({ items = [], onOpen }) {
+export default function SuperTaskWorkItemList({
+  items = [],
+  onOpen,
+  onDelete,
+  deletingId = null,
+}) {
   const workItems = Array.isArray(items) ? items : [];
 
   if (!workItems.length) {
@@ -16,7 +21,13 @@ export default function SuperTaskWorkItemList({ items = [], onOpen }) {
   return (
     <div className="super-task-modal-work-items">
       {workItems.map((item) => (
-        <SuperTaskWorkItemCard key={item.id} item={item} onOpen={onOpen} />
+        <SuperTaskWorkItemCard
+          key={item.id}
+          item={item}
+          onOpen={onOpen}
+          onDelete={onDelete}
+          deleting={deletingId != null}
+        />
       ))}
     </div>
   );

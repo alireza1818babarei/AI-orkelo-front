@@ -1,4 +1,5 @@
 import React from "react";
+import SuperTaskDeleteMenu from "./SuperTaskDeleteMenu";
 import SuperTaskUserAvatar from "./SuperTaskUserAvatar";
 import { getContrastText, getReviewMeta } from "./superTask.utils";
 
@@ -47,7 +48,12 @@ function WorkItemTag({ tag }) {
   );
 }
 
-export default function SuperTaskWorkItemCard({ item, onOpen }) {
+export default function SuperTaskWorkItemCard({
+  item,
+  onOpen,
+  onDelete,
+  deleting = false,
+}) {
   const title = item?.title || "Untitled Work Item";
   const description = item?.description || "No description";
   const assignee = item?.assigned_user || null;
@@ -61,19 +67,30 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
   const attachmentCount = Math.max(0, Number(item?.attachments_count) || 0);
   const voiceCount = Math.max(0, Number(item?.voice_count) || 0);
   const isActionable = typeof onOpen === "function";
-  const CardElement = isActionable ? "button" : "article";
   const avatarUser = assignee || { name: "Unassigned" };
   const avatarTitle = workRoleName
     ? `${assigneeName} — ${workRoleName}`
     : assigneeName;
 
   return (
-    <CardElement
+    <article
       className={`super-task-work-item-card ${isActionable ? "is-actionable" : ""}`}
       {...(isActionable
         ? {
-            type: "button",
-            onClick: () => onOpen(item),
+            role: "button",
+            tabIndex: 0,
+            onClick: () => {
+              if (!deleting) onOpen(item);
+            },
+            onKeyDown: (event) => {
+              if (
+                event.target === event.currentTarget &&
+                (event.key === "Enter" || event.key === " ")
+              ) {
+                event.preventDefault();
+                if (!deleting) onOpen(item);
+              }
+            },
             "aria-label": `Open ${title}`,
           }
         : {})}
@@ -85,12 +102,24 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
       />
 
       <span className="super-task-work-item-card__content">
-        <span className="super-task-work-item-card__head">
+        <span
+          className={`super-task-work-item-card__head ${
+            item?.capabilities?.can_delete === true ? "has-actions" : ""
+          }`}
+        >
           <strong title={title} dir="auto">{title}</strong>
 
           <span className={`super-task-status is-${status.tone}`}>
             {status.label}
           </span>
+
+          {item?.capabilities?.can_delete === true ? (
+            <SuperTaskDeleteMenu
+              itemLabel={title}
+              onDelete={() => onDelete?.(item)}
+              disabled={deleting}
+            />
+          ) : null}
 
           <span
             className="super-task-work-item-card__chevron"
@@ -175,6 +204,6 @@ export default function SuperTaskWorkItemCard({ item, onOpen }) {
           </span>
         ) : null}
       </span>
-    </CardElement>
+    </article>
   );
 }

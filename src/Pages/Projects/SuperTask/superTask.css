@@ -23,7 +23,7 @@
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px) auto;
   align-items: center;
   gap: 24px;
   min-height: 72px;
@@ -63,7 +63,9 @@
 }
 
 .super-task-user-dropdown { min-width: 0; }
-.super-task-owner-dropdown { width: min(100%, 320px); justify-self: end; }
+.super-task-page__toolbar-responsible { min-width: 0; width: 100%; }
+.super-task-owner-dropdown { width: 100%; }
+.super-task-page__action-menu { justify-self: end; }
 .super-task-user-dropdown__toggle {
   display: flex;
   width: 100%;
@@ -439,6 +441,18 @@
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
+.super-task-subtask-row.has-actions {
+  grid-template-columns: 40px minmax(220px, 1fr) minmax(230px, auto) auto 38px 38px;
+}
+
+.super-task-row-action-menu {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+}
+
 .super-task-subtask-row:hover {
   border-color: rgba(var(--primary), 0.25);
   box-shadow: 0 7px 18px rgba(16, 34, 92, 0.06);
@@ -642,11 +656,12 @@
 .super-task-work-item-card.is-actionable:focus-visible { border-color: rgba(var(--primary), .55); outline: 3px solid rgba(var(--primary), .12); }
 .super-task-work-item-card > .super-task-avatar { margin-top: 1px; }
 .super-task-work-item-card__content { display: grid; gap: 8px; min-width: 0; overflow: hidden; }
-.super-task-work-item-card__head { display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; align-items: center; gap: 10px; min-width: 0; overflow: hidden; }
+.super-task-work-item-card__head { display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; align-items: center; gap: 10px; min-width: 0; }
+.super-task-work-item-card__head.has-actions { grid-template-columns: minmax(0, 1fr) auto 36px 30px; }
 .super-task-work-item-card__head > strong { display: block; min-width: 0; overflow: hidden; color: var(--st-ink); font-size: 13px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; text-overflow: ellipsis; white-space: nowrap; }
 .super-task-work-item-card__description { display: -webkit-box; min-width: 0; overflow: hidden; color: #667085; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; word-break: break-word; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .super-task-work-item-card__head > .super-task-status { flex: 0 0 auto; }
-.super-task-work-item-card__chevron { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: 0 0 30px; border-radius: 7px; color: rgba(var(--primary), 1); background: rgba(var(--primary), .07); font-size: 16px; }
+.super-task-work-item-card__chevron { display: inline-flex; grid-column: -2 / -1; align-items: center; justify-content: center; width: 30px; height: 30px; flex: 0 0 30px; border-radius: 7px; color: rgba(var(--primary), 1); background: rgba(var(--primary), .07); font-size: 16px; }
 .super-task-work-item-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
 .super-task-work-item-card__meta-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .super-task-work-item-card__meta-right { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; flex: 0 0 auto; flex-wrap: wrap; }
@@ -692,7 +707,8 @@
 
 @media (max-width: 991px) {
   .super-task-page__toolbar { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
-  .super-task-owner-dropdown { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+  .super-task-page__toolbar-responsible { grid-column: 1 / -1; grid-row: 2; max-width: 360px; justify-self: start; }
+  .super-task-page__action-menu { grid-column: 2; grid-row: 1; }
   .super-task-page__layout { grid-template-columns: 1fr; }
   .super-task-page__main { border-right: 0; }
   .super-task-sidebar { border-top: 1px solid var(--st-border); }
@@ -724,12 +740,14 @@
   .super-task-search { min-width: 0; }
   .super-task-filter-panel, .super-task-new-subtask { grid-template-columns: 1fr; }
   .super-task-subtask-row { grid-template-columns: 34px minmax(0, 1fr) 34px; align-items: start; }
+  .super-task-subtask-row.has-actions { grid-template-columns: 34px minmax(0, 1fr) 34px 34px; }
   .super-task-subtask-row__state { grid-column: 1; grid-row: 1; }
   .super-task-subtask-row__main { grid-column: 2; grid-row: 1; }
-  .super-task-subtask-row__stages { grid-column: 2 / 4; grid-row: 2; margin-top: 4px; }
+  .super-task-subtask-row__stages { grid-column: 2 / -1; grid-row: 2; margin-top: 4px; }
   .super-task-subtask-row__stages .super-task-role-stages { justify-content: flex-start; }
   .super-task-subtask-row > .super-task-status { grid-column: 2; grid-row: 3; }
-  .super-task-subtask-row > .super-task-icon-button { grid-column: 3; grid-row: 1; }
+  .super-task-subtask-row > .super-task-row-action-menu { grid-column: 3; grid-row: 1; }
+  .super-task-subtask-row > .super-task-subtask-row__open { grid-column: -2 / -1; grid-row: 1; }
   .super-task-subtask-row__state { width: 34px; height: 34px; }
   .super-task-item-modal__header { grid-template-columns: minmax(0, 1fr) auto; }
   .super-task-item-modal__identity { grid-column: 1; grid-row: 1; }
@@ -744,9 +762,11 @@
   .super-task-create-work-item__footer > div:first-child { width: 100%; }
   .super-task-work-item-card { grid-template-columns: 40px minmax(0, 1fr); padding: 10px; }
   .super-task-work-item-card__head { grid-template-columns: minmax(0, 1fr) 28px; gap: 8px; }
+  .super-task-work-item-card__head.has-actions { grid-template-columns: minmax(0, 1fr) 32px 28px; }
   .super-task-work-item-card__head > strong { grid-column: 1; grid-row: 1; }
-  .super-task-work-item-card__chevron { grid-column: 2; grid-row: 1; width: 28px; height: 28px; }
-  .super-task-work-item-card__head > .super-task-status { grid-column: 1 / 3; grid-row: 2; justify-self: start; }
+  .super-task-work-item-card__head > .super-task-row-action-menu { grid-column: 2; grid-row: 1; }
+  .super-task-work-item-card__chevron { grid-column: -2 / -1; grid-row: 1; width: 28px; height: 28px; }
+  .super-task-work-item-card__head > .super-task-status { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
   .super-task-work-item-card__meta { align-items: flex-start; flex-direction: column; }
   .super-task-work-item-card__meta-right { justify-content: flex-start; }
 }

@@ -22,7 +22,9 @@ const normalizeActionLabel = (action) => {
   if (a === 'tracker_expired') return 'Timer expired';
   if (a === 'task.created') return 'Task created';
   if (a === 'sub_task.created') return 'Sub-task created';
+  if (a === 'sub_task.deleted') return 'Sub-task deleted';
   if (a === 'work_item.created') return 'Work Item created';
+  if (a === 'work_item.deleted') return 'Work Item deleted';
   if (a === 'task.completed') return 'Task completed';
   if (a === 'task.assignee.assigned') return 'Assignee assigned';
   if (a === 'task.assignee.changed') return 'Assignee changed';
@@ -254,10 +256,20 @@ const buildActivityMessage = (item, checklistItemTextById) => {
       ? `created Sub-task ${subTaskTitle}`
       : 'created a Sub-task';
   }
+  if (action === 'sub_task.deleted') {
+    return subTaskTitle
+      ? `deleted Sub-task ${subTaskTitle}`
+      : 'deleted a Sub-task';
+  }
   if (action === 'work_item.created') {
     return workItemTitle
       ? `created Work Item ${workItemTitle}`
       : 'created a Work Item';
+  }
+  if (action === 'work_item.deleted') {
+    return workItemTitle
+      ? `deleted Work Item ${workItemTitle}`
+      : 'deleted a Work Item';
   }
   if (action === 'task.completed') return 'completed the task';
   if (action === 'task.moved') return 'moved the task';

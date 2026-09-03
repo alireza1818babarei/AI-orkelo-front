@@ -198,10 +198,38 @@ export const resumeWorkItemTracker = (params) =>
 export const stopWorkItemTracker = (params) =>
   mutateWorkItemTracker({ ...params, action: "stop" });
 
-export const deleteSubTask = async (projectId, taskId, subTaskId) =>
-  api.delete(
+export const deleteSubTask = async (projectId, taskId, subTaskId) => {
+  const response = await api.delete(
     `/projects/${projectId}/tasks/${taskId}/sub-tasks/${subTaskId}`,
   );
+  return unwrapData(response, null);
+};
+
+export const deleteWorkItem = async (
+  projectId,
+  taskId,
+  subTaskId,
+  workItemId,
+) => {
+  const response = await api.delete(
+    workItemPath(projectId, taskId, subTaskId, workItemId),
+  );
+  return unwrapData(response, null);
+};
+
+export const toggleSuperTaskArchive = async (projectId, columnId, taskId) => {
+  const response = await api.patch(
+    `/projects/${projectId}/columns/${columnId}/tasks/${taskId}/toggle-archive`,
+  );
+  return unwrapData(response, null);
+};
+
+export const deleteSuperTask = async (projectId, columnId, taskId) => {
+  const response = await api.delete(
+    `/projects/${projectId}/columns/${columnId}/tasks/${taskId}`,
+  );
+  return unwrapData(response, null);
+};
 
 export const reviewSuperTaskEntity = async ({
   projectId,

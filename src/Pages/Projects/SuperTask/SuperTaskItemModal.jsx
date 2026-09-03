@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Modal, ModalBody, Spinner } from "reactstrap";
 import {
   createWorkItem,
+  deleteWorkItem,
   getEntityTimeline,
   getSubTask,
   getWorkItem,
@@ -10,7 +11,11 @@ import {
 } from "../../../api/superTask";
 import TaskActivityConversation from "../../../Components/taskDetailModal/TaskActivityConversation";
 import TaskAttachments from "../../../Components/taskDetailModal/TaskAttachments";
-import { toastError, toastSuccess } from "../../../utils/sweetAlert";
+import {
+  alertConfirm,
+  toastError,
+  toastSuccess,
+} from "../../../utils/sweetAlert";
 import SuperTaskCreateWorkItemForm from "./SuperTaskCreateWorkItemForm";
 import SuperTaskInlineTextField from "./SuperTaskInlineTextField";
 import SuperTaskReviewControls from "./SuperTaskReviewControls";
@@ -39,7 +44,9 @@ export default function SuperTaskItemModal({
   onWorkItemChange,
 }) {
   const subTaskRequestRef = useRef(0);
+  const subTaskTimelineRequestRef = useRef(0);
   const workItemRequestRef = useRef(0);
+  const workItemTimelineRequestRef = useRef(0);
   const [view, setView] = useState(VIEW.SUB_TASK);
   const [subTask, setSubTask] = useState(null);
   const [timeline, setTimeline] = useState(EMPTY_TIMELINE);
@@ -56,6 +63,7 @@ export default function SuperTaskItemModal({
   const [workItemTimelineLoading, setWorkItemTimelineLoading] = useState(false);
   const [workItemError, setWorkItemError] = useState("");
   const [workItemSavingField, setWorkItemSavingField] = useState("");
+  const [deletingWorkItemId, setDeletingWorkItemId] = useState(null);
   const isWorkItemView = view === VIEW.WORK_ITEM;
 
   const resourceBasePath = useMemo(
@@ -77,14 +85,21 @@ export default function SuperTaskItemModal({
 
   const loadSubTaskTimeline = useCallback(async () => {
     if (!isOpen || !subTaskId || !resourceBasePath) return;
+    const requestId = ++subTaskTimelineRequestRef.current;
     try {
       setTimelineLoading(true);
-      setTimeline(await getEntityTimeline(resourceBasePath));
+      const nextTimeline = await getEntityTimeline(resourceBasePath);
+      if (requestId === subTaskTimelineRequestRef.current) {
+        setTimeline(nextTimeline);
+      }
     } catch (error) {
+      if (requestId !== subTaskTimelineRequestRef.current) return;
       toastError(error?.message || "Load Sub-task activity failed");
       setTimeline(EMPTY_TIMELINE);
     } finally {
-      setTimelineLoading(false);
+      if (requestId === subTaskTimelineRequestRef.current) {
+        setTimelineLoading(false);
+      }
     }
   }, [isOpen, resourceBasePath, subTaskId]);
 
@@ -119,14 +134,21 @@ export default function SuperTaskItemModal({
 
   const loadWorkItemTimeline = useCallback(async () => {
     if (!isOpen || !selectedWorkItemId || !workItemResourceBasePath) return;
+    const requestId = ++workItemTimelineRequestRef.current;
     try {
       setWorkItemTimelineLoading(true);
-      setWorkItemTimeline(await getEntityTimeline(workItemResourceBasePath));
+      const nextTimeline = await getEntityTimeline(workItemResourceBasePath);
+      if (requestId === workItemTimelineRequestRef.current) {
+        setWorkItemTimeline(nextTimeline);
+      }
     } catch (error) {
+      if (requestId !== workItemTimelineRequestRef.current) return;
       toastError(error?.message || "Load Work Item activity failed");
       setWorkItemTimeline(EMPTY_TIMELINE);
     } finally {
-      setWorkItemTimelineLoading(false);
+      if (requestId === workItemTimelineRequestRef.current) {
+        setWorkItemTimelineLoading(false);
+      }
     }
   }, [isOpen, selectedWorkItemId, workItemResourceBasePath]);
 
@@ -178,10 +200,13 @@ export default function SuperTaskItemModal({
   useEffect(() => {
     if (!isOpen) {
       subTaskRequestRef.current += 1;
+      subTaskTimelineRequestRef.current += 1;
       workItemRequestRef.current += 1;
+      workItemTimelineRequestRef.current += 1;
       setView(VIEW.SUB_TASK);
       setSelectedWorkItemId(null);
       setShowCreateWorkItem(false);
+      setDeletingWorkItemId(null);
       return;
     }
 
@@ -196,6 +221,7 @@ export default function SuperTaskItemModal({
     setWorkItemTimeline(EMPTY_TIMELINE);
     setWorkItemError("");
     setWorkItemSavingField("");
+    setDeletingWorkItemId(null);
     refreshDetails({ showLoading: true });
   }, [isOpen, refreshDetails, subTaskId]);
 
@@ -323,6 +349,86 @@ export default function SuperTaskItemModal({
     }
   };
 
+  const handleDeleteWorkItem = useCallback(async (item) => {
+    const workItemId = item?.id ?? null;
+    if (
+      workItemId == null ||
+      deletingWorkItemId != null ||
+      item?.capabilities?.can_delete !== true
+    ) {
+      return;
+    }
+
+    const { isConfirmed } = await alertConfirm({
+      title: "Delete this Work Item?",
+      text: "This Work Item will be removed from active views.",
+      confirmText: "Delete",
+      cancelText: "No",
+    });
+    if (!isConfirmed) return;
+
+    const wasSelected =
+      view === VIEW.WORK_ITEM &&
+      String(selectedWorkItemId ?? "") === String(workItemId);
+
+    try {
+      setDeletingWorkItemId(workItemId);
+
+      if (wasSelected) {
+        // Invalidate every Work Item request before clearing its resource path.
+        workItemRequestRef.current += 1;
+        workItemTimelineRequestRef.current += 1;
+        setWorkItemLoading(false);
+        setWorkItemTimelineLoading(false);
+        setView(VIEW.SUB_TASK);
+        setSelectedWorkItemId(null);
+        setWorkItem(null);
+        setWorkItemTimeline(EMPTY_TIMELINE);
+        setWorkItemError("");
+        setWorkItemSavingField("");
+        onWorkItemChange?.(null);
+      }
+
+      await deleteWorkItem(projectId, taskId, subTaskId, workItemId);
+      setSubTask((current) => ({
+        ...current,
+        work_items: (current?.work_items || []).filter(
+          (workItemEntry) =>
+            String(workItemEntry?.id) !== String(workItemId),
+        ),
+      }));
+      toastSuccess("Work Item deleted");
+      await Promise.all([
+        refreshDetails(),
+        Promise.resolve(onChanged?.()),
+      ]);
+    } catch (error) {
+      toastError(error?.message || "Delete Work Item failed");
+
+      if (wasSelected) {
+        setWorkItem(null);
+        setWorkItemTimeline(EMPTY_TIMELINE);
+        setWorkItemError("");
+        setWorkItemLoading(true);
+        setSelectedWorkItemId(workItemId);
+        setView(VIEW.WORK_ITEM);
+        onWorkItemChange?.(workItemId);
+      }
+    } finally {
+      setDeletingWorkItemId(null);
+    }
+  }, [
+    deletingWorkItemId,
+    onChanged,
+    onWorkItemChange,
+    projectId,
+    refreshDetails,
+    selectedWorkItemId,
+    subTaskId,
+    taskId,
+    view,
+  ]);
+
   const handleSubTaskContentChanged = useCallback(async () => {
     await Promise.all([
       loadSubTaskTimeline(),
@@ -348,6 +454,9 @@ export default function SuperTaskItemModal({
 
   const backToSubTask = () => {
     workItemRequestRef.current += 1;
+    workItemTimelineRequestRef.current += 1;
+    setWorkItemLoading(false);
+    setWorkItemTimelineLoading(false);
     setView(VIEW.SUB_TASK);
     setSelectedWorkItemId(null);
     setWorkItem(null);
@@ -571,7 +680,12 @@ export default function SuperTaskItemModal({
                   onCancel={() => setShowCreateWorkItem(false)}
                 />
               ) : null}
-              <SuperTaskWorkItemList items={workItems} onOpen={openWorkItem} />
+              <SuperTaskWorkItemList
+                items={workItems}
+                onOpen={openWorkItem}
+                onDelete={handleDeleteWorkItem}
+                deletingId={deletingWorkItemId}
+              />
             </section>
 
             <section className="super-task-item-modal__section super-task-detail-assets">
