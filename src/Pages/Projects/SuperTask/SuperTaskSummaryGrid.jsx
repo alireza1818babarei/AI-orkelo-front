@@ -12,7 +12,15 @@ function SummaryCard({ icon, title, total, subTaskCount, workItemCount, tone = "
       <div className="super-task-summary-card__content">
         <span>{title}</span>
         {isTotal ? (
-          <strong>{total || 0}</strong>
+          <span
+            style={{
+              fontSize: 22,
+              fontWeight: 600,
+              lineHeight: 1.1,
+            }}
+          >
+            {total || 0}
+          </span>
         ) : (
           <div className="super-task-summary-card__split">
             <span>Sub-tasks <strong>{subTaskCount || 0}</strong></span>
