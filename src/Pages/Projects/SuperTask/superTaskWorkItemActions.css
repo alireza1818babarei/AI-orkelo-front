@@ -1,0 +1,42 @@
+.super-task-work-item-card .super-task-work-item-card__chevron {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 9px;
+  color: #98a2b3;
+  background: transparent;
+  font-size: 16px;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.super-task-work-item-card.is-actionable:hover .super-task-work-item-card__chevron,
+.super-task-work-item-card.is-actionable:focus-visible .super-task-work-item-card__chevron {
+  color: rgba(var(--primary), 1);
+  background: rgba(var(--primary), 0.08);
+  transform: translateX(1px);
+}
+
+body.dark .super-task-work-item-card .super-task-work-item-card__chevron,
+nav.dark-sidebar ~ .app-content .super-task-work-item-card .super-task-work-item-card__chevron {
+  color: #93a1b8;
+  background: transparent;
+}
+
+body.dark .super-task-work-item-card.is-actionable:hover .super-task-work-item-card__chevron,
+body.dark .super-task-work-item-card.is-actionable:focus-visible .super-task-work-item-card__chevron,
+nav.dark-sidebar ~ .app-content .super-task-work-item-card.is-actionable:hover .super-task-work-item-card__chevron,
+nav.dark-sidebar ~ .app-content .super-task-work-item-card.is-actionable:focus-visible .super-task-work-item-card__chevron {
+  color: #ff7a9c;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 767px) {
+  .super-task-work-item-card .super-task-work-item-card__chevron {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+}

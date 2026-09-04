@@ -2,6 +2,7 @@ import React from "react";
 import SuperTaskDeleteMenu from "./SuperTaskDeleteMenu";
 import SuperTaskUserAvatar from "./SuperTaskUserAvatar";
 import { getContrastText, getReviewMeta } from "./superTask.utils";
+import "./superTaskWorkItemActions.css";
 
 const MAX_VISIBLE_TAGS = 3;
 
