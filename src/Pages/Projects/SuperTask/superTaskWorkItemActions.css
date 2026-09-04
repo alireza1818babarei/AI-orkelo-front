@@ -68,3 +68,109 @@ nav.dark-sidebar ~ .app-content .super-task-work-item-card.is-actionable:focus-v
     flex-basis: 28px;
   }
 }
+
+@media (max-width: 575.98px) {
+  .modal-dialog.super-task-item-modal,
+  .modal-dialog.super-task-item-modal.is-work-item {
+    width: calc(100vw - 16px) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+
+  .modal-dialog.super-task-item-modal .super-task-item-modal__content {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 12px;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__header {
+    grid-template-columns: 34px minmax(0, 1fr) 32px 34px;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__back {
+    grid-column: 1;
+    grid-row: 1;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__identity {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__eyebrow {
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__identity .super-task-status {
+    min-height: 24px;
+    padding: 3px 7px;
+    font-size: 10px;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__close {
+    grid-column: 4;
+    grid-row: 1;
+    width: 34px;
+    height: 34px;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__header-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__header-actions .super-task-review-controls {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__header-actions .super-task-review-controls > .btn {
+    flex: 1 1 auto;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__header-actions:has(.super-task-review-controls__secondary):not(:has(.super-task-review-controls > .btn)) {
+    grid-column: 3;
+    grid-row: 1;
+    width: 32px;
+    justify-self: end;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__assignee {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__header:not(:has(.super-task-item-modal__header-actions .super-task-review-controls > .btn)) .super-task-item-modal__assignee {
+    grid-row: 2;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-review-controls__menu-toggle {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .super-task-item-modal.is-work-item .super-task-item-modal__body {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+}
