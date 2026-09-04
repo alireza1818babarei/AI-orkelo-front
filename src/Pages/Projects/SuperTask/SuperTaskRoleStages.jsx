@@ -1,5 +1,6 @@
 import React from "react";
 import { getStageLabel } from "./superTask.utils";
+import "./superTaskRoleStages.css";
 
 const getStageKey = (stage, index) =>
   stage?.id ?? stage?.slug ?? getStageLabel(stage) ?? index;
@@ -11,23 +12,25 @@ export default function SuperTaskRoleStages({ stages = [] }) {
 
   return (
     <div className="super-task-role-stages" aria-label="Work role stages">
-      {orderedStages.map((stage, index) => (
-        <span
-          key={getStageKey(stage, index)}
-          className={stage?.is_ready ? "is-ready" : "is-progress"}
-          title={`${stage?.work_items_count || 0} Work Item(s)`}
-        >
-          <i
-            className={
-              stage?.is_ready
-                ? "ti ti-circle-check-filled"
-                : "ti ti-loader-2"
-            }
-            aria-hidden="true"
-          />
-          {getStageLabel(stage)}
-        </span>
-      ))}
+      {orderedStages.map((stage, index) => {
+        const isReady = stage?.is_ready === true;
+
+        return (
+          <span
+            key={getStageKey(stage, index)}
+            className={`super-task-role-stage ${
+              isReady ? "is-ready" : "is-progress"
+            }`}
+            title={`${stage?.work_items_count || 0} Work Item(s)`}
+          >
+            <i
+              className={isReady ? "ti ti-circle-check" : "ti ti-circle-dot"}
+              aria-hidden="true"
+            />
+            {getStageLabel(stage)}
+          </span>
+        );
+      })}
     </div>
   );
 }
