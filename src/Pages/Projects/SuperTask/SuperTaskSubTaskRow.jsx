@@ -1,8 +1,9 @@
 import React from "react";
-import { getReviewMeta } from "./superTask.utils";
+import { getReviewMeta, REVIEW_STATUS } from "./superTask.utils";
 import SuperTaskDeleteMenu from "./SuperTaskDeleteMenu";
 import SuperTaskRoleStages from "./SuperTaskRoleStages";
 import "./superTaskVoice.css";
+import "./superTaskSubTaskRow.css";
 
 export default function SuperTaskSubTaskRow({
   item,
@@ -11,16 +12,19 @@ export default function SuperTaskSubTaskRow({
   deleting = false,
 }) {
   const status = getReviewMeta(item?.review_status);
+  const isInProgress = item?.review_status === REVIEW_STATUS.IN_PROGRESS;
 
   return (
     <article
       className={`super-task-subtask-row ${
         item?.capabilities?.can_delete === true ? "has-actions" : ""
-      }`}
+      } ${isInProgress ? "is-in-progress" : ""}`}
     >
-      <span className={`super-task-subtask-row__state is-${status.tone}`}>
-        <i className={status.icon} aria-hidden="true" />
-      </span>
+      {!isInProgress ? (
+        <span className={`super-task-subtask-row__state is-${status.tone}`}>
+          <i className={status.icon} aria-hidden="true" />
+        </span>
+      ) : null}
       <div className="super-task-subtask-row__main">
         <strong>{item?.title || "Untitled Sub-task"}</strong>
         <p>{item?.description || "No description"}</p>

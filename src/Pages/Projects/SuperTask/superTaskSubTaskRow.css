@@ -1,0 +1,42 @@
+.super-task-subtask-row.is-in-progress {
+  grid-template-columns: minmax(220px, 1fr) minmax(230px, auto) auto 38px;
+}
+
+.super-task-subtask-row.is-in-progress.has-actions {
+  grid-template-columns: minmax(220px, 1fr) minmax(230px, auto) auto 38px 38px;
+}
+
+@media (max-width: 767px) {
+  .super-task-subtask-row.is-in-progress {
+    grid-template-columns: minmax(0, 1fr) 34px;
+  }
+
+  .super-task-subtask-row.is-in-progress.has-actions {
+    grid-template-columns: minmax(0, 1fr) 34px 34px;
+  }
+
+  .super-task-subtask-row.is-in-progress .super-task-subtask-row__main {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .super-task-subtask-row.is-in-progress .super-task-subtask-row__stages {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .super-task-subtask-row.is-in-progress > .super-task-status {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .super-task-subtask-row.is-in-progress > .super-task-row-action-menu {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .super-task-subtask-row.is-in-progress > .super-task-subtask-row__open {
+    grid-column: -2 / -1;
+    grid-row: 1;
+  }
+}
