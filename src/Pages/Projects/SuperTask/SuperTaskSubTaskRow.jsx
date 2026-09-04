@@ -2,6 +2,7 @@ import React from "react";
 import { getReviewMeta } from "./superTask.utils";
 import SuperTaskDeleteMenu from "./SuperTaskDeleteMenu";
 import SuperTaskRoleStages from "./SuperTaskRoleStages";
+import "./superTaskVoice.css";
 
 export default function SuperTaskSubTaskRow({
   item,

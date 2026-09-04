@@ -1,0 +1,12 @@
+.super-task-item-modal:not(.is-work-item) .super-task-detail-assets .task-voice-add-button__icon {
+  color: #fff;
+}
+
+.super-task-item-modal:not(.is-work-item) .super-task-detail-assets .task-voice-add-button__icon i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
