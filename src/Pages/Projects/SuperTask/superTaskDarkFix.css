@@ -1,0 +1,110 @@
+/* Dark-mode contrast fixes for the Super Task page. */
+body.dark .super-task-summary-card__icon {
+  color: #ff5f8f;
+  background: rgba(var(--primary), 0.2);
+  box-shadow: inset 0 0 0 1px rgba(var(--primary), 0.16);
+}
+
+body.dark .super-task-summary-card.is-violet .super-task-summary-card__icon {
+  color: #b69cff;
+  background: rgba(124, 58, 237, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(183, 149, 255, 0.12);
+}
+
+body.dark .super-task-summary-card.is-success .super-task-summary-card__icon {
+  color: #61d995;
+  background: rgba(22, 148, 79, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(97, 217, 149, 0.12);
+}
+
+body.dark .super-task-summary-card.is-info .super-task-summary-card__icon {
+  color: #79a9ff;
+  background: rgba(40, 101, 221, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(121, 169, 255, 0.12);
+}
+
+body.dark .super-task-summary-card.is-warning .super-task-summary-card__icon {
+  color: #f2bf57;
+  background: rgba(183, 121, 0, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(242, 191, 87, 0.12);
+}
+
+body.dark .super-task-summary-card.is-danger .super-task-summary-card__icon {
+  color: #ff707d;
+  background: rgba(226, 52, 68, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 112, 125, 0.12);
+}
+
+body.dark .super-task-status.is-info {
+  color: #9bbdff;
+  background: rgba(40, 101, 221, 0.18);
+  border-color: rgba(121, 169, 255, 0.26);
+}
+
+body.dark .super-task-status.is-success {
+  color: #79e0a6;
+  background: rgba(22, 148, 79, 0.18);
+  border-color: rgba(97, 217, 149, 0.26);
+}
+
+body.dark .super-task-status.is-warning {
+  color: #f5c96f;
+  background: rgba(183, 121, 0, 0.18);
+  border-color: rgba(242, 191, 87, 0.26);
+}
+
+body.dark .super-task-status.is-danger {
+  color: #ff8a95;
+  background: rgba(226, 52, 68, 0.18);
+  border-color: rgba(255, 112, 125, 0.26);
+}
+
+body.dark .super-task-sidebar,
+body.dark .super-task-sidebar h6,
+body.dark .super-task-sidebar-row,
+body.dark .super-task-sidebar-row > span,
+body.dark .super-task-sidebar-control .dropdown-toggle,
+body.dark .super-task-sidebar-control .btn {
+  color: #edf2ff !important;
+}
+
+body.dark .super-task-sidebar-row > span i,
+body.dark .super-task-sidebar-control .dropdown-toggle i,
+body.dark .super-task-sidebar-control .btn i {
+  color: #c0c9dc;
+}
+
+body.dark .super-task-sidebar-row input[type="date"],
+body.dark .super-task-sidebar-row select {
+  color: #edf2ff;
+  color-scheme: dark;
+}
+
+body.dark .super-task-sidebar-row.is-static strong,
+body.dark .super-task-sidebar .text-muted {
+  color: #9da9c2 !important;
+}
+
+body.dark .super-task-sidebar-control .dropdown-toggle:hover,
+body.dark .super-task-sidebar-control .dropdown-toggle:focus,
+body.dark .super-task-sidebar-control .btn:hover,
+body.dark .super-task-sidebar-control .btn:focus {
+  color: #ffffff !important;
+}
+
+body.dark .super-task-sidebar-control .dropdown-menu {
+  color: #edf2ff;
+  background: #202635;
+  border-color: #30394c;
+}
+
+body.dark .super-task-sidebar-control .dropdown-item {
+  color: #edf2ff;
+}
+
+body.dark .super-task-sidebar-control .dropdown-item:hover,
+body.dark .super-task-sidebar-control .dropdown-item:focus,
+body.dark .super-task-sidebar-control .dropdown-item.bg-light {
+  color: #ffffff;
+  background: #171c28 !important;
+}
