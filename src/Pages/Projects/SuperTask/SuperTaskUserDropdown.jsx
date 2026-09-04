@@ -8,6 +8,7 @@ import {
 } from "reactstrap";
 import SuperTaskUserAvatar from "./SuperTaskUserAvatar";
 import { getMemberId, normalizeProjectMember } from "./superTask.utils";
+import "./superTaskUserDropdown.css";
 
 const EMPTY_USERS = [];
 
