@@ -4,6 +4,7 @@ import TaskTagsDropdown from "../../../Components/taskDetailModal/TaskTagsDropdo
 import TaskWatchersDropdown from "../../../Components/taskDetailModal/TaskWatchersDropdown";
 import { formatDateTime } from "./superTask.utils";
 import SuperTaskUserAvatar from "./SuperTaskUserAvatar";
+import "./superTaskMobileOrder.css";
 
 const toDateInputValue = (value) => {
   if (!value) return "";
