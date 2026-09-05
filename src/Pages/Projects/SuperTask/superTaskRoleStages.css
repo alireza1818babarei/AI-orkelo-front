@@ -1,5 +1,28 @@
-.super-task-role-stages > .super-task-role-stage {
+.super-task-role-stages {
   display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.super-task-role-stages__viewport {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.super-task-role-stages__track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.super-task-role-stages__track > .super-task-role-stage {
+  display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
   min-height: 30px;
@@ -14,7 +37,7 @@
   box-shadow: none;
 }
 
-.super-task-role-stages > .super-task-role-stage i {
+.super-task-role-stages__track > .super-task-role-stage i {
   display: inline-flex;
   width: 14px;
   height: 14px;
@@ -24,45 +47,119 @@
   line-height: 1;
 }
 
-.super-task-role-stages > .super-task-role-stage.is-progress {
+.super-task-role-stages__track > .super-task-role-stage.is-progress {
   color: #667085;
   background: transparent;
   border-color: #dfe5ee;
 }
 
-.super-task-role-stages > .super-task-role-stage.is-ready {
+.super-task-role-stages__track > .super-task-role-stage.is-ready {
   color: #2f6f4e;
   background: #f1faf5;
   border-color: #d3eadc;
 }
 
-.super-task-role-stages > .super-task-role-stage.is-ready i {
+.super-task-role-stages__track > .super-task-role-stage.is-ready i {
   color: #2aa363;
 }
 
-body.dark .super-task-role-stages > .super-task-role-stage,
-nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage {
+.super-task-role-stages__arrow {
+  display: inline-flex;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #dfe5ee;
+  border-radius: 7px;
+  color: #667085;
+  background: #fff;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.super-task-role-stages__arrow i {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.super-task-role-stages__arrow:hover:not(:disabled),
+.super-task-role-stages__arrow:focus-visible:not(:disabled) {
+  color: #344054;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.super-task-role-stages__arrow:focus-visible {
+  outline: 2px solid rgba(56, 132, 255, 0.28);
+  outline-offset: 2px;
+}
+
+.super-task-role-stages__arrow:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+body.dark .super-task-role-stages__track > .super-task-role-stage,
+nav.dark-sidebar ~ .app-content .super-task-role-stages__track > .super-task-role-stage {
   color: #c2cada;
   background: transparent;
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow: none;
 }
 
-body.dark .super-task-role-stages > .super-task-role-stage.is-progress,
-nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage.is-progress {
+body.dark .super-task-role-stages__track > .super-task-role-stage.is-progress,
+nav.dark-sidebar ~ .app-content .super-task-role-stages__track > .super-task-role-stage.is-progress {
   color: #b7c1d3;
   background: transparent;
   border-color: rgba(255, 255, 255, 0.14);
 }
 
-body.dark .super-task-role-stages > .super-task-role-stage.is-ready,
-nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage.is-ready {
+body.dark .super-task-role-stages__track > .super-task-role-stage.is-ready,
+nav.dark-sidebar ~ .app-content .super-task-role-stages__track > .super-task-role-stage.is-ready {
   color: #a9ddbf;
   background: rgba(46, 180, 110, 0.1);
   border-color: rgba(87, 207, 139, 0.24);
 }
 
-body.dark .super-task-role-stages > .super-task-role-stage.is-ready i,
-nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage.is-ready i {
+body.dark .super-task-role-stages__track > .super-task-role-stage.is-ready i,
+nav.dark-sidebar ~ .app-content .super-task-role-stages__track > .super-task-role-stage.is-ready i {
   color: #6fd49b;
+}
+
+body.dark .super-task-role-stages__arrow,
+nav.dark-sidebar ~ .app-content .super-task-role-stages__arrow {
+  color: #c2cada;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+body.dark .super-task-role-stages__arrow:hover:not(:disabled),
+body.dark .super-task-role-stages__arrow:focus-visible:not(:disabled),
+nav.dark-sidebar ~ .app-content .super-task-role-stages__arrow:hover:not(:disabled),
+nav.dark-sidebar ~ .app-content .super-task-role-stages__arrow:focus-visible:not(:disabled) {
+  color: #f3f6fb;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 767px) {
+  .super-task-role-stages {
+    width: 100%;
+  }
+
+  .super-task-role-stages__viewport {
+    flex: 1 1 auto;
+  }
 }
