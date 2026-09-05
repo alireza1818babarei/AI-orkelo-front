@@ -31,8 +31,10 @@
 
   .super-task-page .super-task-page__toolbar-left .super-task-review-controls {
     width: auto;
+    min-width: 0;
+    max-width: 100%;
     align-items: center;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
   }
 
   .super-task-page .super-task-page__toolbar-left .super-task-review-controls .btn {

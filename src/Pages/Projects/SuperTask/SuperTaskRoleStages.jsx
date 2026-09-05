@@ -97,12 +97,14 @@ export default function SuperTaskRoleStages({ stages = [] }) {
                 className={`super-task-role-stage ${
                   isReady ? "is-ready" : "is-progress"
                 }`}
-                title={`${stage?.work_items_count || 0} Work Item(s)`}
+                title={`${getStageLabel(stage)} · ${stage?.work_items_count || 0} Work Item(s)`}
               >
                 {isReady ? (
                   <i className="ti ti-check" aria-hidden="true" />
                 ) : null}
-                {getStageLabel(stage)}
+                <span className="super-task-role-stage__label">
+                  {getStageLabel(stage)}
+                </span>
               </span>
             );
           })}

@@ -1,12 +1,16 @@
 .super-task-role-stages {
   display: inline-flex;
+  /* Keep both arrows beside the visible roles, even in a full-width row. */
+  width: max-content;
   align-items: center;
   gap: 6px;
   min-width: 0;
   max-width: 100%;
+  flex-wrap: nowrap;
 }
 
 .super-task-role-stages__viewport {
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -22,7 +26,7 @@
 
 .super-task-role-stages__track > .super-task-role-stage {
   display: inline-flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   align-items: center;
   gap: 6px;
   min-height: 30px;
@@ -35,12 +39,24 @@
   font-weight: 650;
   line-height: 1;
   box-shadow: none;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+/* Truncate only long labels; role names and arrow controls stay on one line. */
+.super-task-role-stage__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .super-task-role-stages__track > .super-task-role-stage i {
   display: inline-flex;
   width: 14px;
   height: 14px;
+  flex: 0 0 14px;
   align-items: center;
   justify-content: center;
   font-size: 13px;
@@ -154,39 +170,3 @@ nav.dark-sidebar ~ .app-content .super-task-role-stages__arrow:focus-visible:not
   border-color: rgba(255, 255, 255, 0.22);
 }
 
-@media (max-width: 767px) {
-  .super-task-subtask-row__stages {
-    min-width: 0;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  .super-task-role-stages {
-    display: flex;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-
-  .super-task-role-stages__viewport {
-    width: 0;
-    min-width: 0;
-    max-width: none;
-    flex: 1 1 0;
-    overflow: hidden;
-  }
-
-  .super-task-role-stages__track {
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  .super-task-role-stages__track > .super-task-role-stage {
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
