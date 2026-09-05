@@ -7,7 +7,10 @@ import {
   DropdownToggle,
   Spinner,
 } from "reactstrap";
+import { getProjectTags } from "../../../api/superTask";
 import TaskPriorityDropdown from "../../../Components/taskDetailModal/TaskPriorityDropdown";
+import TaskTagsManagerModal from "../../../Components/taskDetailModal/TaskTagsManagerModal";
+import { toastError } from "../../../utils/sweetAlert";
 import SuperTaskUserAvatar from "./SuperTaskUserAvatar";
 import SuperTaskWorkItemTimer from "./SuperTaskWorkItemTimer";
 import {
@@ -26,8 +29,11 @@ function MultiSelectDropdown({
   disabled,
   saving,
   onChange,
+  projectId,
+  onItemsChanged,
 }) {
   const [open, setOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const isTags = type === "tags";
   const selectedIds = useMemo(
     () => selectedItems.map((item) => item?.id).filter((id) => id != null),
@@ -43,101 +49,134 @@ function MultiSelectDropdown({
   };
 
   return (
-    <Dropdown
-      isOpen={open}
-      toggle={() => {
-        if (!disabled && !saving) setOpen((current) => !current);
-      }}
-      className="super-task-work-item-picker"
-    >
-      <DropdownToggle
-        tag="button"
-        type="button"
-        disabled={disabled || saving}
-        className="btn d-flex align-items-center justify-content-between px-0 w-100"
-        style={{ boxShadow: "none" }}
+    <>
+      <Dropdown
+        isOpen={open}
+        toggle={() => {
+          if (!disabled && !saving) setOpen((current) => !current);
+        }}
+        className="super-task-work-item-picker"
       >
-        <span className="d-flex align-items-center gap-2">
-          <i className={`ti ${isTags ? "ti-tags" : "ti-bell"} fs-5`} aria-hidden="true" />
-          {isTags ? "Tags" : "Watchers"}
-        </span>
-        <span className="super-task-work-item-picker__preview ms-auto me-2">
-          {saving ? (
-            <Spinner size="sm" />
-          ) : selectedItems.length ? (
-            <>
-              {selectedItems.slice(0, 3).map((item) =>
-                isTags ? (
-                  <span
-                    key={item.id}
-                    className="super-task-work-item-picker__preview-tag"
-                    style={{ background: item.color || "rgba(var(--primary), .65)" }}
-                    title={item.name || "Tag"}
-                  />
-                ) : (
-                  <SuperTaskUserAvatar key={item.id} user={item} size={24} />
-                ),
-              )}
-              {selectedItems.length > 3 ? (
-                <span className="super-task-work-item-picker__more">
-                  +{selectedItems.length - 3}
-                </span>
-              ) : null}
-            </>
-          ) : (
-            <span className="small text-muted">None</span>
-          )}
-        </span>
-        <i className="ti ti-chevron-down" aria-hidden="true" />
-      </DropdownToggle>
+        <DropdownToggle
+          tag="button"
+          type="button"
+          disabled={disabled || saving}
+          className="btn d-flex align-items-center justify-content-between px-0 w-100"
+          style={{ boxShadow: "none" }}
+        >
+          <span className="d-flex align-items-center gap-2">
+            <i className={`ti ${isTags ? "ti-tags" : "ti-bell"} fs-5`} aria-hidden="true" />
+            {isTags ? "Tags" : "Watchers"}
+          </span>
+          <span className="super-task-work-item-picker__preview ms-auto me-2">
+            {saving ? (
+              <Spinner size="sm" />
+            ) : selectedItems.length ? (
+              <>
+                {selectedItems.slice(0, 3).map((item) =>
+                  isTags ? (
+                    <span
+                      key={item.id}
+                      className="super-task-work-item-picker__preview-tag"
+                      style={{ background: item.color || "rgba(var(--primary), .65)" }}
+                      title={item.name || "Tag"}
+                    />
+                  ) : (
+                    <SuperTaskUserAvatar key={item.id} user={item} size={24} />
+                  ),
+                )}
+                {selectedItems.length > 3 ? (
+                  <span className="super-task-work-item-picker__more">
+                    +{selectedItems.length - 3}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <span className="small text-muted">None</span>
+            )}
+          </span>
+          <i className="ti ti-chevron-down" aria-hidden="true" />
+        </DropdownToggle>
 
-      <DropdownMenu end className="p-1 super-task-work-item-picker__menu">
-        {items.length ? (
-          items.map((item) => {
-            const selected = selectedIds.some((id) => idsEqual(id, item.id));
-            return (
+        <DropdownMenu end className="p-1 super-task-work-item-picker__menu">
+          {items.length ? (
+            items.map((item) => {
+              const selected = selectedIds.some((id) => idsEqual(id, item.id));
+              return (
+                <DropdownItem
+                  key={item.id}
+                  toggle={false}
+                  disabled={saving}
+                  className={selected ? "is-selected" : ""}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleItem(item);
+                  }}
+                >
+                  <span className="super-task-work-item-picker__option">
+                    {isTags ? (
+                      <span
+                        className="super-task-work-item-picker__tag"
+                        style={{
+                          background: item.color || "rgba(var(--primary), .12)",
+                          color: item.color
+                            ? getContrastText(item.color)
+                            : "rgba(var(--primary), 1)",
+                        }}
+                      >
+                        {item.name || "Tag"}
+                      </span>
+                    ) : (
+                      <>
+                        <SuperTaskUserAvatar user={item} size={28} />
+                        <span className="text-truncate">{item.name}</span>
+                      </>
+                    )}
+                  </span>
+                  {selected ? <i className="ti ti-check text-success" aria-hidden="true" /> : null}
+                </DropdownItem>
+              );
+            })
+          ) : (
+            <div className="px-2 py-2 text-muted small">
+              {isTags ? "No project tags." : "No project members."}
+            </div>
+          )}
+
+          {isTags ? (
+            <>
+              <DropdownItem divider />
               <DropdownItem
-                key={item.id}
-                toggle={false}
-                disabled={saving}
-                className={selected ? "is-selected" : ""}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  toggleItem(item);
+                  setOpen(false);
+                  setManageOpen(true);
                 }}
               >
-                <span className="super-task-work-item-picker__option">
-                  {isTags ? (
-                    <span
-                      className="super-task-work-item-picker__tag"
-                      style={{
-                        background: item.color || "rgba(var(--primary), .12)",
-                        color: item.color
-                          ? getContrastText(item.color)
-                          : "rgba(var(--primary), 1)",
-                      }}
-                    >
-                      {item.name || "Tag"}
-                    </span>
-                  ) : (
-                    <>
-                      <SuperTaskUserAvatar user={item} size={28} />
-                      <span className="text-truncate">{item.name}</span>
-                    </>
-                  )}
-                </span>
-                {selected ? <i className="ti ti-check text-success" aria-hidden="true" /> : null}
+                <div className="d-flex align-items-center justify-content-between">
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <i className="ti ti-settings fs-5" aria-hidden="true" />
+                    Manage
+                  </span>
+                  <i className="ti ti-chevron-right" aria-hidden="true" />
+                </div>
               </DropdownItem>
-            );
-          })
-        ) : (
-          <div className="px-2 py-2 text-muted small">
-            {isTags ? "No project tags." : "No project members."}
-          </div>
-        )}
-      </DropdownMenu>
-    </Dropdown>
+            </>
+          ) : null}
+        </DropdownMenu>
+      </Dropdown>
+
+      {isTags ? (
+        <TaskTagsManagerModal
+          projectId={projectId}
+          isOpen={manageOpen}
+          toggle={() => setManageOpen(false)}
+          onChanged={onItemsChanged}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -155,6 +194,9 @@ export default function SuperTaskWorkItemSidebar({
 }) {
   const [dueOpen, setDueOpen] = useState(false);
   const [dueDraft, setDueDraft] = useState(null);
+  const [availableTags, setAvailableTags] = useState(
+    Array.isArray(projectTags) ? projectTags : [],
+  );
   const canEdit = Boolean(workItem?.capabilities?.can_edit);
   const dueAt = workItem?.due_at || null;
   const isOverdue = Boolean(
@@ -172,17 +214,30 @@ export default function SuperTaskWorkItemSidebar({
     return Array.from(unique.values());
   }, [projectMembers]);
 
-  const tags = Array.isArray(projectTags) ? projectTags : [];
+  const tags = availableTags;
   const selectedTags = Array.isArray(workItem?.tags) ? workItem.tags : [];
   const selectedWatchers = Array.isArray(workItem?.watchers)
     ? workItem.watchers.map(normalizeProjectMember)
     : [];
 
   useEffect(() => {
+    setAvailableTags(Array.isArray(projectTags) ? projectTags : []);
+  }, [projectTags]);
+
+  useEffect(() => {
     if (!dueOpen) return;
     const parsed = dueAt ? new Date(dueAt) : new Date();
     setDueDraft(Number.isNaN(parsed.getTime()) ? new Date() : parsed);
   }, [dueAt, dueOpen]);
+
+  const refreshProjectTags = async () => {
+    if (!projectId) return;
+    try {
+      setAvailableTags(await getProjectTags(projectId));
+    } catch (error) {
+      toastError(error?.message || "Load tags failed");
+    }
+  };
 
   const saveDueDate = async () => {
     if (!dueDraft || Number.isNaN(dueDraft.getTime())) return;
@@ -293,6 +348,8 @@ export default function SuperTaskWorkItemSidebar({
           disabled={!canEdit || Boolean(savingField)}
           saving={savingField === "tag_ids"}
           onChange={(ids) => onUpdate("tag_ids", ids)}
+          projectId={projectId}
+          onItemsChanged={refreshProjectTags}
         />
 
         <MultiSelectDropdown
