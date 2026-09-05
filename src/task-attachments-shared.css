@@ -1,0 +1,70 @@
+/* Shared attachment/voice layout hardening.
+ * Keep the same TaskAttachments voice UI stable in Task, Super Task,
+ * Sub-task, and Work Item surfaces regardless of inherited wrapping rules.
+ */
+body .task-voice-add-button__icon,
+body .task-voice-recorder__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+body .task-voice-add-button__icon > i,
+body .task-voice-recorder__icon > i {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+body .task-voice-add-button__icon > i::before,
+body .task-voice-recorder__icon > i::before {
+  display: block;
+  margin: 0;
+  line-height: 1;
+}
+
+body .task-voice-recorder,
+body .task-voice-recorder__head,
+body .task-voice-recorder__meta,
+body .task-voice-recorder__actions {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .task-voice-recorder {
+  width: 100%;
+}
+
+body .task-voice-recorder__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+body .task-voice-recorder__control {
+  display: inline-flex;
+  width: auto;
+  min-width: max-content;
+  max-width: 100%;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+body .task-voice-recorder__control > span {
+  display: inline-block;
+  min-width: max-content;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
