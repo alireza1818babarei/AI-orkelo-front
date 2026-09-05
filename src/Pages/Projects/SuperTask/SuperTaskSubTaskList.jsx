@@ -116,8 +116,7 @@ export default function SuperTaskSubTaskList({
             ) : null}
 
             {orderedItems.map((item, index) => {
-              const itemDragDisabled =
-                dragDisabled || item?.review_status === REVIEW_STATUS.APPROVED;
+              const itemDragDisabled = dragDisabled;
 
               return (
                 <Draggable
