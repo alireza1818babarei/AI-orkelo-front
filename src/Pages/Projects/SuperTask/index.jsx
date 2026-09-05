@@ -27,7 +27,7 @@ import SuperTaskInlineTextField from "./SuperTaskInlineTextField";
 import SuperTaskItemModal from "./SuperTaskItemModal";
 import SuperTaskReviewControls from "./SuperTaskReviewControls";
 import SuperTaskSidebar from "./SuperTaskSidebar";
-import SuperTaskSubTaskRow from "./SuperTaskSubTaskRow";
+import SuperTaskSubTaskList from "./SuperTaskSubTaskList";
 import SuperTaskSummaryGrid from "./SuperTaskSummaryGrid";
 import SuperTaskUserDropdown from "./SuperTaskUserDropdown";
 import {
@@ -344,7 +344,6 @@ export default function SuperTaskPage() {
     const isOpen = String(selectedSubTaskId ?? "") === String(subTaskId);
 
     try {
-      // Closing the modal during the request invalidates child detail requests.
       setDeletingSubTaskId(subTaskId);
       await deleteSubTask(projectId, taskId, subTaskId);
       setSubTasks((current) =>
@@ -661,19 +660,23 @@ export default function SuperTaskPage() {
               <h4>Sub-tasks ({subTasks.length})</h4>
               <span>{childrenLoading ? "Updating..." : `${summary.work_items?.total || 0} Work Items`}</span>
             </div>
-            <div className="super-task-subtask-list">
-              {childrenLoading && !subTasks.length ? <div className="super-task-empty-inline"><Spinner size="sm" />Loading Sub-tasks...</div> : null}
-              {!childrenLoading && !subTasks.length ? <div className="super-task-empty-inline"><i className="ti ti-subtask" />No Sub-tasks match this view.</div> : null}
-              {subTasks.map((item) => (
-                <SuperTaskSubTaskRow
-                  key={item.id}
-                  item={item}
-                  onOpen={handleOpenSubTask}
-                  onDelete={handleDeleteSubTask}
-                  deleting={deletingSubTaskId != null}
-                />
-              ))}
-            </div>
+            <SuperTaskSubTaskList
+              items={subTasks}
+              childrenLoading={childrenLoading}
+              projectId={projectId}
+              taskId={taskId}
+              canReorder={task.capabilities?.can_reorder === true}
+              reorderDisabled={Boolean(
+                searchInput.trim() ||
+                  debouncedSearch ||
+                  activeFilterCount ||
+                  childrenLoading ||
+                  deletingSubTaskId != null
+              )}
+              onOpen={handleOpenSubTask}
+              onDelete={handleDeleteSubTask}
+              deletingId={deletingSubTaskId}
+            />
           </section>
 
           <section ref={attachmentSectionRef} className="super-task-root-assets task-detail-modal-dialog">

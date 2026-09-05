@@ -31,6 +31,15 @@ export const getSuperTaskSubTasks = async (projectId, taskId, filters = {}) => {
   return Array.isArray(data) ? data : [];
 };
 
+export const reorderSubTasks = async (projectId, taskId, orderedIds) => {
+  const response = await api.patch(
+    `/projects/${projectId}/tasks/${taskId}/sub-tasks/reorder`,
+    { ordered_ids: orderedIds },
+  );
+  const data = unwrapData(response, []);
+  return Array.isArray(data) ? data : [];
+};
+
 export const updateSuperTask = async (
   projectId,
   columnId,
@@ -121,6 +130,20 @@ export const createWorkItem = async (
     payload,
   );
   return unwrapData(response, null);
+};
+
+export const reorderWorkItems = async (
+  projectId,
+  taskId,
+  subTaskId,
+  orderedIds,
+) => {
+  const response = await api.patch(
+    `/projects/${projectId}/tasks/${taskId}/sub-tasks/${subTaskId}/work-items/reorder`,
+    { ordered_ids: orderedIds },
+  );
+  const data = unwrapData(response, []);
+  return Array.isArray(data) ? data : [];
 };
 
 const workItemPath = (projectId, taskId, subTaskId, workItemId) =>

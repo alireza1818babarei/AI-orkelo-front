@@ -1,0 +1,41 @@
+.super-task-sortable-item {
+  min-width: 0;
+}
+
+.super-task-sortable-item.is-reorderable {
+  cursor: grab;
+}
+
+.super-task-sortable-item.is-reorderable:active {
+  cursor: grabbing;
+}
+
+.super-task-sortable-item.is-reorderable > .super-task-subtask-row,
+.super-task-sortable-item.is-reorderable > .super-task-work-item-card {
+  cursor: grab;
+}
+
+.super-task-sortable-item.is-dragging {
+  position: relative;
+  z-index: 30;
+}
+
+.super-task-sortable-item.is-dragging > .super-task-subtask-row,
+.super-task-sortable-item.is-dragging > .super-task-work-item-card {
+  border-color: rgba(var(--primary), 0.34);
+  box-shadow: 0 14px 30px rgba(16, 34, 92, 0.14);
+  transform: scale(1.008);
+}
+
+body.dark .super-task-sortable-item.is-dragging > .super-task-subtask-row,
+body.dark .super-task-sortable-item.is-dragging > .super-task-work-item-card,
+nav.dark-sidebar ~ .app-content .super-task-sortable-item.is-dragging > .super-task-subtask-row,
+nav.dark-sidebar ~ .app-content .super-task-sortable-item.is-dragging > .super-task-work-item-card {
+  border-color: rgba(255, 122, 156, 0.3);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
+}
+
+.super-task-sortable-item.is-disabled > .super-task-subtask-row,
+.super-task-sortable-item.is-disabled > .super-task-work-item-card {
+  cursor: default;
+}
