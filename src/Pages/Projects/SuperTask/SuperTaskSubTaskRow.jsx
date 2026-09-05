@@ -12,23 +12,20 @@ export default function SuperTaskSubTaskRow({
   deleting = false,
 }) {
   const status = getReviewMeta(item?.review_status);
-  const isInProgress = item?.review_status === REVIEW_STATUS.IN_PROGRESS;
   const isApproved = item?.review_status === REVIEW_STATUS.APPROVED;
 
   return (
     <article
       className={`super-task-subtask-row ${
         item?.capabilities?.can_delete === true ? "has-actions" : ""
-      } ${isInProgress ? "is-in-progress" : ""}`}
+      }`}
     >
-      {!isInProgress ? (
-        <span className={`super-task-subtask-row__state is-${status.tone}`}>
-          <i
-            className={isApproved ? "ti ti-check" : status.icon}
-            aria-hidden="true"
-          />
-        </span>
-      ) : null}
+      <span className={`super-task-subtask-row__state is-${status.tone}`}>
+        <i
+          className={isApproved ? "ti ti-check" : status.icon}
+          aria-hidden="true"
+        />
+      </span>
       <div className="super-task-subtask-row__main">
         <strong>{item?.title || "Untitled Sub-task"}</strong>
         <p>{item?.description || "No description"}</p>

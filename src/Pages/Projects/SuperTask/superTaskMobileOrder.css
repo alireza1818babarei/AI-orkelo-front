@@ -4,4 +4,58 @@
     border-top: 0;
     border-bottom: 1px solid var(--st-border);
   }
+
+  .super-task-page .super-task-page__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 10px;
+    row-gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .super-task-page .super-task-page__toolbar-left {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .super-task-page .super-task-page__toolbar-left > .btn {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .super-task-page .super-task-page__toolbar-left .super-task-review-controls {
+    width: auto;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .super-task-page .super-task-page__toolbar-left .super-task-review-controls .btn {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .super-task-page .super-task-page__action-menu {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    justify-self: end;
+  }
+
+  .super-task-page .super-task-page__toolbar-responsible {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: min(100%, 340px);
+    max-width: 340px;
+    justify-self: start;
+  }
+
+  .super-task-page .super-task-owner-dropdown {
+    width: 100%;
+  }
 }
