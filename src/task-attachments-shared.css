@@ -20,6 +20,10 @@ body .task-voice-recorder__icon > i {
   line-height: 1;
 }
 
+body .task-voice-add-button__icon > .ti-microphone {
+  transform: translateX(1px);
+}
+
 body .task-voice-add-button__icon > i::before,
 body .task-voice-recorder__icon > i::before {
   display: block;
