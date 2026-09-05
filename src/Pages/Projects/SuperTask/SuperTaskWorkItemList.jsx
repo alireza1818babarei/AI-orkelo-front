@@ -4,6 +4,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { reorderWorkItems } from "../../../api/superTask";
 import { toastError } from "../../../utils/sweetAlert";
 import SuperTaskWorkItemCard from "./SuperTaskWorkItemCard";
+import { REVIEW_STATUS } from "./superTask.utils";
 import "./superTaskReorder.css";
 
 const moveItem = (items, sourceIndex, destinationIndex) => {
@@ -12,6 +13,11 @@ const moveItem = (items, sourceIndex, destinationIndex) => {
   next.splice(destinationIndex, 0, moved);
   return next;
 };
+
+const approvedLast = (items) => [
+  ...items.filter((item) => item?.review_status !== REVIEW_STATUS.APPROVED),
+  ...items.filter((item) => item?.review_status === REVIEW_STATUS.APPROVED),
+];
 
 export default function SuperTaskWorkItemList({
   items = [],
@@ -27,7 +33,7 @@ export default function SuperTaskWorkItemList({
   const routeParams = useParams();
   const location = useLocation();
   const normalizedItems = useMemo(
-    () => (Array.isArray(items) ? items : []),
+    () => approvedLast(Array.isArray(items) ? items : []),
     [items],
   );
   const [orderedItems, setOrderedItems] = useState(normalizedItems);
@@ -73,7 +79,18 @@ export default function SuperTaskWorkItemList({
     }
 
     const previous = orderedItems;
-    const next = moveItem(previous, source.index, destination.index);
+    const next = approvedLast(
+      moveItem(previous, source.index, destination.index),
+    );
+
+    if (
+      previous.every(
+        (item, index) => String(item?.id) === String(next[index]?.id),
+      )
+    ) {
+      return;
+    }
+
     setOrderedItems(next);
     setSavingOrder(true);
 

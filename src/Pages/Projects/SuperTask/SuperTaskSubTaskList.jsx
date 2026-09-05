@@ -30,7 +30,7 @@ export default function SuperTaskSubTaskList({
   deletingId = null,
 }) {
   const normalizedItems = useMemo(
-    () => (Array.isArray(items) ? items : []),
+    () => approvedLast(Array.isArray(items) ? items : []),
     [items],
   );
   const [orderedItems, setOrderedItems] = useState(normalizedItems);
