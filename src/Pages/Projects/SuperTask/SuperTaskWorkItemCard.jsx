@@ -67,35 +67,14 @@ export default function SuperTaskWorkItemCard({
   const dueDate = getDueDateMeta(item?.due_at);
   const attachmentCount = Math.max(0, Number(item?.attachments_count) || 0);
   const voiceCount = Math.max(0, Number(item?.voice_count) || 0);
-  const isActionable = typeof onOpen === "function";
+  const canOpen = typeof onOpen === "function";
   const avatarUser = assignee || { name: "Unassigned" };
   const avatarTitle = workRoleName
     ? `${assigneeName} — ${workRoleName}`
     : assigneeName;
 
   return (
-    <article
-      className={`super-task-work-item-card ${isActionable ? "is-actionable" : ""}`}
-      {...(isActionable
-        ? {
-            role: "button",
-            tabIndex: 0,
-            onClick: () => {
-              if (!deleting) onOpen(item);
-            },
-            onKeyDown: (event) => {
-              if (
-                event.target === event.currentTarget &&
-                (event.key === "Enter" || event.key === " ")
-              ) {
-                event.preventDefault();
-                if (!deleting) onOpen(item);
-              }
-            },
-            "aria-label": `Open ${title}`,
-          }
-        : {})}
-    >
+    <article className="super-task-work-item-card">
       <SuperTaskUserAvatar
         user={avatarUser}
         size={40}
@@ -122,13 +101,20 @@ export default function SuperTaskWorkItemCard({
             />
           ) : null}
 
-          <span
+          <button
+            type="button"
             className="super-task-work-item-card__chevron"
             title="Open Work Item"
-            aria-hidden="true"
+            aria-label={`Open ${title}`}
+            disabled={!canOpen || deleting}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (canOpen && !deleting) onOpen(item);
+            }}
           >
-            <i className="ti ti-chevron-right" />
-          </span>
+            <i className="ti ti-chevron-right" aria-hidden="true" />
+          </button>
         </span>
 
         <span
