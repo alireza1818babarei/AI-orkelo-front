@@ -2,16 +2,52 @@ import React, { useEffect, useState } from "react";
 import { getStageLabel } from "./superTask.utils";
 import "./superTaskRoleStages.css";
 
-const VISIBLE_STAGE_COUNT = 3;
+const DESKTOP_VISIBLE_STAGE_COUNT = 3;
+const MOBILE_VISIBLE_STAGE_COUNT = 2;
+const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
 
 const getStageKey = (stage, index) =>
   stage?.id ?? stage?.slug ?? getStageLabel(stage) ?? index;
 
+const getVisibleStageCount = () => {
+  if (typeof window === "undefined" || !window.matchMedia) {
+    return DESKTOP_VISIBLE_STAGE_COUNT;
+  }
+
+  return window.matchMedia(MOBILE_STAGE_MEDIA_QUERY).matches
+    ? MOBILE_VISIBLE_STAGE_COUNT
+    : DESKTOP_VISIBLE_STAGE_COUNT;
+};
+
 export default function SuperTaskRoleStages({ stages = [] }) {
   const orderedStages = Array.isArray(stages) ? stages : [];
   const [startIndex, setStartIndex] = useState(0);
-  const maxStartIndex = Math.max(0, orderedStages.length - VISIBLE_STAGE_COUNT);
-  const hasOverflow = orderedStages.length > VISIBLE_STAGE_COUNT;
+  const [visibleStageCount, setVisibleStageCount] = useState(getVisibleStageCount);
+  const maxStartIndex = Math.max(0, orderedStages.length - visibleStageCount);
+  const hasOverflow = orderedStages.length > visibleStageCount;
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return undefined;
+
+    const mediaQuery = window.matchMedia(MOBILE_STAGE_MEDIA_QUERY);
+    const handleChange = () => {
+      setVisibleStageCount(
+        mediaQuery.matches
+          ? MOBILE_VISIBLE_STAGE_COUNT
+          : DESKTOP_VISIBLE_STAGE_COUNT,
+      );
+    };
+
+    handleChange();
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
 
   useEffect(() => {
     setStartIndex((current) => Math.min(current, maxStartIndex));
@@ -20,7 +56,7 @@ export default function SuperTaskRoleStages({ stages = [] }) {
   if (!orderedStages.length) return null;
 
   const visibleStages = hasOverflow
-    ? orderedStages.slice(startIndex, startIndex + VISIBLE_STAGE_COUNT)
+    ? orderedStages.slice(startIndex, startIndex + visibleStageCount)
     : orderedStages;
 
   const showPrevious = () => {

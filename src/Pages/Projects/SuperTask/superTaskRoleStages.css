@@ -155,11 +155,38 @@ nav.dark-sidebar ~ .app-content .super-task-role-stages__arrow:focus-visible:not
 }
 
 @media (max-width: 767px) {
-  .super-task-role-stages {
+  .super-task-subtask-row__stages {
+    min-width: 0;
     width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .super-task-role-stages {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .super-task-role-stages__viewport {
-    flex: 1 1 auto;
+    width: 0;
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  .super-task-role-stages__track {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .super-task-role-stages__track > .super-task-role-stage {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
