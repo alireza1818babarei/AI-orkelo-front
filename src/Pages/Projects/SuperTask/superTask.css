@@ -447,7 +447,7 @@
 
 .super-task-subtask-row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 260px) auto 36px;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 300px) auto 36px;
   align-items: center;
   gap: 12px;
   min-height: 78px;
@@ -460,7 +460,7 @@
 }
 
 .super-task-subtask-row.has-actions {
-  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 260px) auto 36px 36px;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 310px) auto 36px 36px;
 }
 
 .super-task-row-action-menu {

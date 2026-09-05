@@ -1,7 +1,7 @@
 .super-task-role-stages {
   display: inline-flex;
-  /* Keep both arrows beside the visible roles, even in a full-width row. */
-  width: max-content;
+  /* Use the available card space while keeping the arrows outside the viewport. */
+  width: 100%;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -10,13 +10,21 @@
 }
 
 .super-task-role-stages__viewport {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
+  direction: ltr;
+}
+
+.super-task-role-stages__viewport::-webkit-scrollbar {
+  display: none;
 }
 
 .super-task-role-stages__track {
+  position: relative;
+  width: max-content;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -26,7 +34,7 @@
 
 .super-task-role-stages__track > .super-task-role-stage {
   display: inline-flex;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
   min-height: 30px;
@@ -44,11 +52,10 @@
   white-space: nowrap;
 }
 
-/* Truncate only long labels; role names and arrow controls stay on one line. */
+/* Preserve the full role name; the viewport handles horizontal overflow. */
 .super-task-role-stage__label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 

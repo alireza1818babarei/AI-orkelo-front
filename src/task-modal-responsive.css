@@ -410,3 +410,18 @@ body .task-detail-modal-dialog audio {
     opacity: 1 !important;
   }
 }
+
+/* Keep the upload cancellation label intact in Task and Super Task modals. */
+body .task-detail-modal-dialog .task-attachment-dropzone__cancel {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+body .task-detail-modal-dialog .task-attachment-dropzone__cancel > span {
+  flex-shrink: 0;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
