@@ -1,5 +1,6 @@
 import React from "react";
 import "./superTaskDarkFix.css";
+import "./superTaskSummaryGrid.css";
 
 function SummaryCard({ icon, title, total, subTaskCount, workItemCount, tone = "primary" }) {
   const isTotal = subTaskCount == null && workItemCount == null;
