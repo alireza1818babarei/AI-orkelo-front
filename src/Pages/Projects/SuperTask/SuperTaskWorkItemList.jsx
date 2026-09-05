@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { reorderWorkItems } from "../../../api/superTask";
 import { toastError } from "../../../utils/sweetAlert";
 import SuperTaskWorkItemCard from "./SuperTaskWorkItemCard";
@@ -25,6 +25,7 @@ export default function SuperTaskWorkItemList({
   deletingId = null,
 }) {
   const routeParams = useParams();
+  const location = useLocation();
   const normalizedItems = useMemo(
     () => (Array.isArray(items) ? items : []),
     [items],
@@ -36,9 +37,15 @@ export default function SuperTaskWorkItemList({
     setOrderedItems(normalizedItems);
   }, [normalizedItems]);
 
+  const querySubTaskId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const value = String(params.get("subTask") ?? "").trim();
+    return value || null;
+  }, [location.search]);
+
   const projectId = projectIdProp ?? routeParams.projectId;
   const taskId = taskIdProp ?? routeParams.taskId;
-  const subTaskId = subTaskIdProp ?? normalizedItems[0]?.parent_id ?? null;
+  const subTaskId = subTaskIdProp ?? querySubTaskId ?? null;
   const canReorder =
     canReorderProp == null
       ? normalizedItems.some((item) => item?.capabilities?.can_reorder === true)
