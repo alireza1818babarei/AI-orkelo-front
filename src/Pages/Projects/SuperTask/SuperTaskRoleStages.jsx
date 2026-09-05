@@ -23,10 +23,9 @@ export default function SuperTaskRoleStages({ stages = [] }) {
             }`}
             title={`${stage?.work_items_count || 0} Work Item(s)`}
           >
-            <i
-              className={isReady ? "ti ti-circle-check" : "ti ti-circle-dot"}
-              aria-hidden="true"
-            />
+            {isReady ? (
+              <i className="ti ti-check" aria-hidden="true" />
+            ) : null}
             {getStageLabel(stage)}
           </span>
         );

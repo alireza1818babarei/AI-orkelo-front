@@ -6,6 +6,42 @@
   grid-template-columns: minmax(220px, 1fr) minmax(230px, auto) auto 38px 38px;
 }
 
+.super-task-subtask-row .super-task-subtask-row__state {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  padding: 0;
+  border: 1px solid transparent;
+  line-height: 1;
+}
+
+.super-task-subtask-row .super-task-subtask-row__state > i {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.super-task-subtask-row .super-task-subtask-row__state.is-success {
+  color: #15924d;
+  background: #e7f8ee;
+  border-color: #c9ecd7;
+}
+
+body.dark .super-task-subtask-row .super-task-subtask-row__state.is-success,
+nav.dark-sidebar ~ .app-content .super-task-subtask-row .super-task-subtask-row__state.is-success {
+  color: #6fd49b;
+  background: rgba(46, 180, 110, 0.14);
+  border-color: rgba(87, 207, 139, 0.24);
+}
+
 @media (max-width: 767px) {
   .super-task-subtask-row.is-in-progress {
     grid-template-columns: minmax(0, 1fr) 34px;

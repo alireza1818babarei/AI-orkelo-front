@@ -4,29 +4,30 @@
   gap: 6px;
   min-height: 30px;
   padding: 4px 9px;
-  border: 1px solid #d8e3f2;
+  border: 1px solid #dfe5ee;
   border-radius: 8px;
-  color: #405777;
-  background: #f6f9fd;
+  color: #667085;
+  background: transparent;
   font-size: 10px;
   font-weight: 650;
   line-height: 1;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  box-shadow: none;
 }
 
 .super-task-role-stages > .super-task-role-stage i {
-  font-size: 14px;
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
   line-height: 1;
 }
 
 .super-task-role-stages > .super-task-role-stage.is-progress {
-  color: #486891;
-  background: #f3f7fd;
-  border-color: #d5e0ef;
-}
-
-.super-task-role-stages > .super-task-role-stage.is-progress i {
-  color: #6f8fbd;
+  color: #667085;
+  background: transparent;
+  border-color: #dfe5ee;
 }
 
 .super-task-role-stages > .super-task-role-stage.is-ready {
@@ -41,29 +42,24 @@
 
 body.dark .super-task-role-stages > .super-task-role-stage,
 nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage {
-  color: #c9d4e6;
-  background: #252d3d;
-  border-color: #3a465b;
+  color: #c2cada;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.14);
   box-shadow: none;
 }
 
 body.dark .super-task-role-stages > .super-task-role-stage.is-progress,
 nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage.is-progress {
-  color: #b8cae7;
-  background: rgba(74, 127, 213, 0.12);
-  border-color: rgba(112, 159, 233, 0.22);
-}
-
-body.dark .super-task-role-stages > .super-task-role-stage.is-progress i,
-nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage.is-progress i {
-  color: #82a9e8;
+  color: #b7c1d3;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 body.dark .super-task-role-stages > .super-task-role-stage.is-ready,
 nav.dark-sidebar ~ .app-content .super-task-role-stages > .super-task-role-stage.is-ready {
-  color: #a9ddbF;
-  background: rgba(46, 180, 110, 0.12);
-  border-color: rgba(87, 207, 139, 0.22);
+  color: #a9ddbf;
+  background: rgba(46, 180, 110, 0.1);
+  border-color: rgba(87, 207, 139, 0.24);
 }
 
 body.dark .super-task-role-stages > .super-task-role-stage.is-ready i,

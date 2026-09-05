@@ -13,6 +13,7 @@ export default function SuperTaskSubTaskRow({
 }) {
   const status = getReviewMeta(item?.review_status);
   const isInProgress = item?.review_status === REVIEW_STATUS.IN_PROGRESS;
+  const isApproved = item?.review_status === REVIEW_STATUS.APPROVED;
 
   return (
     <article
@@ -22,7 +23,10 @@ export default function SuperTaskSubTaskRow({
     >
       {!isInProgress ? (
         <span className={`super-task-subtask-row__state is-${status.tone}`}>
-          <i className={status.icon} aria-hidden="true" />
+          <i
+            className={isApproved ? "ti ti-check" : status.icon}
+            aria-hidden="true"
+          />
         </span>
       ) : null}
       <div className="super-task-subtask-row__main">
