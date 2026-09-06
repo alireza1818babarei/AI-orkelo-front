@@ -2,66 +2,72 @@ import { APP_VERSION, normalizeAppVersion } from "../config/appVersion";
 
 export const APP_UPDATES = [
   {
-    id: "2026-08-06-task-media-mobile-and-project-board-update",
-    version: "v1.6.0",
-    releasedAt: "2026-08-06",
-    title: "Orkelo Workflow Update",
+    id: "2026-09-06-super-task-update",
+    version: "v1.7.0",
+    releasedAt: "2026-09-06",
+    title: "Super Task Is Now Available",
     summary:
-      "This update brings task voice recording, in-app media playback, multi-file uploads, cross-project task moving, stronger board filters, better login sessions, better mobile support, and Telegram bot support.",
+      "Super Task introduces a new way to manage large, multi-part, and collaborative work in Orkelo. Break complex work into Sub-tasks, organize independent Work Items, assign responsibilities, track progress, and manage the entire workflow in one place.",
     newFeatures: [
       {
-        title: "Voice Recording In Tasks",
+        title: "Super Task",
         description:
-          "Voice notes can now be recorded directly inside tasks, making it easier to share quick updates without typing long descriptions.",
-        icon: "ph-duotone ph-microphone",
+          "Create a Super Task for larger pieces of work and assign one main owner who is responsible for coordinating and managing the overall task.",
+        icon: "ph-duotone ph-tree-structure",
       },
       {
-        title: "Audio And Video Preview",
+        title: "Sub-tasks",
         description:
-          "Audio and video attachments can now be played inside Orkelo without downloading the file first.",
-        icon: "ph-duotone ph-play-circle",
+          "Break a Super Task into multiple Sub-tasks so each independent part of the main work can be organized and managed separately.",
+        icon: "ph-duotone ph-list-checks",
       },
       {
-        title: "Multi-File Task Uploads",
+        title: "Work Items",
         description:
-          "Task attachments and checklist item attachments now support uploading multiple files by selecting, dragging, or pasting copied files.",
-        icon: "ph-duotone ph-files",
+          "Create multiple independent Work Items inside each Sub-task and assign each Work Item to a specific team member.",
+        icon: "ph-duotone ph-check-square",
       },
       {
-        title: "Move Tasks Between Projects",
+        title: "Work Roles",
         description:
-          "Tasks can now be moved from one project to another accessible project and placed in a compatible destination column.",
-        icon: "ph-duotone ph-arrows-left-right",
+          "Work Roles identify the responsibilities of team members. The status of each work-role group is shown directly on the Sub-task card, making it easy to see which roles have completed their work and which are still in progress.",
+        icon: "ph-duotone ph-users-three",
       },
       {
-        title: "Project Board Task Filters",
+        title: "Review, Approve & Reject",
         description:
-          "Board tasks can now be filtered by search text, tags, priorities, and selected project members.",
-        icon: "ph-duotone ph-funnel",
+          "Work Items and Sub-tasks can move through Review, Approve, and Reject workflows, allowing work to be checked and confirmed before completion.",
+        icon: "ph-duotone ph-seal-check",
       },
       {
-        title: "Checklist Copy Shortcut",
+        title: "Time Tracking",
         description:
-          "The checklist copy action is now available directly from the checklist area for faster access.",
-        icon: "ph-duotone ph-copy",
+          "Team members can track the time they spend working on their assigned Work Items directly inside the Super Task workflow.",
+        icon: "ph-duotone ph-timer",
       },
       {
-        title: "Improved Login Sessions",
+        title: "Attachments & Voice",
         description:
-          "Accounts can now stay signed in across multiple tabs, browsers, and devices at the same time.",
-        icon: "ph-duotone ph-devices",
+          "Files and voice recordings can be added while working on Work Items, keeping relevant information and communication connected to the work.",
+        icon: "ph-duotone ph-paperclip",
       },
       {
-        title: "Better Mobile Experience",
+        title: "Activity",
         description:
-          "Orkelo has been improved for mobile screens with better responsive behavior, cleaner layout, and smoother daily use.",
-        icon: "ph-duotone ph-device-mobile",
+          "Important actions and changes are recorded in Activity so the progress and history of work can be followed more easily.",
+        icon: "ph-duotone ph-clock-counter-clockwise",
       },
       {
-        title: "Telegram Bot Support",
+        title: "Smart Ordering",
         description:
-          "Telegram bot support has been added to help teams stay connected with Orkelo updates and workflows.",
-        icon: "ph-duotone ph-paper-plane-tilt",
+          "Sub-tasks and Work Items can be reordered, while approved items are automatically kept organized at the end of the list.",
+        icon: "ph-duotone ph-arrows-down-up",
+      },
+      {
+        title: "Integrated With Orkelo",
+        description:
+          "Super Task works with Assignment, Work Roles, Review & Approval, Time Tracking, Attachments, Voice, Activity, Notifications, Tags, Priority, Due Date, and Watchers.",
+        icon: "ph-duotone ph-squares-four",
       },
     ],
     active: true,
