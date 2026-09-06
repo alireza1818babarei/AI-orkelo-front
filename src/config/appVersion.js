@@ -30,7 +30,7 @@ export const APP_VERSION = resolvePackageAppVersion();
 // Release-only UI belongs here so old modals and tours do not leak into newer deploys.
 export const APP_RELEASE_SURFACES = Object.freeze({
   [RELEASE_SURFACES.APP_UPDATE_MODAL]: Object.freeze({
-    version: "v1.6.0",
+    version: "v1.7.0",
     enabled: true,
   }),
   [RELEASE_SURFACES.PROJECT_BOARD_TOUR]: Object.freeze({
